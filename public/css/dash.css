@@ -1,0 +1,18 @@
+/* Dashboard card styling */
+/* Add custom styles for the black card with white text */
+.dash-card {
+    background-color: rgb(211, 5, 5) ; /* Set the background color to black */
+    color: white !important; /* Set the text color to white */
+}
+
+/* Style the header text (Dashboard) */
+.dash-card-header {
+    background-color: black !important; /* Set the background color for the header */
+    color: white !important; /* Set the text color for the header */
+}
+
+/* Style the success alert text */
+.alert.alert-success {
+    background-color: black !important; /* Set the background color for the alert */
+    color: white !important; /* Set the text color for the alert */
+}

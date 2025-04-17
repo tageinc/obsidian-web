@@ -1,0 +1,2 @@
+/usr/bin/php /home/u882932635/domains/tezca.net/public_html/obsidian/artisan device:generate-info
+/usr/bin/php /home/u882932635/domains/tezca.net/public_html/obsidian/artisan device:check-status

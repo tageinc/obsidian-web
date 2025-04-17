@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+	<IfModule mod_negotiation.c>
+	    Options -MultiViews
+	</IfModule>
+
+	RewriteEngine On
+
+	RewriteCond %{HTTP:Authorization} ^(.+)$
+	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+	RewriteCond %{REQUEST_URI} !^public
+	RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+php_value upload_max_filesize 200M
+php_value post_max_size 200M
+php_value max_execution_time 300
+php_value max_input_time 300

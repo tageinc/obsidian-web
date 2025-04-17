@@ -1,0 +1,97 @@
+
+				<!--
+
+
+
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function() {
+    const termsCheckbox = document.getElementById('terms_checkbox');
+    const purchaseBtn = document.getElementById('purchase_btn');
+
+    // Function to update the state of the purchase button based on the checkbox
+    function updatePurchaseButtonState() {
+        console.log("Checkbox Checked:", termsCheckbox.checked);  // Log the checkbox status
+        purchaseBtn.disabled = !termsCheckbox.checked; // Disable or enable the button
+    }
+
+    // Attach the event listener to the checkbox
+    termsCheckbox.addEventListener('change', updatePurchaseButtonState);
+
+    // Call the function to set the initial state of the purchase button
+    updatePurchaseButtonState();
+});
+</script>
+
+
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function() {
+    const termsCheckbox = document.getElementById('terms_checkbox');
+    const agreementDiv = document.getElementById('agreementScroll');
+
+    // Function to check if the user has scrolled to the bottom of the div
+    function checkScroll() {
+        if (agreementDiv.offsetHeight + agreementDiv.scrollTop >= agreementDiv.scrollHeight) {
+            termsCheckbox.disabled = false;
+        }
+    }
+
+    // Attach event listener to scrollable div
+    agreementDiv.addEventListener('scroll', checkScroll);
+});
+</script>
+-->
+				
+				<!--
+		<div class="col-md-6 offset-md-4">
+
+			<div class="scrollable-window" id="agreementScroll">
+				<h4>Data Collection, Inspection, and Replacement Services Agreement</h4>
+				<p><strong>This Agreement ("Agreement")</strong> is entered into between the Customer, <strong>{{ $user->name }}</strong>, located at <strong>{{ $user->address_1 }}{{ $user->address_2 }} {{ $user->city }} {{ $user->state }}, {{ $user->zip_code }}</strong>, and Tezca Inc, located at 2660 Walnut Ave, Suite D, CA 92780 collectively referred to as the "Parties".</p>
+
+				<h5>Data Collection:</h5>
+				<ol>
+					<li><strong>Consent:</strong> Customer hereby consents to Tezca collecting data from the products provided by Tezca ("Products") that are installed in Customer's premises.</li>
+					<li><strong>Purpose:</strong> The data collected by Tezca may include but is not limited to usage data, performance data, and other relevant information necessary for the operation and improvement of the Products and services.</li>
+					<li><strong>Confidentiality:</strong> Tezca agrees to handle all collected data in accordance with applicable laws and regulations and maintain the confidentiality of Customer's data.</li>
+				</ol>
+
+				<h5>Inspection and Replacement Services:</h5>
+				<ol>
+					<li><strong>Services:</strong> Tezca shall provide inspection and replacement services for the Products as deemed necessary to ensure proper functioning and maintenance.</li>
+					<li><strong>Schedule:</strong> Tezca shall schedule inspections and replacements at mutually agreed-upon times with the Customer.</li>
+					<li><strong>Responsibility:</strong> Tezca shall bear the cost of inspection and replacement services unless damage to the Products is due to misuse or negligence by the Customer.</li>
+				</ol>
+
+				<h5>Subscription Price:</h5>
+				<ol>
+					<li><strong>Price:</strong> Customer agrees to pay the monthly subscription fee of <strong>${{$licenses['total']}}</strong> U.S. Dollars for the services provided by Tezca, as outlined in this Agreement.</li>
+					<li><strong>Payment Terms:</strong> The subscription fee shall be paid in advance monthly unless otherwise agreed upon by both Parties.</li>
+				</ol>
+
+				<h5>Term and Termination:</h5>
+				<ol>
+					<li><strong>Term:</strong> This Agreement shall commence on the effective date and shall continue until terminated by either Party in accordance with the terms herein.</li>
+					<li><strong>Termination:</strong> Either Party may terminate this Agreement upon written notice to the other Party if there is a material breach of any provision of this Agreement by the other Party, which remains uncured for a period of 30 days after written notice of such breach.</li>
+				</ol>
+
+				<h5>General Provisions:</h5>
+				<ol>
+					<li><strong>Governing Law:</strong> This Agreement shall be governed by and construed in accordance with the laws of the United States of America.</li>
+					<li><strong>Entire Agreement:</strong> This Agreement constitutes the entire agreement between the Parties concerning the subject matter hereof and supersedes all prior agreements and understandings, whether written or oral, relating to such subject matter.</li>
+				</ol>
+
+				<p><em>IN WITNESS WHEREOF, the Parties hereto have executed this Agreement as of the Effective Date.</em></p>
+				</div>
+
+
+				<div>
+					<input type="checkbox" id="terms_checkbox" disabled>
+					<label for="terms_checkbox">I have read and agree to the terms and conditions</label>
+				</div>
+				
+
+				<br>
+				<div style="margin-top: 20px; font-weight: bold">TOTAL: <span id="checkout_total_2">${{$licenses['total']}}</span></div>
+			</div>
+		</div>
+		-->

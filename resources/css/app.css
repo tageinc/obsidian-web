@@ -1,0 +1,12 @@
+.nav-link {
+	color: black !important;
+}
+
+@media screen and (max-width: 900px) {
+	body {
+		background-color: red;
+	}
+	.section {
+		flex-direction: column;
+	}
+}

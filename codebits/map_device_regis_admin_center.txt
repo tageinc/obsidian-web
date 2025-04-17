@@ -1,0 +1,179 @@
+	<!-- MAP -->
+    <!--
+	<div class="container">
+		<div class="row" style="margin-top: 20px;">
+			<div class="col-md-12">
+				<h3>Map of Devices</h3>
+				<div id="map" style="height: 400px;"></div>
+			</div>
+		</div>
+	</div>
+	-->
+	<!-- Graph Container -->
+	<!--
+	<div class="container">
+
+		<div class="row" style="margin-top: 20px;"> 
+			
+			<div class="col-md-12">
+				<h3>New Device Registrations</h3>
+				<div style="max-width: 600px; max-height: 400px; margin: 0 auto;">
+					<canvas id="newRegistrationChart"></canvas>
+				</div>
+			</div>
+	
+			<div class="col-md-6">
+				<h3>Device Registration Graph</h3>
+				<div style="max-width: 600px; max-height: 400px; margin: 0 auto;">
+					<canvas id="registrationChart"></canvas>
+				</div>
+			</div>
+		
+		</div>
+	</div>
+	-->
+
+
+
+
+
+
+
+<script>
+	/*
+document.addEventListener('DOMContentLoaded', function() {
+    var map = L.map('map').setView([33.7263, -117.9190], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+	var devices = @json($deviceLocations);
+    console.log("Device data being mapped:", devices);
+
+    @json($deviceLocations).forEach(function(device) {
+        if (device.latitude && device.longitude) {
+            var markerColor;
+            switch (device.geo_status) { // Assuming 'geo_status' holds the status
+                case 'online':
+                                markerColor = '#00FF00'; // Green
+                                break;
+                            case 'online unregistered':
+                                markerColor = '#0000FF'; // Blue
+                                break;
+                            case 'offline':
+                                markerColor = '#808080'; // Grey
+                                break;
+                            case 'low voltage':
+                                markerColor = '#FFFF00'; // Yellow
+                                break;
+                            case 'extreme weather':
+                                markerColor = '#FFA500'; // Orange
+                                break;
+                            case 'theft vandalism':
+                                markerColor = '#800080'; // Purple
+                                break;
+                            case 'battery dead':
+                                markerColor = '#FF0000'; // Red
+                                break;
+								case 'idle':
+								markerColor = '#000000'; // Black
+								break;
+							case 'set-up':
+								markerColor = '#FA8072'; // Salmon
+								break;
+							case 'calibration':
+								markerColor = '#A52A2A'; // Brown
+								break;
+							case 'solar-track':
+								markerColor = '#008000'; // Green
+								break;
+							case 'sleep':
+								markerColor = '#ADD8E6'; // Light Blue
+								break;
+							case 'safe':
+								markerColor = '#800080'; // Purple
+								break;
+							case 'gray':
+								markerColor = '#808080'; // Gray
+								break;
+							default:
+								markerColor = '#808080'; // Grey for unknown or other statuses
+            }
+
+            var customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24'><path fill='" + markerColor + "' d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z'/></svg>",
+                iconSize: [30, 42], // Size of the icon
+                iconAnchor: [15, 42] // Point of the icon which will correspond to marker's location
+            });
+
+            L.marker([device.latitude, device.longitude], {icon: customIcon})
+                .addTo(map)
+                .bindPopup(`<strong>Serial No:</strong> ${device.serial_no}<br>` +
+							`<strong>Product:</strong> ${device.hardware_name}<br>` +
+						   `<strong>SKU:</strong> ${device.sku}<br>` +
+                           `<strong>Address:</strong> ${device.address_1 || 'No Address'}<br>` +
+                           `<strong>Status:</strong> ${device.geo_status || 'Unknown'}`);
+        }
+    });
+});
+*/
+</script>
+
+<script>
+    /*
+	var newCtx = document.getElementById('newRegistrationChart').getContext('2d');
+    var newRegistrationChart = new Chart(newCtx, {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($newLabels) !!},
+            datasets: [{
+                label: 'New Device Registrations',
+                data: {!! json_encode($newData) !!},
+                backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+	*/
+</script>
+
+
+<script>
+    /*
+	var ctx = document.getElementById('registrationChart').getContext('2d');
+    var registrationChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($labels) !!},
+            datasets: [{
+                label: 'Device Registrations',
+                data: {!! json_encode($data) !!},
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1 // Set step size to 1
+                    }
+                }
+            }
+        }
+    });*/
+</script>

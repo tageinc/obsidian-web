@@ -1,0 +1,56 @@
+Device table on device manager
+                        @if(!is_null($device->license) && $device->license->device_id != 0)
+
+                                @if($device->hardware_id == 1)
+                                <span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
+                                <p>Last updated at: {{ $device->last_updated }}</p>
+                                @elseif(in_array($device->hardware_id, [2, 3]))
+                                    <span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
+                                    <p>Last updated at: {{ $device->last_updated }}</p>
+                                @endif
+
+						@else
+							<div style="display: flex; align-items: left;">
+								<a href="{{ route('purchase') }}">
+									<img src="{{ asset('img/sub-lock.png') }}" alt="Locked" style="width: 50px; height: auto; margin-left: -10px;"></img>
+									<p>Click to Unlock</p>
+								</a>
+							</div>
+						@endif
+
+
+License side for device view or device info
+
+
+
+                                <!-- Section title for clarity -->
+                                @if(!is_null($device->license))
+                             <div id="Graphs" class="tabcontent" style="display: block;">
+									<div id="realtimeGraphs">
+										<!-- Container for the Battery Energy graph -->
+										<select id="timeFrameSelect">
+											<option value="today">Today</option>
+											<option value="yesterday">Yesterday</option>
+											<option value="past7days">Past 7 Days</option>
+											<option value="monthToDate">Month to Date</option>
+											<option value="yearToDate">Year to Date</option>
+											<option value="lifetime">Lifetime</option>
+										</select>
+										<div id="savingsGraph" style="height: 300px; width: 100%; margin-bottom: 20px" class="graph-container">
+											<canvas id="savingsGraphCanvas"></canvas>
+										</div>
+										<div id="pBattGraph" style="height: 300px; width: 100%; margin-bottom: 20px" class="graph-container">
+											<canvas id="pBattGraphCanvas"></canvas>
+										</div>
+										<div id="pBattGraph" style="height: 300px; width: 100%; margin-bottom: 20px" class="graph-container">
+											<canvas id="eBattGraphCanvas"></canvas>
+										</div>
+										<div id="pBattGraph" style="height: 300px; width: 100%; margin-bottom: 20px" class="graph-container">
+											<canvas id="emissionsGraphCanvas"></canvas>
+										</div>
+                                        <button onclick="window.print();" class="btn btn-primary no-print">Print</button>
+									</div>
+								</div>
+								@else
+                                
+                                @endif
