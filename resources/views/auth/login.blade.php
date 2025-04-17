@@ -8,6 +8,7 @@
                 <div class="card-header">{{ __('Login') }}</div>
 
                 <div class="card-body">
+                    <h1>Test!</h1>
                     @if (session('error'))
                         <div class="alert alert-danger">
                             {{ session('error') }}
