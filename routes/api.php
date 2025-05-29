@@ -38,9 +38,9 @@ Route::get('/remote-control/{serial_no?}', [DeviceRemoteController::class, 'getR
 Route::post('/remote-control-set/{data?}', [DeviceRemoteController::class, 'remoteControl'])->name('device.remote-control-set');
 
 // Public routes (without logging)
-Route::post('login', [LoginController::class, 'apiLogin'])->name('api.login');
-Route::post('logout', [LoginController::class, 'logout'])->name('api.logout');
-    Route::post('/device-register', [DeviceRegisterController::class, 'apiRegisterDevice']); //register device
+Route::post('/login', [LoginController::class, 'apiLogin'])->name('api.login');
+Route::post('/logout', [LoginController::class, 'logout'])->name('api.logout');
+Route::post('/device-register', [DeviceRegisterController::class, 'apiRegisterDevice']); //register device
 
 
 // Routes that require Sanctum authentication and logging
