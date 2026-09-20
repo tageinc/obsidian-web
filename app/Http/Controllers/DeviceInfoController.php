@@ -24,7 +24,6 @@ class DeviceInfoController extends Controller
 
         return view('device-info', array_merge([
             'device' => $device,
-            'license' => $device->license,
         ], $this->statusPayload($device->serial_no)));
     }
 

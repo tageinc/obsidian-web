@@ -7,7 +7,6 @@
     "require": {
         "php": "^8.3",
         "ext-curl": "*",
-        "authorizenet/authorizenet": ">=1.9.3",
         "fideloper/proxy": "^4.2",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^7.8",

@@ -19,15 +19,6 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'authorizenet/authorizenet' => array(
-            'pretty_version' => '2.0.3',
-            'version' => '2.0.3.0',
-            'reference' => 'e1acf55c9cb22bef1852b1e494502973ade11cce',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../authorizenet/authorizenet',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
         'brick/math' => array(
             'pretty_version' => '0.12.1',
             'version' => '0.12.1.0',

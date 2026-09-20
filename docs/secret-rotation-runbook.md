@@ -63,7 +63,7 @@ The repository history contains one prior `.env` revision with secret-bearing
 variable names. Treat each value in that historical revision as exposed until
 its issuer confirms it has been rotated or revoked.
 
-The accessible repository also contains `logs/authorizenet_log`, a historical
+The accessible repository may contain historical payment logs. They are retained
 payment-provider log. Its content matches generic secret-exposure indicators.
 Do not copy its contents into a ticket or chat. The payment owner must review
 it in the approved incident process and rotate any credential, token, payment

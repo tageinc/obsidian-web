@@ -19,7 +19,6 @@
         </div>
 
         <div class="col-md-8">
-            @if(!is_null($license))
                 <div class="card mb-3">
                     <div class="card-header">Current Status</div>
                     <div class="card-body row">
@@ -47,14 +46,10 @@
                         <button class="btn btn-primary" data-speed="-20">Down</button>
                     </div>
                 </div>
-            @else
-                <div class="card"><div class="card-body">An active license is required to view device data.</div></div>
-            @endif
         </div>
     </div>
 </div>
 
-@if(!is_null($license))
 <script>
 document.querySelectorAll('[data-speed]').forEach(function (button) {
     button.addEventListener('click', function () {
@@ -66,5 +61,4 @@ document.querySelectorAll('[data-speed]').forEach(function (button) {
     });
 });
 </script>
-@endif
 @endsection

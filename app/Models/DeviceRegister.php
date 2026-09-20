@@ -21,9 +21,5 @@ class DeviceRegister extends Model
         return $this->belongsTo(Hardware::class, 'hardware_id');
     }
 
-	public function license()
-	{
-		return $this->hasOne(License::class, 'device_id');
-	}
 }
 

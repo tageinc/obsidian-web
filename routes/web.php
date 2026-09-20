@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DeviceRegisterController;
@@ -11,11 +10,8 @@ use App\Http\Controllers\DeviceInfoController;
 use App\Http\Controllers\AdminControlCenterController;
 use App\Http\Controllers\ThankYouController;
 use App\Http\Controllers\ContactUsController;
-use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\Auth\VerificationController;
-use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\DeviceManagerController;
-use App\Http\Controllers\SubscriptionManagerController;
 use App\Http\Controllers\Delta;
 
 
@@ -33,24 +29,6 @@ use App\Http\Controllers\Delta;
 // Enabling Laravel's default authentication routes with email verification
 Auth::routes(['verify' => true]);
 
-Route::get('/checkoutapi', [CheckoutController::class, 'showCheckoutForm']);
-Route::post('/purchase-checkout-api', [CheckoutController::class, 'purchaseApi'])->name('purchase-checkout-api');
-
-Route::get('/checkout-success', function() {
-    return view('checkout.success');
-})->name('checkout.success');
-
-Route::get('/checkout-error', function() {
-    return view('checkout.error');
-})->name('checkout.error');
-
-Route::get('/update-success', function() {
-    return view('update.success');
-})->name('update.success');
-
-Route::get('/update-error', function() {
-    return view('update.error');
-})->name('update.error');
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -73,9 +51,6 @@ Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
     Route::put('/profile/update-phone-number', [ProfileController::class, 'updatePhoneNumber'])->name('profile.updatePhoneNumber');
     Route::put('/profile/update-password', [ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
     Route::get('/device-manager', [DeviceManagerController::class, 'index'])->name('device-manager');
-	Route::get('/subscription-manager', [SubscriptionManagerController::class, 'index'])->name('subscription-manager');
-    Route::get('/assign-license/{id}', [SubscriptionManagerController::class, 'assignLicense'])->name('assign-license');
-    Route::get('/cancel-subscription/{id}', [SubscriptionManagerController::class, 'cancelSubscription'])->name('cancel-subscription');
     Route::get('/delete-device/{id}', [DeviceManagerController::class, 'delete'])->name('deleteDevice');
     Route::get('/edit-device/{id}', [EditDeviceController::class, 'index'])->name('edit-device');
     Route::put('/edit-device/{id}/address1', [EditDeviceController::class, 'updateAddress1'])->name('update.address1');
@@ -96,10 +71,6 @@ Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
     Route::get('/all-devices', [DeviceManagerController::class, 'allDevices'])->name('all-devices');
     Route::get('/paginated-devices', [DeviceManagerController::class, 'paginatedDevices'])->name('paginated-devices');
     Route::get('/thank-you', [ThankYouController::class, 'index'])->name('thank-you');
-    Route::get('/update', [UpdateController::class, 'index'])->name('update');
-	Route::get('/purchase', [PurchaseController::class, 'index'])->name('purchase');
-	Route::post('/checkout', 'CheckoutController@store')->name('checkout.store');
-	Route::post('/purchase-checkout', [CheckoutController::class, 'purchase'])->name('purchase-checkout');
     Route::get('/device/{id}/fetch-graph-data', 'DeviceInfoController@fetchGraphData')->name('device.fetchGraphData');
     Route::put('/device/{id}/update-status-notification', 'EditDeviceController@updateStatusNotification')->name('update.status_notification');
     Route::put('/device/{id}/update-product-alias', [EditDeviceController::class, 'updateProductAlias'])->name('update.alias');

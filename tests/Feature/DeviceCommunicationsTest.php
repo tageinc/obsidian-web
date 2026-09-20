@@ -86,6 +86,17 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertSame(0, SolarTrackerLog::count());
     }
 
+    public function test_billing_and_license_routes_are_removed_and_device_access_has_no_license_gate(): void
+    {
+        $this->assertFalse(Route::has('purchase'));
+        $this->assertFalse(Route::has('subscription-manager'));
+        $this->assertFalse(Route::has('purchase-checkout'));
+        $this->assertFileDoesNotExist(base_path('app/Models/License.php'));
+        $this->assertFileDoesNotExist(base_path('app/Models/Order.php'));
+        $this->assertFileDoesNotExist(base_path('app/Http/Middleware/BillingMiddleware.php'));
+        $this->assertStringNotContainsString('authorizenet', file_get_contents(base_path('composer.json')));
+    }
+
     public function test_status_command_preserves_email_notifications_without_sms_or_twilio(): void
     {
         Mail::fake();
