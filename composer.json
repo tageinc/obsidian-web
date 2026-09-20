@@ -7,7 +7,6 @@
     "require": {
         "php": "^8.3",
         "ext-curl": "*",
-        "authorizenet/authorizenet": ">=1.9.3",
         "fideloper/proxy": "^4.2",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^7.8",
@@ -17,8 +16,7 @@
         "league/csv": "^9.8",
         "livewire/livewire": "^2.10",
         "phpoffice/phpspreadsheet": "^2.2",
-        "symfony/polyfill-php73": "^1.28",
-        "twilio/sdk": "^6.37"
+        "symfony/polyfill-php73": "^1.28"
     },
     "require-dev": {
         "facade/ignition": "^2.17",
@@ -62,6 +60,12 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "lint": "@php scripts/lint.php",
+        "test": "@php vendor/phpunit/phpunit/phpunit --do-not-cache-result",
+        "check": [
+            "@lint",
+            "@test"
         ]
     }
 }

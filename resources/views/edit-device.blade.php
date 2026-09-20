@@ -72,22 +72,6 @@ input:checked + .toggle-switch {
                         @endif
 
 
-                        @if($device->sms_notification)
-                        <div class="form-group">
-                            <label for="sms_notification">You are currently opted IN to receive SMS notifications of status changes. Toggle to opt OUT:</label>
-                            <input type="checkbox" id="sms_notification" name="sms_notification" checked style="display:none;" onclick="confirmSMSChange(this)">
-                            <label class="toggle-switch" for="sms_notification"></label>
-                        </div>
-                        @else
-                        <div class="form-group">
-                            <label for="sms_notification">You are currently opted OUT of receiving SMS notifications of status changes. Toggle to opt IN:</label>
-                            <input type="checkbox" id="sms_notification" name="sms_notification" style="display:none;" onclick="confirmSMSChange(this)">
-                            <label class="toggle-switch" for="sms_notification"></label>
-                        </div>
-                        @endif
-
-
-
                     <form method="POST" action="{{ route('update.address1', ['id' => $device->id]) }}">
                         @csrf
                         @method('PUT')
@@ -261,46 +245,6 @@ input:checked + .toggle-switch {
         document.body.appendChild(form);
 
         form.submit();
-    }
-
-    function confirmSMSChange(checkbox) {
-    const message = checkbox.checked
-        ? "Are you sure you want to opt in to receive SMS notifications of status changes?"
-        : "Are you sure you would like to opt out? Press 'Yes' to continue or 'No' to cancel.";
-
-    if (!confirm(message)) {
-        // Revert the checkbox state if the user cancels
-        checkbox.checked = !checkbox.checked;
-        return;
-    }
-
-    // Create a form and submit it to update the sms_notification in the database
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = "{{ route('update.sms_notification', $device->id) }}"; // Adjust this to your actual route
-    form.style.display = 'none';
-
-    const csrfField = document.createElement('input');
-    csrfField.type = 'hidden';
-    csrfField.name = '_token';
-    csrfField.value = "{{ csrf_token() }}";
-
-    const methodField = document.createElement('input');
-    methodField.type = 'hidden';
-    methodField.name = '_method';
-    methodField.value = 'PUT'; // Assuming your route accepts a PUT request
-
-    const smsField = document.createElement('input');
-    smsField.type = 'hidden';
-    smsField.name = 'sms_notification';
-    smsField.value = checkbox.checked ? '1' : '0';
-
-    form.appendChild(csrfField);
-    form.appendChild(methodField);
-    form.appendChild(smsField);
-    document.body.appendChild(form);
-
-    form.submit();
     }
 
     // Define the cityData object

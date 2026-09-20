@@ -9,7 +9,6 @@ use App\Models\GeoCode;
 use App\Models\Api\SolarTrackerLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\License;
 use App\Models\Hardware;
 use Carbon\Carbon;
 
@@ -34,7 +33,7 @@ class DeviceManagerController extends Controller
         }
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
-        $devices = DeviceRegister::where('user_id', $user_id)
+        $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
         //->with('hardware', 'license') // Load the license relationship
         ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
         ->paginate($pagination_size);
@@ -89,7 +88,7 @@ class DeviceManagerController extends Controller
     public function allDevices(Request $request)
 {
     $user_id = Auth::id();
-    $devices = DeviceRegister::where('user_id', $user_id)
+    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
              ->with('hardware')  // This fetches hardware details
              ->get(['id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
@@ -130,7 +129,7 @@ $devicesJson = $devices->toJson();
     $user_id = Auth::id();
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
-    $devices = DeviceRegister::where('user_id', $user_id)
+    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
              ->with('hardware')  // Fetch hardware details
              ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
              ->paginate($pagination_size);
@@ -174,14 +173,6 @@ $devicesJson = $devices->toJson();
             return redirect()->route('device-manager')->with('error', 'You do not have permission to delete this device');
         }
 
-        // Remove the device from any assigned license
-        /*
-		$license = License::where('device_id', $device->id)->first();
-        if ($license) {
-            $license->device_id = 0;
-            $license->save();
-        }*/
-
         // Delete the device from the device register
         $device->delete();
 
@@ -203,12 +194,11 @@ $devicesJson = $devices->toJson();
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
     
-            $devices = DeviceRegister::where('user_id', $user_id)
+            $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
                 ->with('hardware')
                 ->get([
                     'id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 
-                    'address_1', 'address_2', 'updated_at', 'status_notification', 
-                    'sms_notification', 'zip_code'
+                    'address_1', 'address_2', 'updated_at', 'status_notification', 'zip_code'
                 ]);
     
             foreach ($devices as $device) {
@@ -250,14 +240,6 @@ $devicesJson = $devices->toJson();
         if (Auth::id() !== $device->user_id) {
             return response()->json(['error' => 'You do not have permission to delete this device'], 403);
         }
-
-        // Remove the device from any assigned license
-        /*
-        $license = License::where('device_id', $device->id)->first();
-        if ($license) {
-            $license->device_id = 0;
-            $license->save();
-        }*/
 
         // Delete the device from the device register
         $device->delete();

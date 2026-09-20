@@ -39,10 +39,4 @@ public function sendEmailVerificationNotification()
         $this->notify(new CustomVerifyEmail());
     }
 
-    public function licenses()
-    {
-        $licenses = $this->hasMany(License::class);
-
-        return $licenses;
-    }
 }

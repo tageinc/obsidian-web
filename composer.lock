@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6ee04afd28c3defa32deb3834a37dda1",
+    "content-hash": "2a81de2c0cebcf3506775d50dd3da1f4",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -61,49 +61,6 @@
                 "source": "https://github.com/asm89/stack-cors/tree/v2.2.0"
             },
             "time": "2023-11-14T13:51:46+00:00"
-        },
-        {
-            "name": "authorizenet/authorizenet",
-            "version": "2.0.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/AuthorizeNet/sdk-php.git",
-                "reference": "e1acf55c9cb22bef1852b1e494502973ade11cce"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/AuthorizeNet/sdk-php/zipball/e1acf55c9cb22bef1852b1e494502973ade11cce",
-                "reference": "e1acf55c9cb22bef1852b1e494502973ade11cce",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*",
-                "ext-json": "*",
-                "php": ">=5.6"
-            },
-            "type": "library",
-            "autoload": {
-                "classmap": [
-                    "lib"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "proprietary"
-            ],
-            "description": "Official PHP SDK for Authorize.Net",
-            "homepage": "http://developer.authorize.net",
-            "keywords": [
-                "authorize.net",
-                "authorizenet",
-                "ecommerce",
-                "payment"
-            ],
-            "support": {
-                "issues": "https://github.com/AuthorizeNet/sdk-php/issues",
-                "source": "https://github.com/AuthorizeNet/sdk-php/tree/2.0.3"
-            },
-            "time": "2024-05-29T17:33:13+00:00"
         },
         {
             "name": "brick/math",
@@ -5770,59 +5727,6 @@
             "time": "2023-12-08T13:03:43+00:00"
         },
         {
-            "name": "twilio/sdk",
-            "version": "6.44.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/twilio/twilio-php.git",
-                "reference": "08aad5f377e2245b9cd7508e7762d95e7392fa4d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/twilio/twilio-php/zipball/08aad5f377e2245b9cd7508e7762d95e7392fa4d",
-                "reference": "08aad5f377e2245b9cd7508e7762d95e7392fa4d",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=7.1.0"
-            },
-            "require-dev": {
-                "guzzlehttp/guzzle": "^6.3 || ^7.0",
-                "phpunit/phpunit": ">=7.0 < 10"
-            },
-            "suggest": {
-                "guzzlehttp/guzzle": "An HTTP client to execute the API requests"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Twilio\\": "src/Twilio/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Twilio API Team",
-                    "email": "api@twilio.com"
-                }
-            ],
-            "description": "A PHP wrapper for Twilio's API",
-            "homepage": "https://github.com/twilio/twilio-php",
-            "keywords": [
-                "api",
-                "sms",
-                "twilio"
-            ],
-            "support": {
-                "issues": "https://github.com/twilio/twilio-php/issues",
-                "source": "https://github.com/twilio/twilio-php/tree/6.44.4"
-            },
-            "time": "2023-02-22T19:59:53+00:00"
-        },
-        {
             "name": "vlucas/phpdotenv",
             "version": "v5.6.0",
             "source": {
@@ -8331,13 +8235,13 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.3",
         "ext-curl": "*"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.3.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.6.0"
 }

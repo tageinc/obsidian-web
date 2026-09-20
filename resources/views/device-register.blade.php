@@ -85,14 +85,6 @@
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="sms_notification" class="control-label">Would you like to opt in for SMS status notification changes?</label>
-            <select name="sms_notification" class="form-control form-control-sm" required>
-                <option value="1">Yes</option>
-                <option value="0">No</option>
-            </select>
-        </div>
-        
         
             <div class="form-group">
                 <label for="sku" class="control-label">SKU #:</label>

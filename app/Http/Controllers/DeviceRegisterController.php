@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use League\Csv\Reader;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DeviceRegister;
-use App\Models\Weather;
 use App\Models\GeoCode;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
@@ -20,7 +18,7 @@ class DeviceRegisterController extends Controller
 {
     public function index()
     {
-        return view('device-register', ['hardwares' => Hardware::select('id', 'name')->get()]);
+        return view('device-register', ['hardwares' => Hardware::where('id', 1)->select('id', 'name')->get()]);
 
     }
 
@@ -35,7 +33,7 @@ class DeviceRegisterController extends Controller
                 'city' => 'required',
                 'state' => 'required',
                 'zip_code' => 'required|regex:/[0-9]+/',
-                'hardware_id' => 'required', // Make sure this validation rule is correct
+                'hardware_id' => 'required|integer|in:1',
                 'alias' => 'required|string|max:255',
 				'serial_no' => 'required',
 				'sku' => 'required',
@@ -65,7 +63,7 @@ class DeviceRegisterController extends Controller
             'city' => 'required',
             'state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
-            'hardware_id' => 'required',
+            'hardware_id' => 'required|integer|in:1',
 			'alias' => 'required|string|max:255',
             'sku' => 'required',
             'serial_no' => 'required',
@@ -99,7 +97,6 @@ class DeviceRegisterController extends Controller
         $order_no = $request->input('order_no');
         $latitude = $request->input('latitude');
         $longitude = $request->input('longitude');
-        $sms_notification = $request->input('sms_notification');
         $status_notification = $request->input('status_notification');
 
         $alias = $request->input('alias');
@@ -154,7 +151,6 @@ class DeviceRegisterController extends Controller
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'status_notification' => $status_notification,
-                'sms_notification' => $sms_notification,
                 
             ]);
 
@@ -181,59 +177,6 @@ class DeviceRegisterController extends Controller
 
         }
 
-        // WEATHER FEATURE
-        // =============================================================================================================
-        // Check if the weather record already exists
-        $existing_record = Weather::where('city', 'like', '%' . $city . '%')
-            ->where('state', $state)
-            ->first();
-
-        if ($existing_record) {
-            Log::info('Found existing weather record:', ['record' => $existing_record->toArray()]);
-        } else {
-            // Log::info('No existing weather record found for city: ' . $city . ', state: ' . $state);
-        }
-
-        if (!$existing_record) {
-            // Log::info('INSIDE of the no existing record loop');
-            // If not found in Weather, try to fetch latitude and longitude from the CSV
-            $csv = Reader::createFromPath(storage_path('app/public/csv/cityStateToLatLong.csv'), 'r');
-            $csv->setHeaderOffset(0);
-
-            foreach ($csv->getRecords() as $record) {
-
-                // $city_exists = isset($record['city']) ? $record['city'] : 'Not Set';
-                // $state_exists = isset($record['state']) ? $record['state'] : 'Not Set';
-                // $latitude_exists = isset($record['latitude']) ? $record['latitude'] : 'Not Set';
-                // $longitude_exists = isset($record['longitude']) ? $record['longitude'] : 'Not Set';
-                // Log::info("City: $city_exists, State: $state_exists, Latitude: $latitude_exists, Longitude: $longitude_exists");
-
-
-                if (isset($record['city']) && isset($record['state']) && isset($record['latitude']) && isset($record['longitude'])) {
-
-                    if (stripos($record['city'], $city) !== false && strtolower($state) === strtolower($record['state'])) {
-                        // Found a matching city and state in the CSV
-                        $latitude = $record['latitude'];
-                        $longitude = $record['longitude'];
-
-                        // Insert the new record into the Weather
-                        Weather::create([
-                            'city' => $city,
-                            'state' => $state,
-                            'latitude' => $latitude,
-                            'longitude' => $longitude,
-                        ]);
-                        // Log::info('MATCH FOUND ' . "\n");
-                        break; // Exit the loop once a match is found
-                    } else {
-                        // Log::info('No Match found' . "\n");
-                    }
-                } else {
-                    //Log::info('Incomplete or missing data in CSV row' . "\n");
-                }
-            }
-        }
-
         if ($is_insert_success) {
             // Redirect to the thank-you route if the insert was successful
             return redirect()->route('thank-you');
@@ -253,7 +196,7 @@ class DeviceRegisterController extends Controller
             'city' => 'required',
             'state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
-            'hardware_id' => 'required',
+            'hardware_id' => 'required|integer|in:1',
             'alias' => 'required|string|max:255',
             'serial_no' => 'required',
             'sku' => 'required',
@@ -286,7 +229,6 @@ class DeviceRegisterController extends Controller
             'latitude' => $validatedData['latitude'],
             'longitude' => $validatedData['longitude'],
             'status_notification' => $request->input('status_notification'),
-            'sms_notification' => $request->input('sms_notification'),
         ]);
 
         // Respond with a success message, no need to return the device data

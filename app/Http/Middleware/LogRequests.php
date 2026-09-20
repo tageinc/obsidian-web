@@ -32,7 +32,6 @@ class LogRequests
             'device.api-update-zipcode',
             'device.api-update-statecity',
             'device.api-update-status-notification',
-            'device.api-update-sms-notification',
             'device.delete',
         ];
 

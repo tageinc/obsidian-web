@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\DeviceSoftwareController;
 use App\Http\Controllers\DeviceManagerController;
 use App\Http\Controllers\DeviceInfoController;
 use App\Http\Controllers\EditDeviceController;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DeviceRegisterController;
 
@@ -24,7 +23,7 @@ use App\Http\Controllers\DeviceRegisterController;
 */
 
 // Set a route for the device log controller
-Route::post('/log', [DeviceLogController::class, 'logData'])->name('device.log-data');
+Route::post('/log', [DeviceLogController::class, 'logData'])->middleware('throttle:device-telemetry')->name('device.log-data');
 
 Route::get('/firmware-file/version/{version?}', [DeviceSoftwareController::class, 'serveFirmwareByVersion'])->name('device.firmware-by-version');
 Route::get('/config-file/version/{version?}', [DeviceSoftwareController::class, 'serveConfigByVersion'])->name('device.config-by-version');
@@ -46,8 +45,6 @@ Route::post('/device-register', [DeviceRegisterController::class, 'apiRegisterDe
 // Routes that require Sanctum authentication and logging
 Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
     
-    // Checkout Route
-    Route::get('/checkoutapi', [CheckoutController::class, 'showCheckoutForm'])->name('api.checkout');
 
     // Profile Routes
     Route::put('/update-name', [ProfileController::class, 'updateNameApi'])->name('profile.update-name');
@@ -64,7 +61,6 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
 
 
     
-    Route::post('/subscribe', [CheckoutController::class, 'subscribe'])->name('api.subscribe');
 
     // Device routes with a prefix
     Route::prefix('device')->group(function () {
@@ -74,7 +70,6 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
         Route::put('{id}/zipcode', [EditDeviceController::class, 'apiUpdateZipCode'])->name('device.api-update-zipcode');
         Route::put('{id}/statecity', [EditDeviceController::class, 'apiUpdateStateCity'])->name('device.api-update-statecity');
         Route::put('{id}/statusnotification', [EditDeviceController::class, 'apiUpdateStatusNotification'])->name('device.api-update-status-notification');
-        Route::put('{id}/smsnotification', [EditDeviceController::class, 'apiUpdateSMSNotification'])->name('device.api-update-sms-notification');
         Route::delete('{id}', [DeviceManagerController::class, 'deleteAPI'])->name('device.delete-api');
     });
 });

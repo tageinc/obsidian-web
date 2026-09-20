@@ -1,0 +1,41 @@
+{
+  "source_bytes": 4364266612,
+  "timestamps": "as logged; timezone not verified",
+  "counting": "timestamped log entries only; stack-trace repetitions excluded; counts are events not unique requests",
+  "findings": {
+    "missing configuration file": {
+      "count": 220539,
+      "first": "2026-06-17 21:50:26",
+      "first_line": 42,
+      "last": "2026-09-20 19:51:34",
+      "last_line": 9237241
+    },
+    "INSERT denied: solar_tracker_logs": {
+      "count": 129470,
+      "first": "2026-09-18 08:34:35",
+      "first_line": 8599294,
+      "last": "2026-09-20 19:51:35",
+      "last_line": 9237244
+    },
+    "UPDATE denied: geocode": {
+      "count": 3557,
+      "first": "2026-09-18 08:35:03",
+      "first_line": 8599357,
+      "last": "2026-09-20 19:51:03",
+      "last_line": 9237125
+    },
+    "INSERT denied: other/unresolved": {
+      "count": 13,
+      "first": "2026-09-18 18:22:19",
+      "first_line": 8706354,
+      "last": "2026-09-19 20:30:51",
+      "last_line": 8986110
+    }
+  },
+  "permission_errors_by_day": {
+    "2026-09-18": 33886,
+    "2026-09-19": 54197,
+    "2026-09-20": 44957
+  },
+  "distinct_serials_in_permission_errors": 7
+}

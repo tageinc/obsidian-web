@@ -24,7 +24,6 @@ protected function tokensMatch($request)
      */
     protected $except = [
 
-    'purchase-checkout-api',
     'update-name',
     'api/login',
     'api/logout',

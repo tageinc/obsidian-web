@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Api\SolarTrackerLog;
-use App\Models\Api\EnergyMonitorLog;
 use App\Models\DeviceRegister;
 use App\Models\Hardware;
 use Illuminate\Support\Facades\Log;
@@ -21,18 +20,28 @@ class DeviceLogController extends Controller
 
     public function logData(Request $request)
     {			
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'serial_no' => 'required|string|max:255',
+            'data' => 'required|string|max:16384',
+        ]);
+        if ($validator->fails()) {
+            return $this->invalidPayload();
+        }
         $data = $request->data;
 		$json = json_decode($data, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($json) || substr(ltrim($data), 0, 1) !== '{') {
+            return $this->invalidPayload();
+        }
         $serial_no = (string) $request->serial_no;
 		$device_register = DeviceRegister::where('serial_no', '=', $serial_no)->get()->first();
 		if($device_register){
 			$hardware_id = (int)$device_register->hardware_id;
-			switch($hardware_id){
+			if ($hardware_id === 1 && !$this->validTelemetry($json, $hardware_id)) {
+                return $this->invalidPayload();
+            }
+            switch($hardware_id){
 				case 1: // Smart Panels
 					self::logSolarTrackerData($json, $serial_no);
-					return self::SUCCESS_RESPONSE;
-				case 2: // Energy Monitor
-					self::logEnergyMonitorData($json, $serial_no);
 					return self::SUCCESS_RESPONSE;
 				default:
 					// Do nothing
@@ -42,6 +51,36 @@ class DeviceLogController extends Controller
 		}else{
 			return self::DEVICE_NOT_REGISTERED;
 		}
+    }
+
+    private function invalidPayload()
+    {
+        // Never log payloads, serial numbers, credentials, or complete request URLs.
+        Log::notice('device.telemetry_rejected', ['reason' => 'invalid_payload']);
+        return response()->json(['msg' => 'invalid telemetry'], 422);
+    }
+
+    private function validTelemetry(array $data, int $hardware): bool
+    {
+        $fields = ['ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed', 'temp', 'cts', 'state'];
+        $hasValue = false;
+        foreach ($fields as $field) {
+            if (!isset($data[$field])) {
+                continue;
+            }
+            $value = $data[$field];
+            if ($field === 'state') {
+                if (!is_string($value) || trim($value) === '' || strlen($value) > 255) {
+                    return false;
+                }
+            } elseif (!is_numeric($value) || !is_finite((float) $value)
+                || ($field === 'cts' && filter_var($value, FILTER_VALIDATE_INT) === false)) {
+                return false;
+            }
+            $hasValue = true;
+        }
+        // Partial reports and extension fields remain supported, but empty/unknown-only reports do not.
+        return $hasValue;
     }
 
     // Logs the solar tracker data
@@ -100,47 +139,4 @@ class DeviceLogController extends Controller
         $log->save();
     }
 
-    // Logs the solar bus tap data
-    private function logEnergyMonitorData($json, $serial_no)
-    {
-        if (isset($json['v_batt'])) {
-            $v_batt = (float) $json['v_batt'];
-        } else {
-            $v_batt = null;
-        }
-        if (isset($json['i_batt'])) {
-            $i_batt = (float) $json['i_batt'];
-        } else {
-            $i_batt = null;
-        }
-        if (isset($json['v_sol'])) {
-            $v_sol = (float) $json['v_sol'];
-        } else {
-            $v_sol = null;
-        }
-        if (isset($json['i_sol'])) {
-            $i_sol = (float) $json['i_sol'];
-        } else {
-            $i_sol = null;
-        }
-        if (isset($json['i_inv'])) {
-            $i_inv = (float) $json['i_inv'];
-        } else {
-            $i_inv = null;
-        }
-        if (isset($json['temp'])) {
-            $temp = (float) $json['temp'];
-        } else {
-            $temp = null;
-        }
-        $log = new EnergyMonitorLog;
-        $log->v_batt = $v_batt;
-        $log->i_batt = $i_batt;
-        $log->v_sol = $v_sol;
-        $log->i_sol = $i_sol;
-        $log->i_inv = $i_inv;
-        $log->temp = $temp;
-        $log->serial_no = $serial_no;
-        $log->save();
-    }
 }
