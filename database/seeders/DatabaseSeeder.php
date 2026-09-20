@@ -12,6 +12,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Application seed data is provisioned by environment-specific tooling.
+        $this->call(DevelopmentDataSeeder::class);
     }
 }

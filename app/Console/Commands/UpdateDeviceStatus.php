@@ -6,7 +6,6 @@ use Illuminate\Console\Command;
 use App\Models\DeviceRegister;
 use App\Models\GeoCode;
 use App\Mail\LowVoltageMail;
-use App\Mail\ExtremeWeatherMail;
 use App\Mail\TheftVandalismMail;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
@@ -111,10 +110,6 @@ class UpdateDeviceStatus extends Command
             case 'low voltage':
                 $address1 = $deviceInfo ? $deviceInfo->address_1 : 'No address available';
                 Mail::to($recipientEmail)->send(new LowVoltageMail($user->name,$serial_no, $address1, $latitude, $longitude));
-                break;
-            case 'extreme weather':
-                $address1 = $deviceInfo ? $deviceInfo->address_1 : 'No address available';
-                Mail::to($recipientEmail)->send(new ExtremeWeatherMail($user->name,$serial_no, $address1, $latitude, $longitude));
                 break;
             case 'theft vandalism':
                 // Pass the address_1 from deviceInfo to the email, assuming it exists in DeviceRegister
