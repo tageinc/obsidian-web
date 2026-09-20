@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\DeviceSoftwareController;
 use App\Http\Controllers\DeviceManagerController;
 use App\Http\Controllers\DeviceInfoController;
 use App\Http\Controllers\EditDeviceController;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DeviceRegisterController;
 
@@ -46,8 +45,6 @@ Route::post('/device-register', [DeviceRegisterController::class, 'apiRegisterDe
 // Routes that require Sanctum authentication and logging
 Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
     
-    // Checkout Route
-    Route::get('/checkoutapi', [CheckoutController::class, 'showCheckoutForm'])->name('api.checkout');
 
     // Profile Routes
     Route::put('/update-name', [ProfileController::class, 'updateNameApi'])->name('profile.update-name');
@@ -64,7 +61,6 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
 
 
     
-    Route::post('/subscribe', [CheckoutController::class, 'subscribe'])->name('api.subscribe');
 
     // Device routes with a prefix
     Route::prefix('device')->group(function () {

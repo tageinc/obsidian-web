@@ -9,7 +9,6 @@ use App\Models\GeoCode;
 use App\Models\Api\SolarTrackerLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\License;
 use App\Models\Hardware;
 use Carbon\Carbon;
 
@@ -174,14 +173,6 @@ $devicesJson = $devices->toJson();
             return redirect()->route('device-manager')->with('error', 'You do not have permission to delete this device');
         }
 
-        // Remove the device from any assigned license
-        /*
-		$license = License::where('device_id', $device->id)->first();
-        if ($license) {
-            $license->device_id = 0;
-            $license->save();
-        }*/
-
         // Delete the device from the device register
         $device->delete();
 
@@ -249,14 +240,6 @@ $devicesJson = $devices->toJson();
         if (Auth::id() !== $device->user_id) {
             return response()->json(['error' => 'You do not have permission to delete this device'], 403);
         }
-
-        // Remove the device from any assigned license
-        /*
-        $license = License::where('device_id', $device->id)->first();
-        if ($license) {
-            $license->device_id = 0;
-            $license->save();
-        }*/
 
         // Delete the device from the device register
         $device->delete();

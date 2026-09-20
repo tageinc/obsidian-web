@@ -16,9 +16,4 @@ class Hardware extends Model
     {
         return $this->hasMany(DeviceRegister::class, 'hardware_id');
     }
-	
-	public function product(){
-		return $this->hasOne(Product::class, 'hardware_id');
-	}
-
 }
