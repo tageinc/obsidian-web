@@ -3,13 +3,12 @@
 namespace App\Services;
 
 use App\Models\Api\SolarTrackerLog;
-use App\Models\Api\EnergyMonitorLog;
 
 class DeviceCommunicationStatus
 {
     public function latest($device)
     {
-        $model = [1 => SolarTrackerLog::class, 2 => EnergyMonitorLog::class][(int) $device->hardware_id] ?? null;
+        $model = (int) $device->hardware_id === 1 ? SolarTrackerLog::class : null;
         return $model ? $model::where('serial_no', $device->serial_no)->latest('created_at')->first() : null;
     }
 
@@ -22,7 +21,7 @@ class DeviceCommunicationStatus
 
     public function classify($device, $geocode, $log): string
     {
-        if (!in_array((int) $device->hardware_id, [1, 2], true)) {
+        if ((int) $device->hardware_id !== 1) {
             return 'unknown';
         }
         if (!$this->isFresh($log)) {

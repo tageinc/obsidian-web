@@ -34,7 +34,7 @@ class DeviceManagerController extends Controller
         }
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
-        $devices = DeviceRegister::where('user_id', $user_id)
+        $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
         //->with('hardware', 'license') // Load the license relationship
         ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
         ->paginate($pagination_size);
@@ -89,7 +89,7 @@ class DeviceManagerController extends Controller
     public function allDevices(Request $request)
 {
     $user_id = Auth::id();
-    $devices = DeviceRegister::where('user_id', $user_id)
+    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
              ->with('hardware')  // This fetches hardware details
              ->get(['id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
@@ -130,7 +130,7 @@ $devicesJson = $devices->toJson();
     $user_id = Auth::id();
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
-    $devices = DeviceRegister::where('user_id', $user_id)
+    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
              ->with('hardware')  // Fetch hardware details
              ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
              ->paginate($pagination_size);
@@ -203,12 +203,11 @@ $devicesJson = $devices->toJson();
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
     
-            $devices = DeviceRegister::where('user_id', $user_id)
+            $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
                 ->with('hardware')
                 ->get([
                     'id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 
-                    'address_1', 'address_2', 'updated_at', 'status_notification', 
-                    'sms_notification', 'zip_code'
+                    'address_1', 'address_2', 'updated_at', 'status_notification', 'zip_code'
                 ]);
     
             foreach ($devices as $device) {

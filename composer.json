@@ -17,8 +17,7 @@
         "league/csv": "^9.8",
         "livewire/livewire": "^2.10",
         "phpoffice/phpspreadsheet": "^2.2",
-        "symfony/polyfill-php73": "^1.28",
-        "twilio/sdk": "^6.37"
+        "symfony/polyfill-php73": "^1.28"
     },
     "require-dev": {
         "facade/ignition": "^2.17",

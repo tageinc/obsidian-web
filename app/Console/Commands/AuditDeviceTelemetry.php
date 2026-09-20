@@ -6,7 +6,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Api\SolarTrackerLog;
-use App\Models\Api\EnergyMonitorLog;
 
 class AuditDeviceTelemetry extends Command
 {
@@ -16,7 +15,7 @@ class AuditDeviceTelemetry extends Command
     public function handle()
     {
         $failed = false;
-        foreach ([new SolarTrackerLog, new EnergyMonitorLog] as $model) {
+        foreach ([new SolarTrackerLog] as $model) {
             $table = $model->getTable();
             try {
                 if (!Schema::hasTable($table)) {

@@ -74,7 +74,6 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
         Route::put('{id}/zipcode', [EditDeviceController::class, 'apiUpdateZipCode'])->name('device.api-update-zipcode');
         Route::put('{id}/statecity', [EditDeviceController::class, 'apiUpdateStateCity'])->name('device.api-update-statecity');
         Route::put('{id}/statusnotification', [EditDeviceController::class, 'apiUpdateStatusNotification'])->name('device.api-update-status-notification');
-        Route::put('{id}/smsnotification', [EditDeviceController::class, 'apiUpdateSMSNotification'])->name('device.api-update-sms-notification');
         Route::delete('{id}', [DeviceManagerController::class, 'deleteAPI'])->name('device.delete-api');
     });
 });

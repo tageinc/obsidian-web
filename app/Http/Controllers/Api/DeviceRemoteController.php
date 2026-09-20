@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\SolarTrackerRemoteControl;
+use App\Models\DeviceRegister;
 
 class DeviceRemoteController extends Controller{
 	
@@ -20,6 +21,10 @@ class DeviceRemoteController extends Controller{
 	 */
 	public function getRemoteControlInfo($serial_no = null){
 		if($serial_no){
+			$device = DeviceRegister::where('serial_no', $serial_no)->first();
+			if (!$device || (int) $device->hardware_id !== 1) {
+				return response()->json(['error' => 'Unsupported hardware type'], 410);
+			}
 			//Log::info('Remote control info requested. serial_no: ' . $serial_no);
 			$remote_control = SolarTrackerRemoteControl::where('serial_no', $serial_no)->select('mode', 'motor_speed')->first();
 			$json = json_encode($remote_control);
@@ -31,11 +36,16 @@ class DeviceRemoteController extends Controller{
 	}
 	
 	public function remoteControl(Request $request){		
-		$validatedData = $request->validate([
+        $validatedData = $request->validate([
             'mode' => 'required|boolean',
             'motor_speed' => 'required|numeric|min:-100|max:100',
             'serial_no' => 'required|string|max:255',
         ]);
+
+        $device = DeviceRegister::where('serial_no', $validatedData['serial_no'])->first();
+        if (!$device || (int) $device->hardware_id !== 1) {
+            return response()->json(['error' => 'Unsupported hardware type'], 410);
+        }
     
         // Use updateOrCreate to insert a new row if the serial number does not exist, or update the existing row
         $panel = SolarTrackerRemoteControl::updateOrCreate(

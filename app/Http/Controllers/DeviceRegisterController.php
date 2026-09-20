@@ -20,7 +20,7 @@ class DeviceRegisterController extends Controller
 {
     public function index()
     {
-        return view('device-register', ['hardwares' => Hardware::select('id', 'name')->get()]);
+        return view('device-register', ['hardwares' => Hardware::where('id', 1)->select('id', 'name')->get()]);
 
     }
 
@@ -35,7 +35,7 @@ class DeviceRegisterController extends Controller
                 'city' => 'required',
                 'state' => 'required',
                 'zip_code' => 'required|regex:/[0-9]+/',
-                'hardware_id' => 'required', // Make sure this validation rule is correct
+                'hardware_id' => 'required|integer|in:1',
                 'alias' => 'required|string|max:255',
 				'serial_no' => 'required',
 				'sku' => 'required',
@@ -65,7 +65,7 @@ class DeviceRegisterController extends Controller
             'city' => 'required',
             'state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
-            'hardware_id' => 'required',
+            'hardware_id' => 'required|integer|in:1',
 			'alias' => 'required|string|max:255',
             'sku' => 'required',
             'serial_no' => 'required',
@@ -99,7 +99,6 @@ class DeviceRegisterController extends Controller
         $order_no = $request->input('order_no');
         $latitude = $request->input('latitude');
         $longitude = $request->input('longitude');
-        $sms_notification = $request->input('sms_notification');
         $status_notification = $request->input('status_notification');
 
         $alias = $request->input('alias');
@@ -154,7 +153,6 @@ class DeviceRegisterController extends Controller
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'status_notification' => $status_notification,
-                'sms_notification' => $sms_notification,
                 
             ]);
 
@@ -253,7 +251,7 @@ class DeviceRegisterController extends Controller
             'city' => 'required',
             'state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
-            'hardware_id' => 'required',
+            'hardware_id' => 'required|integer|in:1',
             'alias' => 'required|string|max:255',
             'serial_no' => 'required',
             'sku' => 'required',
@@ -286,7 +284,6 @@ class DeviceRegisterController extends Controller
             'latitude' => $validatedData['latitude'],
             'longitude' => $validatedData['longitude'],
             'status_notification' => $request->input('status_notification'),
-            'sms_notification' => $request->input('sms_notification'),
         ]);
 
         // Respond with a success message, no need to return the device data

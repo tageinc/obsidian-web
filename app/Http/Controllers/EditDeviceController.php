@@ -112,17 +112,6 @@ class EditDeviceController extends Controller
         return back()->with('success', 'Notification preference updated successfully.');
     }
 
-
-        public function updateSMSNotification(Request $request, $id)
-    {
-        $device = DeviceRegister::findOrFail($id);
-        $device->sms_notification = $request->sms_notification == '1';
-        $device->save();
-
-        return back()->with('success', 'SMS notification preference updated successfully.');
-    }
-
-
     //------------------------------------------
     public function apiUpdateAddress1(Request $request, $id)
     {
@@ -193,16 +182,5 @@ class EditDeviceController extends Controller
 
         return response()->json(['message' => 'Notification preference updated successfully.'], 200);
     }
-
-    public function apiUpdateSMSNotification(Request $request, $id)
-    {
-        $device = DeviceRegister::findOrFail($id);
-        $device->sms_notification = $request->sms_notification == '1';
-        $device->save();
-
-        return response()->json(['message' => 'SMS notification preference updated successfully.'], 200);
-    }
-
-
 
 }

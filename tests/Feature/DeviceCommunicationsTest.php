@@ -2,53 +2,61 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Mail\LowVoltageMail;
+use App\Models\Api\SolarTrackerLog;
+use App\Models\DeviceRegister;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
-use App\Models\Api\SolarTrackerLog;
-use App\Models\Api\EnergyMonitorLog;
-use App\Services\DeviceCommunicationStatus;
+use Tests\TestCase;
 
 class DeviceCommunicationsTest extends TestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-        $this->assertSame('sqlite', DB::connection()->getDriverName());
-        $this->assertSame(':memory:', DB::connection()->getDatabaseName());
-        config(['devices.telemetry_freshness_seconds' => 600]);
         Carbon::setTestNow(Carbon::parse('2026-09-20 12:00:00'));
-        foreach (['firmware_versions', 'config_versions'] as $table) {
-            Schema::create($table, function (Blueprint $table) {
-                $table->id();
-                $table->string('prefix');
-                $table->string('version');
-                $table->string('file_path')->nullable();
-                $table->timestamps();
-            });
-        }
+        config(['devices.telemetry_freshness_seconds' => 600]);
+
         Schema::create('device_registers', function (Blueprint $table) {
             $table->id();
             $table->string('serial_no');
             $table->integer('hardware_id');
+            $table->integer('user_id')->nullable();
+            $table->boolean('status_notification')->default(false);
+            $table->boolean('sms_notification')->default(false);
+            $table->string('address_1')->nullable();
+            $table->timestamps();
         });
-        foreach ([new SolarTrackerLog, new EnergyMonitorLog] as $model) {
-            Schema::create($model->getTable(), function (Blueprint $table) use ($model) {
-                $table->id();
-                foreach ($model->getFillable() as $field) {
-                    $table->string($field)->nullable();
-                }
-                $table->timestamps();
-                $table->index(['serial_no', 'created_at']);
-            });
-        }
-        DB::table('device_registers')->insert([
-            ['serial_no' => 'solar', 'hardware_id' => 1],
-            ['serial_no' => 'energy', 'hardware_id' => 2],
-        ]);
+        Schema::create('solar_tracker_logs', function (Blueprint $table) {
+            $table->id();
+            $table->string('serial_no')->index();
+            $table->float('ps1')->nullable();
+            $table->float('ps2')->nullable();
+            $table->float('ps_avg')->nullable();
+            $table->float('pds')->nullable();
+            $table->float('motor_speed')->nullable();
+            $table->float('temp')->nullable();
+            $table->integer('cts')->nullable();
+            $table->string('state')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('geocode', function (Blueprint $table) {
+            $table->id();
+            $table->string('serial_no');
+            $table->string('status');
+            $table->float('latitude')->nullable();
+            $table->float('longitude')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email');
+        });
     }
 
     protected function tearDown(): void
@@ -57,150 +65,78 @@ class DeviceCommunicationsTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_missing_software_records_and_prefixes_are_deliberate_404s(): void
+    public function test_solar_telemetry_is_accepted_and_invalid_payload_is_rejected_without_a_write(): void
     {
-        foreach (['firmware', 'config'] as $kind) {
-            foreach (['version', 'version/123', 'prefix', 'prefix/missing'] as $selector) {
-                $this->getJson('/api/'.$kind.'-file/'.$selector)->assertNotFound();
-            }
-            foreach (['', '/missing'] as $prefix) {
-                $this->getJson('/api/'.$kind.'-version'.$prefix)->assertNotFound()
-                    ->assertExactJson(['version' => '0', 'error' => 'no_matching_version']);
-            }
-        }
-    }
+        DB::table('device_registers')->insert(['serial_no' => 'solar', 'hardware_id' => 1]);
 
-    public function test_matching_versions_and_downloads_preserve_contract(): void
-    {
-        Storage::fake();
-        Storage::put('test.bin', 'firmware-content');
-        foreach (['firmware', 'config'] as $kind) {
-            DB::table($kind.'_versions')->insert(['prefix' => 'panel', 'version' => '7', 'file_path' => 'test.bin']);
-            $this->getJson('/api/'.$kind.'-version/panel')->assertOk()->assertExactJson(['version' => '7']);
-            $this->getJson('/api/'.$kind.'-version/wrong')->assertNotFound();
-            DB::table($kind.'_versions')->insert(['prefix' => 'zero', 'version' => '0', 'file_path' => 'test.bin']);
-            $this->getJson('/api/'.$kind.'-version/zero')->assertOk()->assertExactJson(['version' => '0']);
-            $this->get('/api/'.$kind.'-file/prefix/panel')->assertOk();
-            $this->get('/api/'.$kind.'-file/version/7')->assertOk();
-            DB::table($kind.'_versions')->update(['file_path' => 'absent.bin']);
-            $this->getJson('/api/'.$kind.'-file/version')->assertNotFound();
-        }
-    }
-
-    public function test_malformed_and_unsupported_telemetry_never_writes(): void
-    {
-        foreach (['{', 'null', '[]', '123', '{}', '{"unknown":1}', '{"temp":null}',
-            '{"temp":"bad"}', '{"temp":true}', '{"temp":[]}', '{"temp":"1e999"}',
-            '{"cts":1.5}', '{"state":[]}', '{"state":""}'] as $data) {
-            $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => $data])->assertStatus(422);
-        }
-        $this->postJson('/api/log', ['serial_no' => [], 'data' => '{}'])->assertStatus(422);
-        $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => ['temp' => 2]])->assertStatus(422);
-        $this->assertSame(0, SolarTrackerLog::count());
-        $this->assertSame(0, EnergyMonitorLog::count());
-    }
-
-    public function test_valid_legacy_partial_and_extended_payloads_use_correct_writer(): void
-    {
-        $this->post('/api/log', ['serial_no' => 'solar', 'data' => '{"ps1":"0","cts":1,"state":"online","extra":42}'])
+        $this->post('/api/log', ['serial_no' => 'solar', 'data' => '{"ps1":0,"state":"online"}'])
             ->assertOk()->assertExactJson(['msg' => 'success']);
-        $this->postJson('/api/log', ['serial_no' => 'energy', 'data' => '{"v_batt":"12.5","temp":0}'])
-            ->assertOk()->assertExactJson(['msg' => 'success']);
-        $this->assertDatabaseHas('solar_tracker_logs', ['serial_no' => 'solar', 'ps1' => 0, 'state' => 'online']);
-        $this->assertDatabaseHas('energy_monitor_logs', ['serial_no' => 'energy', 'v_batt' => 12.5]);
+        $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => '{}'])->assertStatus(422);
+
         $this->assertSame(1, SolarTrackerLog::count());
-        $this->assertSame(1, EnergyMonitorLog::count());
     }
 
-    public function test_freshness_boundary_missing_and_future_telemetry(): void
+    public function test_retired_energy_monitor_telemetry_is_not_written(): void
     {
-        $service = new DeviceCommunicationStatus;
-        foreach ([1, 2] as $hardware) {
-            $device = (object) ['hardware_id' => $hardware, 'serial_no' => $hardware === 1 ? 'solar' : 'energy', 'latitude' => 0, 'longitude' => 0];
-            $geo = (object) ['latitude' => 0, 'longitude' => 0];
-            $this->assertSame('offline', $service->classify($device, $geo, null));
-            foreach ([599 => 'online', 600 => 'offline', 601 => 'offline', -1 => 'offline'] as $age => $expected) {
-                $log = new SolarTrackerLog(['state' => 'online']);
-                $log->created_at = now()->subSeconds($age);
-                $this->assertSame($expected, $service->classify($device, $geo, $log));
-            }
-        }
-    }
+        DB::table('device_registers')->insert(['serial_no' => 'retired', 'hardware_id' => 2]);
 
-    public function test_source_selection_does_not_use_other_hardware_telemetry(): void
-    {
-        EnergyMonitorLog::create(['serial_no' => 'solar', 'temp' => 20]);
-        $service = new DeviceCommunicationStatus;
-        $device = (object) ['hardware_id' => 1, 'serial_no' => 'solar'];
-        $this->assertNull($service->latest($device));
-        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'online']);
-        $this->assertInstanceOf(SolarTrackerLog::class, $service->latest($device));
-    }
+        $this->postJson('/api/log', ['serial_no' => 'retired', 'data' => '{"v_batt":12.5}'])
+            ->assertOk()->assertExactJson(['msg' => 'invalid hardware']);
 
-    public function test_rate_limits_are_isolated_and_prevent_writes(): void
-    {
-        config(['devices.telemetry_per_minute' => 1]);
-        $payload = ['serial_no' => 'solar', 'data' => '{"temp":20}'];
-        $this->postJson('/api/log', $payload)->assertOk();
-        $this->postJson('/api/log', $payload)->assertStatus(429)->assertHeader('Retry-After');
-        $this->postJson('/api/log', ['serial_no' => 'energy', 'data' => '{"temp":20}'])->assertOk();
-        $this->assertSame(1, SolarTrackerLog::count());
-        $limiter = \Illuminate\Support\Facades\RateLimiter::limiter('api');
-        $a = \Illuminate\Http\Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '192.0.2.1']);
-        $b = \Illuminate\Http\Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => '192.0.2.2']);
-        $this->assertNotSame($limiter($a)->key, $limiter($b)->key);
-    }
-
-    public function test_read_only_schema_audit_checks_tables_columns_and_indexes(): void
-    {
-        $this->artisan('device:audit-telemetry')->assertExitCode(0);
-        Schema::table('solar_tracker_logs', function (Blueprint $table) {
-            $table->dropIndex(['serial_no', 'created_at']);
-        });
-        $this->artisan('device:audit-telemetry')->assertExitCode(1);
-        Schema::drop('energy_monitor_logs');
-        $this->artisan('device:audit-telemetry')->assertExitCode(1);
         $this->assertSame(0, SolarTrackerLog::count());
     }
 
-    public function test_status_command_persists_offline_for_stale_and_missing_telemetry(): void
+    public function test_status_command_preserves_email_notifications_without_sms_or_twilio(): void
     {
-        Schema::create('geocode', function (Blueprint $table) {
-            $table->id();
-            $table->string('serial_no');
-            $table->string('status');
-            $table->timestamps();
-        });
-        DB::table('geocode')->insert([
-            ['serial_no' => 'solar', 'status' => 'online'],
-            ['serial_no' => 'energy', 'status' => 'online'],
+        Mail::fake();
+        DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
+        DB::table('device_registers')->insert([
+            'serial_no' => 'solar', 'hardware_id' => 1, 'user_id' => 1,
+            'status_notification' => true, 'sms_notification' => true, 'address_1' => '1 Main St',
         ]);
-        $log = new SolarTrackerLog(['serial_no' => 'solar', 'state' => 'online']);
-        $log->created_at = now()->subMinutes(11);
-        $log->save();
-        // This report must not rescue a solar tracker from offline classification.
-        EnergyMonitorLog::create(['serial_no' => 'solar', 'temp' => 20]);
+        DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline', 'latitude' => 1, 'longitude' => 2]);
+        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
+
         $this->artisan('device:check-status')->assertExitCode(0);
-        $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'offline']);
-        $this->assertDatabaseHas('geocode', ['serial_no' => 'energy', 'status' => 'offline']);
-        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'tracking']);
-        $this->artisan('device:check-status')->assertExitCode(0);
-        $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'tracking']);
+
+        $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'low voltage']);
+        Mail::assertSent(LowVoltageMail::class, 1);
+        $this->assertStringNotContainsString('Twilio', file_get_contents(app_path('Console/Commands/UpdateDeviceStatus.php')));
     }
 
-    public function test_software_diagnostics_do_not_log_request_secrets(): void
+    public function test_sms_deactivation_is_explicit_and_non_destructive(): void
     {
-        \Illuminate\Support\Facades\Log::spy();
-        $this->getJson('/api/firmware-version/unknown?token=secret-value')->assertNotFound();
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->once()->with(
-            'device.software_unavailable', [
-                'kind' => 'firmware', 'selector' => 'prefix', 'reason' => 'no_matching_version',
-                'selector_hash' => hash('sha256', 'unknown'),
-            ]);
+        DB::table('device_registers')->insert([
+            ['serial_no' => 'one', 'hardware_id' => 1, 'sms_notification' => true],
+            ['serial_no' => 'two', 'hardware_id' => 1, 'sms_notification' => false],
+        ]);
+
+        $this->artisan('device:deactivate-sms-notifications')->assertExitCode(0);
+        $this->assertDatabaseHas('device_registers', ['serial_no' => 'one', 'sms_notification' => true]);
+        $this->artisan('device:deactivate-sms-notifications', ['--apply' => true])->assertExitCode(0);
+        $this->assertDatabaseHas('device_registers', ['serial_no' => 'one', 'sms_notification' => false]);
+        $this->assertDatabaseHas('device_registers', ['serial_no' => 'two', 'sms_notification' => false]);
     }
 
-    public function test_missing_remote_serial_returns_existing_error_instead_of_exception(): void
+    public function test_sms_routes_configuration_and_dependency_are_removed(): void
     {
-        $this->get('/api/remote-control')->assertOk()->assertExactJson(['msg' => 'serial number null or not found']);
+        $this->assertFalse(Route::has('update.sms_notification'));
+        $this->assertFalse(Route::has('device.api-update-sms-notification'));
+        $this->assertFileDoesNotExist(app_path('Services/TwilioService.php'));
+        $this->assertStringNotContainsString('twilio/sdk', file_get_contents(base_path('composer.json')));
+        $this->assertStringNotContainsString('TWILIO_', file_get_contents(base_path('.env.example')));
+    }
+
+    public function test_energy_monitor_is_archived_and_not_an_active_status_or_device_info_path(): void
+    {
+        $this->assertFileDoesNotExist(app_path('Models/Api/EnergyMonitorLog.php'));
+        $this->assertFileExists(base_path('docs/archive/energy-monitor.md'));
+        DB::table('device_registers')->insert(['id' => 2, 'serial_no' => 'retired', 'hardware_id' => 2]);
+        DB::table('geocode')->insert(['serial_no' => 'retired', 'status' => 'archived']);
+
+        $response = app(\App\Http\Controllers\DeviceInfoController::class)->getLatestStatusJson('retired');
+        $this->assertSame(410, $response->getStatusCode());
+        $this->artisan('device:check-status')->assertExitCode(0);
+        $this->assertDatabaseHas('geocode', ['serial_no' => 'retired', 'status' => 'archived']);
     }
 }

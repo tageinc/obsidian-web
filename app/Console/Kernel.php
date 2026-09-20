@@ -27,7 +27,6 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('sync:weather-data')->everyMinute();
 		$schedule->command('device:check-status')->hourly();
-		$schedule->command('device:generate-info')->everyMinute();
     }
 
     /**

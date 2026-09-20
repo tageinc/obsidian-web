@@ -16,7 +16,6 @@ and place it only in the approved runtime secret store/deployment path.
 | `DB_USERNAME`, `DB_PASSWORD`, `DATABASE_URL` when configured | Database account credential | Database owner | Pending approval and database-owner confirmation |
 | `API_LOGIN_ID`, `TRANSACTION_KEY` | Payment gateway credential | Finance/payment owner | Pending approval |
 | `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAILGUN_SECRET`, `POSTMARK_TOKEN`, AWS mail variables when configured | Email provider credential | Messaging/email owner | Pending approval |
-| `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM` | Messaging credential/sender identity | Messaging owner | Pending approval |
 | `TOMORROWIO_KEY` | Weather API token | Application owner | Pending approval |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` when configured | Infrastructure credential | Cloud/infrastructure owner | Pending approval |
 | Any device, deployment, cache, storage, or provider variables added outside the current `.env` inventory | Service credential | Respective system owner | Inventory required before rotation |

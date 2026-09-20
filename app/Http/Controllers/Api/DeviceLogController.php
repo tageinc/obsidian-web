@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Api\SolarTrackerLog;
-use App\Models\Api\EnergyMonitorLog;
 use App\Models\DeviceRegister;
 use App\Models\Hardware;
 use Illuminate\Support\Facades\Log;
@@ -37,15 +36,12 @@ class DeviceLogController extends Controller
 		$device_register = DeviceRegister::where('serial_no', '=', $serial_no)->get()->first();
 		if($device_register){
 			$hardware_id = (int)$device_register->hardware_id;
-			if (in_array($hardware_id, [1, 2], true) && !$this->validTelemetry($json, $hardware_id)) {
+			if ($hardware_id === 1 && !$this->validTelemetry($json, $hardware_id)) {
                 return $this->invalidPayload();
             }
             switch($hardware_id){
 				case 1: // Smart Panels
 					self::logSolarTrackerData($json, $serial_no);
-					return self::SUCCESS_RESPONSE;
-				case 2: // Energy Monitor
-					self::logEnergyMonitorData($json, $serial_no);
 					return self::SUCCESS_RESPONSE;
 				default:
 					// Do nothing
@@ -66,9 +62,7 @@ class DeviceLogController extends Controller
 
     private function validTelemetry(array $data, int $hardware): bool
     {
-        $fields = $hardware === 1
-            ? ['ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed', 'temp', 'cts', 'state']
-            : ['v_batt', 'i_batt', 'v_sol', 'i_sol', 'i_inv', 'temp'];
+        $fields = ['ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed', 'temp', 'cts', 'state'];
         $hasValue = false;
         foreach ($fields as $field) {
             if (!isset($data[$field])) {
@@ -145,47 +139,4 @@ class DeviceLogController extends Controller
         $log->save();
     }
 
-    // Logs the solar bus tap data
-    private function logEnergyMonitorData($json, $serial_no)
-    {
-        if (isset($json['v_batt'])) {
-            $v_batt = (float) $json['v_batt'];
-        } else {
-            $v_batt = null;
-        }
-        if (isset($json['i_batt'])) {
-            $i_batt = (float) $json['i_batt'];
-        } else {
-            $i_batt = null;
-        }
-        if (isset($json['v_sol'])) {
-            $v_sol = (float) $json['v_sol'];
-        } else {
-            $v_sol = null;
-        }
-        if (isset($json['i_sol'])) {
-            $i_sol = (float) $json['i_sol'];
-        } else {
-            $i_sol = null;
-        }
-        if (isset($json['i_inv'])) {
-            $i_inv = (float) $json['i_inv'];
-        } else {
-            $i_inv = null;
-        }
-        if (isset($json['temp'])) {
-            $temp = (float) $json['temp'];
-        } else {
-            $temp = null;
-        }
-        $log = new EnergyMonitorLog;
-        $log->v_batt = $v_batt;
-        $log->i_batt = $i_batt;
-        $log->v_sol = $v_sol;
-        $log->i_sol = $i_sol;
-        $log->i_inv = $i_inv;
-        $log->temp = $temp;
-        $log->serial_no = $serial_no;
-        $log->save();
-    }
 }

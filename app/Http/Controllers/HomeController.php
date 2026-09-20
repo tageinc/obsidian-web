@@ -7,7 +7,6 @@ use App\Models\DeviceRegister;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth; // Import Auth
 use Illuminate\Support\Facades\View; // Import View
-use App\Services\TwilioService;
 
 // this is the dashboard controller
 
