@@ -26,7 +26,7 @@ class DeviceRemoteController extends Controller{
 			return $json;
 		}else{
 			//Log::info('Remote control info requested. serial number is null.');
-			return ERROR_RESPONSE;
+			return self::ERROR_RESPONSE;
 		}
 	}
 	

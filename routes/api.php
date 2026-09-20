@@ -24,7 +24,7 @@ use App\Http\Controllers\DeviceRegisterController;
 */
 
 // Set a route for the device log controller
-Route::post('/log', [DeviceLogController::class, 'logData'])->name('device.log-data');
+Route::post('/log', [DeviceLogController::class, 'logData'])->middleware('throttle:device-telemetry')->name('device.log-data');
 
 Route::get('/firmware-file/version/{version?}', [DeviceSoftwareController::class, 'serveFirmwareByVersion'])->name('device.firmware-by-version');
 Route::get('/config-file/version/{version?}', [DeviceSoftwareController::class, 'serveConfigByVersion'])->name('device.config-by-version');

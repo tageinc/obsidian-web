@@ -58,8 +58,14 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        RateLimiter::for('device-telemetry', function (Request $request) {
+            $serial = $request->input('serial_no');
+            $key = is_string($serial) && strlen($serial) <= 255 ? $serial : 'invalid:'.$request->ip();
+            return Limit::perMinute(config('devices.telemetry_per_minute'))->by(hash('sha256', $key));
+        });
+
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(1000);
+            return Limit::perMinute(1000)->by('ip:'.$request->ip());
         });
     }
 }
