@@ -33,9 +33,6 @@ class DeviceCommunicationStatus
         if ($geocode->latitude != $device->latitude || $geocode->longitude != $device->longitude) {
             return 'theft vandalism';
         }
-        if ($log->temp !== null && ($log->temp > 40 || $log->temp < -10)) {
-            return 'extreme weather';
-        }
         if ($log->v_batt !== null && $log->v_batt < 5) {
             return 'low voltage';
         }

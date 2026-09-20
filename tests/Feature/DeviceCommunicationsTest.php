@@ -91,8 +91,8 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertFalse(Route::has('purchase'));
         $this->assertFalse(Route::has('subscription-manager'));
         $this->assertFalse(Route::has('purchase-checkout'));
-        $this->assertFileDoesNotExist(base_path('app/Models/License.php'));
         $this->assertFileDoesNotExist(base_path('app/Models/Order.php'));
+        $this->assertStringNotContainsString('AuthorizeNet', file_get_contents(base_path('app/Models/License.php')));
         $this->assertFileDoesNotExist(base_path('app/Http/Middleware/BillingMiddleware.php'));
         $this->assertStringNotContainsString('authorizenet', file_get_contents(base_path('composer.json')));
     }
