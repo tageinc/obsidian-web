@@ -94,6 +94,25 @@ async function checkAccessibility(page) {
     ).toBe(true);
 }
 
+async function checkModalKeyboardAndViewport(page, dialog) {
+    await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    const bounds = await dialog.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize().height);
+    const controls = dialog.locator(
+        'button:not([disabled]):visible, a[href]:visible, input:not([type="hidden"]):not([disabled]):visible, select:not([disabled]):visible, textarea:not([disabled]):visible',
+    );
+    await controls.last().focus();
+    await page.keyboard.press('Tab');
+    await expect(controls.first()).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(controls.last()).toBeFocused();
+    await checkAccessibility(page);
+}
+
 test('account dropdown supports keyboard, Escape, mobile navigation and native logout', async ({
     page,
     isMobile,
@@ -390,21 +409,7 @@ test('registration modal stays in the dashboard and preserves native validation 
     await page.keyboard.press('Enter');
     await expect(dialog).toBeVisible();
     await expect(page).toHaveURL(/\/dashboard$/);
-    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-    const dialogBounds = await dialog.boundingBox();
-    expect(dialogBounds.x).toBeGreaterThanOrEqual(0);
-    expect(dialogBounds.y).toBeGreaterThanOrEqual(0);
-    expect(dialogBounds.x + dialogBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
-    expect(dialogBounds.y + dialogBounds.height).toBeLessThanOrEqual(page.viewportSize().height);
-    const controls = dialog.locator(
-        'button:not([disabled]):visible, a[href]:visible, input:not([type="hidden"]):not([disabled]):visible, select:not([disabled]):visible, textarea:not([disabled]):visible',
-    );
-    await controls.last().focus();
-    await page.keyboard.press('Tab');
-    await expect(controls.first()).toBeFocused();
-    await page.keyboard.press('Shift+Tab');
-    await expect(controls.last()).toBeFocused();
-    await checkAccessibility(page);
+    await checkModalKeyboardAndViewport(page, dialog);
     await page.keyboard.press('Escape');
     await expect(dialog).not.toBeVisible();
     await expect(create).toBeFocused();
@@ -610,27 +615,76 @@ test('developer authorization and multipart server validation remain in Laravel'
     await expect(page.locator('#developer-firmware-panel')).toBeVisible();
     await expect(page.locator('#firmware-upload')).not.toBeVisible();
     await expect(page.locator('#developer-config-panel')).not.toBeVisible();
+    await expect(page.locator('form[enctype="multipart/form-data"]')).toHaveCount(0);
     await checkAccessibility(page);
+    const firmwareTrigger = page
+        .locator('#developer-firmware-panel')
+        .getByRole('button', { name: 'New upload', exact: true });
+    const firmwareDialog = page.getByRole('dialog', { name: 'Upload firmware', exact: true });
+    await firmwareTrigger.focus();
+    await page.keyboard.press('Enter');
+    await checkModalKeyboardAndViewport(page, firmwareDialog);
+    await expect(firmwareDialog.locator('form')).toHaveAttribute('action', /\/upload-firmware$/);
+    await expect(firmwareDialog.locator('form')).toHaveAttribute('enctype', 'multipart/form-data');
+    await page.keyboard.press('Escape');
+    await expect(firmwareDialog).not.toBeVisible();
+    await expect(firmwareTrigger).toBeFocused();
+    await firmwareTrigger.click();
+    await firmwareDialog
+        .getByRole('button', { name: 'Close firmware upload', exact: true })
+        .click();
+    await expect(firmwareDialog).not.toBeVisible();
+    await expect(firmwareTrigger).toBeFocused();
+    await firmwareTrigger.click();
+    await firmwareDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(firmwareDialog).not.toBeVisible();
+    await expect(firmwareTrigger).toBeFocused();
+    await expect(page.locator('form[enctype="multipart/form-data"]')).toHaveCount(0);
+    const configPageSize = await page.locator('#config-per-page').inputValue();
+    await page.locator('#firmware-per-page').selectOption('20');
+    await expect(page).toHaveURL(/firmware_show=20/);
+    expect(new URL(page.url()).searchParams.get('config_show')).toBe(configPageSize);
+    expect(new URL(page.url()).searchParams.get('section')).toBe('firmware');
+    await expect(page.locator('#firmware-per-page')).toHaveValue('20');
     await page.getByRole('tab', { name: /^Firmware/ }).focus();
     await page.keyboard.press('End');
     await expect(page.getByRole('tab', { name: /^Configuration/ })).toBeFocused();
     await expect(page.locator('#developer-config-panel')).toBeVisible();
     await expect(page.locator('#developer-firmware-panel')).not.toBeVisible();
-    await page
+    const configTrigger = page
         .locator('#developer-config-panel')
-        .getByRole('button', { name: 'New upload' })
+        .getByRole('button', { name: 'New upload', exact: true });
+    const configDialog = page.getByRole('dialog', { name: 'Upload configuration', exact: true });
+    await configTrigger.click();
+    await checkModalKeyboardAndViewport(page, configDialog);
+    await configDialog
+        .getByRole('button', { name: 'Close configuration upload', exact: true })
         .click();
-    await expect(page.locator('#config')).toBeFocused();
-    await page.locator('#config').setInputFiles({
+    await expect(configDialog).not.toBeVisible();
+    await expect(configTrigger).toBeFocused();
+    await configTrigger.click();
+    await configDialog.locator('#config').setInputFiles({
         name: 'invalid.json',
         mimeType: 'text/plain',
         buffer: Buffer.from('not a json document'),
     });
-    await page.locator('#config-description').fill('Synthetic rejected upload');
-    await page.locator('#config-prefix').fill('BROWSER');
-    await page.getByRole('button', { name: 'Upload JSON Config' }).click();
-    await expect(page.locator('#config')).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.locator('#config-description')).toHaveValue('Synthetic rejected upload');
-    await expect(page.locator('#config')).toHaveValue('');
+    await configDialog.locator('#config-description').fill('Synthetic rejected upload');
+    await configDialog.locator('#config-prefix').fill('BROWSER');
+    await configDialog.getByRole('button', { name: 'Upload JSON Config' }).click();
+    await expect(configDialog).toBeVisible();
+    await expect(firmwareDialog).not.toBeVisible();
+    await expect(configDialog.locator('#config')).toHaveAttribute('aria-invalid', 'true');
+    await expect(configDialog.locator('#config-description')).toHaveValue(
+        'Synthetic rejected upload',
+    );
+    await expect(configDialog.locator('#config-prefix')).toHaveValue('BROWSER');
+    await expect(configDialog.locator('#config')).toHaveValue('');
+    await expect(configDialog.getByRole('alert')).toBeFocused();
     await checkAccessibility(page);
+    await configDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(configDialog).not.toBeVisible();
+    await expect(configTrigger).toBeFocused();
+    await expect(page.locator('#developer-config-panel')).toBeVisible();
+    await expect(page.locator('#config-per-page')).toBeEnabled();
+    await expect(page.locator('form[enctype="multipart/form-data"]')).toHaveCount(0);
 });

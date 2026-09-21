@@ -13,6 +13,17 @@ The former admin management screen is now Developer Workspace at
 fallback. Historical admin terminology below and the internal `admin` feature
 flag refer to this same policy; see [the current access model](../access-model.md).
 
+Device registration and Developer Workspace uploads use the shared `FormModal`
+component: a native dialog with a fixed header, scrollable body, keyboard focus
+wrapping, and guarded dismissal while a form submission is pending. Firmware
+and Configuration each open their own modal from New upload above release
+history. Closing restores focus to that button. Native multipart endpoints,
+CSRF, file limits, and developer authorization are unchanged. Validation and
+handled storage failures reopen the matching modal with description/prefix
+retained and focused error feedback; the file must be selected again. Success
+returns to the matching history with the modal closed. The `admin` flag still
+provides the existing Blade rollback path.
+
 ## Grounding in current TAGCSOFT
 
 Reference: sibling repository `tagcsoft-web`, clean HEAD `e67cbaa2`, inspected

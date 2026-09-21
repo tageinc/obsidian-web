@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import FormField from '../../shared/components/FormField.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
+import FormModal from '../../shared/components/FormModal.vue';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -14,6 +15,8 @@ const props = defineProps({
     otherSize: { type: Number, required: true },
     values: { type: Object, default: () => ({}) },
     errors: { type: Object, default: () => ({}) },
+    sessionError: { type: String, default: null },
+    initiallyOpen: { type: Boolean, default: false },
     pending: { type: Boolean, default: false },
     active: { type: Boolean, default: false },
 });
@@ -23,22 +26,19 @@ const description = ref(props.values.description ?? '');
 const prefix = ref(props.values.prefix ?? '');
 const perPage = ref(props.pagination.perPage);
 const showUpload = ref(
-    Object.keys(props.errors).length > 0 ||
-        Boolean(props.values.description || props.values.prefix),
+    props.initiallyOpen || Object.keys(props.errors).length > 0 || Boolean(props.sessionError),
 );
-const fileInput = ref(null);
+const uploadButton = ref(null);
 watch(
-    () => props.errors,
-    (errors) => {
-        if (Object.keys(errors).length) showUpload.value = true;
+    () => [props.initiallyOpen, props.errors, props.sessionError],
+    ([initiallyOpen, errors, sessionError]) => {
+        if (initiallyOpen || Object.keys(errors).length || sessionError) showUpload.value = true;
     },
 );
-async function toggleUpload() {
-    showUpload.value = !showUpload.value;
-    if (showUpload.value) {
-        await nextTick();
-        fileInput.value?.focus();
-    }
+async function closeUpload() {
+    showUpload.value = false;
+    await nextTick();
+    uploadButton.value?.focus({ preventScroll: true });
 }
 watch(
     () => props.pagination.perPage,
@@ -79,112 +79,137 @@ function checkFile(event) {
                 </p>
             </div>
             <button
+                ref="uploadButton"
                 type="button"
                 class="btn btn-outline-primary btn-sm"
-                :aria-expanded="showUpload"
-                :aria-controls="`${kind}-upload-section`"
+                aria-haspopup="dialog"
+                :aria-controls="`${kind}-upload-dialog`"
                 :disabled="pending"
-                @click="toggleUpload"
+                @click="showUpload = true"
             >
-                {{ showUpload ? 'Close upload' : 'New upload' }}
+                New upload
             </button>
         </div>
         <div class="p-4 pt-0">
-            <div :id="`${kind}-upload-section`" v-show="showUpload" class="developer-upload mb-4">
-                <h3 class="h5 mb-3">{{ firmware ? 'Upload firmware' : 'Upload configuration' }}</h3>
-                <FormFeedback :errors="summaryErrors" />
-                <form
-                    :id="`${kind}-upload`"
-                    :action="action"
-                    method="POST"
-                    enctype="multipart/form-data"
-                    :aria-busy="pending && active"
-                    @submit="$emit('submit', $event)"
-                >
-                    <input type="hidden" name="_token" :value="csrfToken" />
-                    <input type="hidden" name="_upload_kind" :value="kind" />
-                    <div class="mb-3">
-                        <label :for="kind" class="form-label">{{
-                            firmware ? 'Firmware File (.bin)' : 'Configuration File (.json)'
-                        }}</label>
-                        <input
-                            :id="kind"
-                            ref="fileInput"
-                            :name="kind"
-                            type="file"
-                            :accept="firmware ? '.bin' : '.json'"
-                            required
-                            class="form-control"
-                            :class="{ 'is-invalid': errors[kind]?.length }"
-                            :aria-invalid="errors[kind]?.length ? 'true' : undefined"
-                            :aria-describedby="`${kind}-help${errors[kind]?.length ? ` ${kind}-errors` : ''}`"
-                            @change="checkFile"
-                        />
-                        <div :id="`${kind}-help`" class="form-text">
-                            Maximum {{ firmware ? '10 MB' : '1 MB' }}. Select the file again after a
-                            validation error.
-                        </div>
-                        <div
-                            v-if="errors[kind]?.length"
-                            :id="`${kind}-errors`"
-                            class="invalid-feedback"
-                        >
-                            <div v-for="message in errors[kind]" :key="message">{{ message }}</div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label :for="`${kind}-description`" class="form-label">{{
-                            firmware ? 'Firmware Description' : 'Config Description'
-                        }}</label>
-                        <textarea
-                            :id="`${kind}-description`"
-                            v-model="description"
-                            name="description"
-                            class="form-control"
-                            :class="{ 'is-invalid': errors.description?.length }"
-                            required
-                            maxlength="255"
-                            rows="3"
-                            :aria-invalid="errors.description?.length ? 'true' : undefined"
-                            :aria-describedby="
-                                errors.description?.length
-                                    ? `${kind}-description-errors`
-                                    : undefined
-                            "
-                        />
-                        <div
-                            v-if="errors.description?.length"
-                            :id="`${kind}-description-errors`"
-                            class="invalid-feedback"
-                        >
-                            <div v-for="message in errors.description" :key="message">
-                                {{ message }}
+            <FormModal
+                v-if="showUpload"
+                :id="`${kind}-upload-dialog`"
+                :title="firmware ? 'Upload firmware' : 'Upload configuration'"
+                :description="
+                    firmware
+                        ? 'Add a binary release for your devices.'
+                        : 'Add a JSON configuration release for your devices.'
+                "
+                :close-label="firmware ? 'Close firmware upload' : 'Close configuration upload'"
+                :pending="pending"
+                @close="closeUpload"
+            >
+                <template #default="{ close }">
+                    <FormFeedback :errors="summaryErrors" :session-error="sessionError" />
+                    <form
+                        :id="`${kind}-upload`"
+                        :action="action"
+                        method="POST"
+                        enctype="multipart/form-data"
+                        :aria-busy="pending && active"
+                        @submit="$emit('submit', $event)"
+                    >
+                        <input type="hidden" name="_token" :value="csrfToken" />
+                        <input type="hidden" name="_upload_kind" :value="kind" />
+                        <div class="mb-3">
+                            <label :for="kind" class="form-label">{{
+                                firmware ? 'Firmware File (.bin)' : 'Configuration File (.json)'
+                            }}</label>
+                            <input
+                                :id="kind"
+                                :name="kind"
+                                type="file"
+                                :accept="firmware ? '.bin' : '.json'"
+                                required
+                                class="form-control"
+                                :class="{ 'is-invalid': errors[kind]?.length }"
+                                :aria-invalid="errors[kind]?.length ? 'true' : undefined"
+                                :aria-describedby="`${kind}-help${errors[kind]?.length ? ` ${kind}-errors` : ''}`"
+                                @change="checkFile"
+                            />
+                            <div :id="`${kind}-help`" class="form-text">
+                                Maximum {{ firmware ? '10 MB' : '1 MB' }}. Select the file again
+                                after a validation error.
+                            </div>
+                            <div
+                                v-if="errors[kind]?.length"
+                                :id="`${kind}-errors`"
+                                class="invalid-feedback"
+                            >
+                                <div v-for="message in errors[kind]" :key="message">
+                                    {{ message }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <FormField
-                        :id="`${kind}-prefix`"
-                        v-model="prefix"
-                        name="prefix"
-                        label="Prefix"
-                        maxlength="255"
-                        required
-                        :errors="errors.prefix"
-                    />
-                    <button type="submit" class="btn btn-primary" :disabled="pending">
-                        {{
-                            pending && active
-                                ? 'Uploading…'
-                                : firmware
-                                  ? 'Upload Firmware'
-                                  : 'Upload JSON Config'
-                        }}
-                    </button>
-                    <span class="visually-hidden" role="status">{{
-                        pending && active ? 'Uploading file. Please wait.' : ''
-                    }}</span>
-                </form>
-            </div>
+                        <div class="mb-3">
+                            <label :for="`${kind}-description`" class="form-label">{{
+                                firmware ? 'Firmware Description' : 'Config Description'
+                            }}</label>
+                            <textarea
+                                :id="`${kind}-description`"
+                                v-model="description"
+                                name="description"
+                                class="form-control"
+                                :class="{ 'is-invalid': errors.description?.length }"
+                                required
+                                maxlength="255"
+                                rows="3"
+                                :aria-invalid="errors.description?.length ? 'true' : undefined"
+                                :aria-describedby="
+                                    errors.description?.length
+                                        ? `${kind}-description-errors`
+                                        : undefined
+                                "
+                            />
+                            <div
+                                v-if="errors.description?.length"
+                                :id="`${kind}-description-errors`"
+                                class="invalid-feedback"
+                            >
+                                <div v-for="message in errors.description" :key="message">
+                                    {{ message }}
+                                </div>
+                            </div>
+                        </div>
+                        <FormField
+                            :id="`${kind}-prefix`"
+                            v-model="prefix"
+                            name="prefix"
+                            label="Prefix"
+                            maxlength="255"
+                            required
+                            :errors="errors.prefix"
+                        />
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                :disabled="pending"
+                                @click="close"
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" :disabled="pending">
+                                {{
+                                    pending && active
+                                        ? 'Uploading…'
+                                        : firmware
+                                          ? 'Upload Firmware'
+                                          : 'Upload JSON Config'
+                                }}
+                            </button>
+                        </div>
+                        <span class="visually-hidden" role="status">{{
+                            pending && active ? 'Uploading file. Please wait.' : ''
+                        }}</span>
+                    </form>
+                </template>
+            </FormModal>
             <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-3">
                 <h3 class="h5 mb-0">Release history</h3>
                 <span class="small text-secondary">{{
@@ -277,13 +302,6 @@ function checkFile(event) {
 </template>
 
 <style scoped>
-.developer-upload {
-    --bs-form-invalid-color: #b02a37;
-    padding: 1.5rem;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius-lg);
-    background: var(--bs-tertiary-bg);
-}
 .developer-history th {
     font-size: 0.875rem;
 }
@@ -294,10 +312,5 @@ function checkFile(event) {
 .developer-description {
     min-width: 10rem;
     overflow-wrap: anywhere;
-}
-@media (max-width: 575.98px) {
-    .developer-upload {
-        padding: 1rem;
-    }
 }
 </style>

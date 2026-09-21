@@ -26,8 +26,11 @@
                 ],
             ];
         };
-        $activeUpload = old('_upload_kind', session('active_upload', $errors->has('config') ? 'config' : request('section', 'firmware')));
+        $uploadErrors = array_intersect_key($errors->messages(), array_flip(['firmware', 'config', 'description', 'prefix']));
+        $failedUpload = session('error') && in_array(session('active_upload'), ['firmware', 'config'], true) ? session('active_upload') : null;
+        $activeUpload = $failedUpload ?? old('_upload_kind', session('active_upload', $errors->has('config') ? 'config' : request('section', 'firmware')));
         $activeUpload = $activeUpload === 'config' ? 'config' : 'firmware';
+        $initiallyOpenUpload = !empty($uploadErrors) || $failedUpload ? $activeUpload : null;
     @endphp
     @include('frontend.mount', ['page' => 'admin', 'props' => [
         'csrfToken' => csrf_token(),
@@ -41,8 +44,9 @@
         'config' => $adminPageData($configVersions, $configPaginationSize, 'config'),
         'activeUpload' => $activeUpload,
         'activeSection' => $activeUpload,
+        'initiallyOpenUpload' => $initiallyOpenUpload,
         'values' => ['description' => old('description'), 'prefix' => old('prefix')],
-        'errors' => $errors->messages(),
+        'errors' => $uploadErrors,
         'success' => session('success'),
         'sessionError' => session('error'),
     ]])

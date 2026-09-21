@@ -168,7 +168,8 @@ class AdminControlCenterController extends Controller
             $message = "Firmware v{$version} uploaded successfully! File located at: " . $fullPath;
             return back()->with('success', $message)->with('active_upload', 'firmware');
         } else {
-            return back()->with('error', 'There was an issue uploading the firmware file.')->with('active_upload', 'firmware');
+            return back()->with('error', 'There was an issue uploading the firmware file.')->with('active_upload', 'firmware')
+                ->withInput($request->only(['_upload_kind', 'description', 'prefix']));
         }
     }
 
@@ -203,7 +204,8 @@ class AdminControlCenterController extends Controller
             Log::info('device.config_uploaded');
             return back()->with('success', "Config file uploaded successfully!")->with('active_upload', 'config');
         } else {
-            return back()->with('error', 'There was an issue uploading the config file.')->with('active_upload', 'config');
+            return back()->with('error', 'There was an issue uploading the config file.')->with('active_upload', 'config')
+                ->withInput($request->only(['_upload_kind', 'description', 'prefix']));
         }
     }
     /**

@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import UploadSection from './UploadSection.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 import { useNativeForm } from '../../shared/composables/useNativeForm.js';
@@ -12,6 +12,7 @@ const props = defineProps({
     values: { type: Object, default: () => ({}) },
     activeUpload: { type: String, default: 'firmware' },
     activeSection: { type: String, default: 'firmware' },
+    initiallyOpenUpload: { type: String, default: null },
     errors: { type: Object, default: () => ({}) },
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
@@ -27,10 +28,12 @@ const sections = [
         format: '.json',
     },
 ];
+const modalFailureKind = computed(
+    () =>
+        props.initiallyOpenUpload || (Object.keys(props.errors).length ? props.activeUpload : null),
+);
 const selected = ref(
-    (Object.keys(props.errors).length ? props.activeUpload : props.activeSection) === 'config'
-        ? 'config'
-        : 'firmware',
+    (modalFailureKind.value || props.activeSection) === 'config' ? 'config' : 'firmware',
 );
 const tabElements = ref({});
 const vertical = ref(false);
@@ -78,7 +81,7 @@ function upload(event, kind) {
                 >Back to dashboard</a
             >
         </header>
-        <FormFeedback :success="success" :session-error="sessionError" />
+        <FormFeedback :success="success" :session-error="modalFailureKind ? null : sessionError" />
         <div class="developer-layout">
             <div
                 class="developer-sections"
@@ -133,6 +136,8 @@ function upload(event, kind) {
                         "
                         :values="activeUpload === section.key ? values : {}"
                         :errors="activeUpload === section.key ? errors : {}"
+                        :session-error="modalFailureKind === section.key ? sessionError : null"
+                        :initially-open="initiallyOpenUpload === section.key"
                         :pending="pending"
                         :active="active === section.key"
                         @submit="upload($event, section.key)"
