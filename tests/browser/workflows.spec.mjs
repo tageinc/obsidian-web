@@ -31,6 +31,35 @@ async function login(page, role = 'owner') {
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 }
 
+async function openAccountNavigation(page, { keyboard = false } = {}) {
+    const navigationToggle = page.getByRole('button', { name: 'Toggle navigation' });
+    if (
+        (await navigationToggle.isVisible()) &&
+        (await navigationToggle.getAttribute('aria-expanded')) !== 'true'
+    ) {
+        if (keyboard) {
+            await navigationToggle.focus();
+            await page.keyboard.press('Enter');
+        } else {
+            await navigationToggle.click();
+        }
+        await expect(navigationToggle).toHaveAttribute('aria-expanded', 'true');
+    }
+    const account = page.locator('button[aria-controls="account-navigation"]');
+    if ((await account.getAttribute('aria-expanded')) !== 'true') {
+        if (keyboard) {
+            await account.focus();
+            await page.keyboard.press('Enter');
+        } else {
+            await account.click();
+        }
+    }
+    await expect(account).toHaveAttribute('aria-expanded', 'true');
+    const dropdown = page.locator('#account-navigation');
+    await expect(dropdown).toBeVisible();
+    return dropdown;
+}
+
 async function checkAccessibility(page) {
     await page.addScriptTag({ path: axePath });
     const violations = await page.evaluate(async () => {
@@ -49,26 +78,54 @@ async function checkAccessibility(page) {
     ).toBe(true);
 }
 
-test('native login redirects and dashboard navigation remain accessible at both viewport sizes', async ({
+test('account dropdown supports keyboard, Escape, mobile navigation and native logout', async ({
     page,
     isMobile,
 }) => {
+    if (!isMobile) await page.setViewportSize({ width: 1240, height: 800 });
     await login(page);
     await expect(
         page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();
     await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
-    await page.getByRole('link', { name: 'Edit profile', exact: true }).click();
+    const account = page.locator('button[aria-controls="account-navigation"]');
+    await expect(account).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#account-navigation')).not.toBeVisible();
+    const dropdown = await openAccountNavigation(page, { keyboard: true });
+    await expect(account).toHaveAccessibleName('Owner browser fixture');
+    await expect(account).toBeFocused();
+    await expect(dropdown.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Profile', exact: true })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Register my device' })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Developer Workspace' })).toHaveCount(0);
+    const dropdownBounds = await dropdown.boundingBox();
+    expect(dropdownBounds).not.toBeNull();
+    expect(dropdownBounds.x).toBeGreaterThanOrEqual(0);
+    expect(dropdownBounds.x + dropdownBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    await checkAccessibility(page);
+    await page.keyboard.press('Tab');
+    await expect(dropdown.getByRole('link', { name: 'Dashboard', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dropdown).not.toBeVisible();
+    await expect(account).toHaveAttribute('aria-expanded', 'false');
+    await expect(account).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Dashboard', exact: true })).toBeFocused();
+    await dropdown.getByRole('link', { name: 'Profile', exact: true }).click();
     await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible();
+    await expect(dropdown).not.toBeVisible();
+    await expect(account).toHaveAttribute('aria-expanded', 'false');
     await checkAccessibility(page);
     if (isMobile) {
-        const toggle = page.getByRole('button', { name: 'Toggle navigation' });
-        await toggle.focus();
-        await page.keyboard.press('Enter');
-        await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.getByRole('button', { name: 'Toggle navigation' })).toHaveAttribute(
+            'aria-expanded',
+            'false',
+        );
     }
-    await page.getByRole('button', { name: 'Logout', exact: true }).click();
+    await openAccountNavigation(page, { keyboard: true });
+    await dropdown.getByRole('button', { name: 'Logout', exact: true }).click();
     await expect(page).toHaveURL(/\/login$/);
 });
 
@@ -210,6 +267,7 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
 test('auth and public documents retain URLs, form labels and keyboard access', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login', exact: true })).toBeVisible();
+    await expect(page.locator('button[aria-controls="account-navigation"]')).not.toBeVisible();
     await checkAccessibility(page);
     await page.goto('/register');
     await expect(page.getByRole('heading', { name: 'Register', exact: true })).toBeVisible();
@@ -234,7 +292,11 @@ test('developer authorization and multipart server validation remain in Laravel'
     expect(forbidden.status()).toBe(403);
     await page.context().clearCookies();
     await login(page, 'admin');
-    await page.goto('/developer-workspace');
+    const dropdown = await openAccountNavigation(page);
+    const developerLink = dropdown.getByRole('link', { name: 'Developer Workspace', exact: true });
+    await expect(developerLink).toHaveAttribute('href', /\/developer-workspace$/);
+    await developerLink.click();
+    await expect(dropdown).not.toBeVisible();
     await expect(
         page.getByRole('heading', { name: 'Developer Workspace', exact: true }),
     ).toBeVisible();
