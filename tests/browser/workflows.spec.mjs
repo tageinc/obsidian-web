@@ -370,6 +370,92 @@ test('device actions stay usable and alias search keeps the table and map in syn
     ).toBeVisible();
 });
 
+test('registration modal stays in the dashboard and preserves native validation and keyboard focus', async ({
+    page,
+}) => {
+    await login(page);
+    const create = page.getByRole('button', { name: 'Create +', exact: true });
+    await expect(create).toBeVisible();
+    const mapBounds = await page.locator('#map').boundingBox();
+    const createBounds = await create.boundingBox();
+    const managerBounds = await page
+        .getByRole('heading', { name: 'Device Manager', exact: true })
+        .boundingBox();
+    expect(createBounds.y).toBeGreaterThanOrEqual(mapBounds.y + mapBounds.height);
+    expect(createBounds.y + createBounds.height).toBeLessThanOrEqual(managerBounds.y);
+
+    const dialog = page.getByRole('dialog', { name: 'Register device', exact: true });
+    await expect(dialog).not.toBeVisible();
+    await create.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    const dialogBounds = await dialog.boundingBox();
+    expect(dialogBounds.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBounds.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBounds.x + dialogBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(dialogBounds.y + dialogBounds.height).toBeLessThanOrEqual(page.viewportSize().height);
+    const controls = dialog.locator(
+        'button:not([disabled]):visible, a[href]:visible, input:not([type="hidden"]):not([disabled]):visible, select:not([disabled]):visible, textarea:not([disabled]):visible',
+    );
+    await controls.last().focus();
+    await page.keyboard.press('Tab');
+    await expect(controls.first()).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(controls.last()).toBeFocused();
+    await checkAccessibility(page);
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(create).toBeFocused();
+
+    await create.click();
+    await dialog.getByRole('button', { name: 'Close registration', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(create).toBeFocused();
+    await create.click();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(create).toBeFocused();
+
+    await create.click();
+    await expect(dialog.locator('form')).toHaveAttribute('method', /post/i);
+    await expect(dialog.locator('form')).toHaveAttribute('action', /\/dataInsert$/);
+    await expect(dialog.locator('[name="_registration_modal"]')).toHaveValue('1');
+    await expect(dialog.locator('button[type="submit"]')).toHaveCount(1);
+    await dialog.getByLabel('Hardware', { exact: true }).selectOption('1');
+    await dialog.getByLabel('Serial number', { exact: true }).fill('BROWSER-SIMULATOR-1');
+    await dialog.getByLabel('SKU', { exact: true }).fill('TEST');
+    await dialog.getByLabel('Order number', { exact: true }).fill('TEST-ORDER');
+    await dialog.getByLabel('Device name', { exact: true }).fill('Modal duplicate fixture');
+    await dialog.getByLabel('City', { exact: true }).fill('Modal city');
+    await dialog.getByLabel('Latitude', { exact: true }).fill('0');
+    await dialog.getByLabel('Longitude', { exact: true }).fill('0');
+    await dialog.getByRole('button', { name: 'Register device', exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel('Serial number', { exact: true })).toHaveAttribute(
+        'aria-invalid',
+        'true',
+    );
+    await expect(dialog.getByLabel('Device name', { exact: true })).toHaveValue(
+        'Modal duplicate fixture',
+    );
+    await expect(dialog.getByLabel('City', { exact: true })).toHaveValue('Modal city');
+    await expect(dialog.getByLabel('Latitude', { exact: true })).toHaveValue('0');
+    await expect(dialog.getByRole('alert')).toBeFocused();
+    await expect(
+        dialog.getByRole('button', { name: 'Register device', exact: true }),
+    ).toBeEnabled();
+    await checkAccessibility(page);
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(create).toBeFocused();
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
+    ).toBeVisible();
+});
+
 test('profile and device forms retain one save action, server errors and entered nonsecret values', async ({
     page,
 }) => {

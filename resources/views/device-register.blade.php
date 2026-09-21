@@ -6,15 +6,7 @@
 @section('content')
 @if ($usesVue)
     @php
-        $deviceValues = [];
-        foreach (['alias', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude'] as $field) {
-            $deviceValues[$field] = old($field);
-        }
-        foreach (['address_1', 'address_2', 'city', 'state', 'zip_code', 'country'] as $field) {
-            $default = Auth::user()->getAttribute($field);
-            $deviceValues[$field] = old($field, $field === 'country' && !$default ? 'US' : $default);
-        }
-        $deviceValues['hardware_id'] = old('hardware_id', 1);
+        $deviceValues = \App\Support\DeviceRegistrationData::values(Auth::user());
     @endphp
     @include('frontend.mount', ['page' => 'device-register', 'props' => [
         'registering' => true,

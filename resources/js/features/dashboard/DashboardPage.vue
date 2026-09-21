@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import DeviceMap from './DeviceMap.vue';
 import DeviceActions from './DeviceActions.vue';
+import DeviceRegistrationModal from './DeviceRegistrationModal.vue';
 import { statusColor } from './deviceMap.js';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 
@@ -13,7 +14,15 @@ const props = defineProps({
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
     search: { type: String, default: '' },
+    registration: { type: Object, default: null },
 });
+const registeringDevice = ref(props.registration?.initiallyOpen ?? false);
+const createButton = ref(null);
+async function closeRegistration() {
+    registeringDevice.value = false;
+    await nextTick();
+    createButton.value?.focus({ preventScroll: true });
+}
 const showAll = ref(false);
 const perPage = ref(props.pagination.perPage);
 const aliasSearch = ref(props.search);
@@ -65,7 +74,6 @@ watch(
             </div>
             <div class="d-flex gap-2">
                 <a class="btn btn-outline-secondary" :href="links.profile">Edit profile</a>
-                <a class="btn btn-primary" :href="links.register">Register device</a>
             </div>
         </div>
         <FormFeedback :success="success" :session-error="sessionError" />
@@ -87,6 +95,19 @@ watch(
                     <label class="form-check-label" for="show-all-devices">{{
                         search ? 'Show all matching devices on map' : 'Show all devices on map'
                     }}</label>
+                </div>
+                <div class="device-create-toolbar">
+                    <button
+                        v-if="registration"
+                        ref="createButton"
+                        type="button"
+                        class="btn btn-primary"
+                        aria-haspopup="dialog"
+                        @click="registeringDevice = true"
+                    >
+                        Create +
+                    </button>
+                    <a v-else class="btn btn-primary" :href="links.register">Create +</a>
                 </div>
                 <section class="device-manager" aria-labelledby="device-manager-heading">
                     <h2 id="device-manager-heading" class="h5 mb-3">Device Manager</h2>
@@ -138,7 +159,7 @@ watch(
                             search.</template
                         >
                         <template v-else
-                            >No devices registered yet. Use Register device to add your first
+                            >No devices registered yet. Use Create + to add your first
                             device.</template
                         >
                     </p>
@@ -295,12 +316,22 @@ watch(
                 </section>
             </div>
         </div>
+        <DeviceRegistrationModal
+            v-if="registration && registeringDevice"
+            :registration="registration"
+            @close="closeRegistration"
+        />
     </div>
 </template>
 
 <style scoped>
+.device-create-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
 .device-manager {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     color: #111827;
 }
 .device-search {

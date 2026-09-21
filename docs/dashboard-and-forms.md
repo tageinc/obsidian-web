@@ -1,9 +1,24 @@
 # Dashboard and account/device forms
 
 `/dashboard` is the Device Manager: the signed-in user's devices, location map,
-pagination, and shortcuts to Register device and Edit profile. Login redirects
+pagination, and shortcuts to create a device and edit the profile. Login redirects
 here. `/` and the old `/device-manager` URL redirect to the same dashboard,
 preserving query parameters. Authentication and email verification remain required.
+
+The `Create +` button sits below the device map and above Device Manager. With
+the Vue dashboard and registration enabled, it opens a native modal dialog with
+the shared device registration form. The dialog contains keyboard focus, closes
+with Cancel, its close button, or Escape, and returns focus to Create +. Dismissal
+is disabled while a native form submission is pending. Its header stays visible
+while the form scrolls on smaller screens.
+
+Registration still uses the existing native `POST /dataInsert`. Modal submissions
+include `_registration_modal=1`; validation redirects back to the dashboard and
+reopens the modal with entered values and focused error feedback. Profile address
+defaults and allowed hardware options match the standalone registration page.
+Successful registration redirects to the dashboard with the existing success
+message. `/device-register` remains available for direct links and rollback; when
+Vue registration is disabled, Create + links to that page.
 
 The Device Manager table has a three-dot action menu for View, Edit, and Delete.
 Delete retains the existing confirmation and server ownership check. The Vue

@@ -80,7 +80,14 @@ class DeviceManagerController extends Controller
         //Log::info('controller Final Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
 
-        return view('device-manager', ['devices' => $devices, 'pagination_size' => $pagination_size, 'search' => $search]);
+        $registrationHardware = config('frontend.vue3.dashboard') && config('frontend.vue3.device_register')
+            ? Hardware::where('id', 1)->select('id', 'name')->get()
+            : null;
+
+        return view('device-manager', [
+            'devices' => $devices, 'pagination_size' => $pagination_size, 'search' => $search,
+            'registrationHardware' => $registrationHardware,
+        ]);
     }
 
 

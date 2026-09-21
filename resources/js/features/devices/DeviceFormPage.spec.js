@@ -42,6 +42,9 @@ describe('device forms', () => {
             method: 'POST',
         });
         expect(wrapper.findAll('button[type="submit"]')).toHaveLength(1);
+        expect(wrapper.get('h1').text()).toBe('Register device');
+        expect(wrapper.get('a[href="/dashboard"]').text()).toBe('Back to dashboard');
+        expect(wrapper.find('[name="_registration_modal"]').exists()).toBe(false);
         expect(wrapper.find('[name="_method"]').exists()).toBe(false);
         expect(wrapper.find('[name="status_notification"]').exists()).toBe(false);
         expect(wrapper.find('[name="sms_notification"]').exists()).toBe(false);

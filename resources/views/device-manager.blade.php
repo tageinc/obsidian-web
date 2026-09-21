@@ -40,15 +40,31 @@
                 return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
             })->all(),
         ];
+        $registration = null;
+        if ($registrationHardware !== null) {
+            $modalSubmission = old('_registration_modal') === '1';
+            $registrationErrors = $modalSubmission ? \App\Support\DeviceRegistrationData::errors($errors->messages()) : [];
+            $registrationError = $modalSubmission ? session('error') : null;
+            $registration = [
+                'csrfToken' => csrf_token(),
+                'action' => route('dataInsert'),
+                'values' => \App\Support\DeviceRegistrationData::values(Auth::user(), $modalSubmission),
+                'hardwareOptions' => $registrationHardware->map->only(['id', 'name'])->values()->all(),
+                'errors' => $registrationErrors,
+                'sessionError' => $registrationError,
+                'initiallyOpen' => $modalSubmission && (!empty($registrationErrors) || !empty($registrationError)),
+            ];
+        }
     @endphp
     @include('frontend.mount', ['page' => 'dashboard', 'props' => [
         'devices' => $dashboardDevices,
+        'registration' => $registration,
         'search' => $search,
         'pagination' => $dashboardPagination,
         'mapEndpoints' => ['all' => route('all-devices', $search !== '' ? ['search' => $search] : []), 'paginated' => route('paginated-devices', $search !== '' ? ['search' => $search] : [])],
         'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'register' => route('device-register')],
         'success' => session('success'),
-        'sessionError' => session('error'),
+        'sessionError' => $registration && $registration['initiallyOpen'] ? null : session('error'),
     ]])
 @else
 <style>
