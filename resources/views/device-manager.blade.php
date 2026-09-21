@@ -120,10 +120,6 @@
             <h1 class="h3 mb-1">Dashboard</h1>
             <p class="text-muted mb-2">Manage your devices and their locations.</p>
         </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href="{{ route('profile') }}">Edit profile</a>
-            <a class="btn btn-primary" href="{{ route('device-register') }}">Register device</a>
-        </div>
     </div>
     @if (session('success'))
     <div
@@ -143,6 +139,9 @@
             <form id="allDevicesForm">
                 <input type="checkbox" name="showAll" id="showAllDevicesCheckbox"> Show All Devices
             </form>
+            <div class="d-flex justify-content-end my-3">
+                <a class="btn btn-primary" href="{{ route('device-register') }}">Create +</a>
+            </div>
             <div class="card">
                 <div class="card-header">{{ __('Device Manager') }}</div>
                 <div class="card-body">
@@ -194,7 +193,7 @@
                     @elseif ($search !== '')
                         <p class="text-muted mt-3 mb-0">No devices match this alias search. Try another alias or clear the search.</p>
                     @else
-                        <p class="text-muted mt-3 mb-0">No devices registered yet. Use Register device to add your first device.</p>
+                        <p class="text-muted mt-3 mb-0">No devices registered yet. Use Create + to add your first device.</p>
                     @endif
                     @endforelse
                     <!-- Show Devices Features -->

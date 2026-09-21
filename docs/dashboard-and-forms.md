@@ -1,9 +1,11 @@
 # Dashboard and account/device forms
 
 `/dashboard` is the Device Manager: the signed-in user's devices, location map,
-pagination, and shortcuts to create a device and edit the profile. Login redirects
-here. `/` and the old `/device-manager` URL redirect to the same dashboard,
-preserving query parameters. Authentication and email verification remain required.
+pagination, and a Create + button below the map. Profile is available from the
+account menu; the dashboard header has no duplicate profile or registration
+buttons. Login redirects here. `/` and the old `/device-manager` URL redirect to
+the same dashboard, preserving query parameters. Authentication and email
+verification remain required.
 
 The `Create +` button sits below the device map and above Device Manager. With
 the Vue dashboard and registration enabled, it opens a native modal dialog with

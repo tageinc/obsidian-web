@@ -24,7 +24,8 @@ class DashboardTest extends TestCase
         $this->actingAs($owner)->get('/dashboard')
             ->assertOk()->assertViewIs('device-manager')
             ->assertSee('My solar tracker')->assertDontSee('Other private tracker')
-            ->assertSee('Register device')->assertSee('Edit profile')
+            ->assertSee('Create +')->assertDontSee('Edit profile')
+            ->assertSee(route('profile'))
             ->assertSee('id="map"', false);
     }
 

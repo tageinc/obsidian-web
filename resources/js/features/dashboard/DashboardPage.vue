@@ -93,9 +93,6 @@ watch(
                 <h1 class="h3 mb-1">Dashboard</h1>
                 <p class="text-muted mb-2">Manage your devices and their locations.</p>
             </div>
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-secondary" :href="links.profile">Edit profile</a>
-            </div>
         </div>
         <FormFeedback :success="success" :session-error="sessionError" />
         <div class="row justify-content-center">
