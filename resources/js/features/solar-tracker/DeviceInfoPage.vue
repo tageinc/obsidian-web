@@ -203,7 +203,11 @@ function navigateSection(event, index) {
                             disabled.
                         </dd>
                         <dt>Remote control</dt>
-                        <dd>Up, Stop, and Down save a manual motor command for the device.</dd>
+                        <dd>
+                            Set the motor speed from -100 to 100 in steps of 10. Release the slider,
+                            or use the arrow keys, to save the command automatically. Zero stops the
+                            motor.
+                        </dd>
                     </dl>
                     <p>
                         Changing modes sets the manual command to Stop. The reported motor speed

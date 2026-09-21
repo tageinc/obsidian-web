@@ -67,11 +67,21 @@
                             <label class="form-check-label" for="remote-control-mode">Remote control mode</label>
                         </div>
                         <p class="mb-2">Mode: <strong data-remote-mode>{{ $remoteControl['mode'] === 1 ? 'Remote Control' : 'Automatic' }}</strong></p>
-                        <p id="remote-control-help" class="text-muted small">Enable Remote Control to use Up, Stop, and Down. Switching modes resets the manual motor command to Stop.</p>
+                        <p id="remote-control-help" class="text-muted small">Enable Remote Control to set the motor speed. Switching modes resets the manual motor command to Stop (0).</p>
                         <div data-remote-controls role="group" aria-label="Motor controls">
-                            <button type="button" class="btn btn-primary" data-speed="20" @if($remoteControl['mode'] !== 1) disabled @endif>Up</button>
-                            <button type="button" class="btn btn-secondary" data-speed="0" @if($remoteControl['mode'] !== 1) disabled @endif>Stop</button>
-                            <button type="button" class="btn btn-primary" data-speed="-20" @if($remoteControl['mode'] !== 1) disabled @endif>Down</button>
+                            <div class="d-flex justify-content-between gap-2">
+                                <label class="form-label" for="remote-motor-speed">Motor speed</label>
+                                <output id="remote-speed-value" for="remote-motor-speed" data-remote-speed-value>Stop (0)</output>
+                            </div>
+                            <input type="range" class="form-range" id="remote-motor-speed"
+                                data-remote-speed min="-100" max="100" step="10" value="0"
+                                aria-valuetext="Stop (0)" aria-describedby="remote-speed-help remote-saved-speed"
+                                @if($remoteControl['mode'] !== 1) disabled @endif>
+                            <div class="d-flex justify-content-between small text-muted mb-2" aria-hidden="true">
+                                <span>Down (-100)</span><span>Stop (0)</span><span>Up (100)</span>
+                            </div>
+                            <p id="remote-speed-help" class="text-muted small mb-1">Drag and release to save, or use the arrow keys. Negative values move Down, positive values move Up, and 0 stops the motor.</p>
+                            <p id="remote-saved-speed" class="small mb-0">Saved motor speed: <strong data-remote-saved-speed>{{ $remoteControl['motor_speed'] }}</strong></p>
                         </div>
                         <p class="small mt-2 mb-0" data-remote-feedback role="status" aria-live="polite"></p>
                     </div>

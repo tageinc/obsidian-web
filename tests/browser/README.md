@@ -15,7 +15,9 @@ empty file. It never runs the development or production database seeders.
 Accounts and the one device are synthetic. Mail uses Laravel's array transport,
 logs are disabled, Redis workloads are disabled, and external browser requests
 are blocked (map tiles use a static fixture). Motor-command requests are blocked
-and asserted absent. Forms exercise rejected submissions; the device modal also
+and asserted absent on mount/navigation. The dedicated speed-slider test
+fulfills commands with mocked responses and verifies that the fixture's stored
+command remains unchanged. Forms exercise rejected submissions; the device modal also
 saves and restores an address line on the synthetic fixture only. Screenshots,
 video, traces, stored login state and artifact uploads are disabled. Any failure
 context contains synthetic fixtures only. Temporary files are cleaned up on
@@ -25,7 +27,8 @@ directory for the OS temporary-file cleanup policy.
 The desktop and mobile Chromium projects cover login/logout redirects, bounded
 workspace navigation, map loading/failure/retry/empty data, profile and device
 validation, readonly device identity, raw graph ranges and timestamp labels,
-remote-control inactivity on mount/navigation, auth/public pages and authorized
+remote-control inactivity on mount/navigation, slider preview/autosave, speed
+bounds, pending guards, failure rollback, auth/public pages and authorized
 multipart upload validation. Axe checks WCAG A/AA rules on representative pages;
 horizontal overflow and keyboard menu access are also checked. Backend and Vue
 unit tests cover the remaining authorization, mutation, timezone/DST, lifecycle,

@@ -444,7 +444,7 @@ test('device view modal includes history and control without issuing commands an
     await expect(view.getByRole('img', { name: /Panel sensors.*Pacific Time/ })).toBeVisible();
     await view.getByRole('tab', { name: 'Control', exact: true }).click();
     await expect(view.getByRole('switch', { name: 'Remote control mode' })).not.toBeChecked();
-    await expect(view.getByRole('button', { name: 'Up', exact: true })).toBeDisabled();
+    await expect(view.getByRole('slider', { name: 'Motor speed', exact: true })).toBeDisabled();
     await checkAccessibility(page);
     expect(commands).toEqual([]);
     await view.getByRole('button', { name: 'Edit device', exact: true }).click();
@@ -776,7 +776,7 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
     await expect(page.locator('#device-panel-history')).not.toBeVisible();
     await expect(page.getByRole('switch', { name: 'Remote control mode' })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Remote control mode' })).not.toBeChecked();
-    await expect(page.getByRole('button', { name: 'Up', exact: true })).toBeDisabled();
+    await expect(page.getByRole('slider', { name: 'Motor speed', exact: true })).toBeDisabled();
     await checkAccessibility(page);
     await page.reload();
     await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
@@ -787,6 +787,163 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
     await page.getByRole('link', { name: '← Devices', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
     expect(commands).toEqual([]);
+});
+
+test('remote motor speed previews then saves the chosen range value and restores confirmed state after failure', async ({
+    page,
+}) => {
+    // Every motor POST is fulfilled here; the fixture's automatic/zero state is never changed.
+    const commands = [];
+    let simulated = { mode: 0, motor_speed: 0 };
+    let failNext = false;
+    let pendingResponse = null;
+    await page.route('**/update-solar-tracker', async (route) => {
+        const request = route.request();
+        expect(request.method()).toBe('POST');
+        const payload = request.postDataJSON();
+        expect(payload.serial_no).toBe('BROWSER-SIMULATOR-1');
+        expect(payload.motor_speed).toBeGreaterThanOrEqual(-100);
+        expect(payload.motor_speed).toBeLessThanOrEqual(100);
+        expect(Math.abs(payload.motor_speed % 10)).toBe(0);
+        commands.push(payload);
+        if (pendingResponse) {
+            const wait = pendingResponse;
+            pendingResponse = null;
+            await wait;
+        }
+        if (failNext) {
+            failNext = false;
+            return route.fulfill({
+                status: 503,
+                contentType: 'application/json',
+                body: '{"message":"Synthetic command failure"}',
+            });
+        }
+        simulated = {
+            mode: payload.mode,
+            motor_speed: payload.mode === 1 ? payload.motor_speed : 0,
+        };
+        return route.fulfill({ json: { success: true, ...simulated } });
+    });
+    // Replay only the mocked confirmed state when reopening the read-only device modal.
+    await page.route('**/device-info/1', async (route) => {
+        if (route.request().headers()['x-obsidian-modal'] !== '1') return route.continue();
+        const response = await route.fetch();
+        const payload = await response.json();
+        payload.props.remote = { ...payload.props.remote, ...simulated };
+        return route.fulfill({ response, json: payload });
+    });
+    await login(page);
+    const alias = page
+        .getByRole('rowheader', { name: 'Browser simulator', exact: true })
+        .getByRole('link');
+    await alias.click();
+    const dialog = page.getByRole('dialog', { name: 'View device', exact: true });
+    await dialog.getByRole('tab', { name: 'Control', exact: true }).click();
+    const remote = dialog.locator('section[aria-labelledby="remote-title"]');
+    const mode = remote.getByRole('switch', { name: 'Remote control mode', exact: true });
+    const slider = remote.getByRole('slider', { name: 'Motor speed', exact: true });
+    await expect(slider).toHaveAttribute('min', '-100');
+    await expect(slider).toHaveAttribute('max', '100');
+    await expect(slider).toHaveAttribute('step', '10');
+    await expect(slider).toBeDisabled();
+    await expect(slider).toHaveValue('0');
+    await expect(remote.locator('#remote-speed-value')).toHaveText('Stop (0)');
+    await expect(remote.getByRole('button', { name: /update|up|stop|down/i })).toHaveCount(0);
+    expect(commands).toEqual([]);
+
+    await mode.check();
+    await expect(slider).toBeEnabled();
+    expect(commands).toHaveLength(1);
+    expect(commands[0]).toMatchObject({ mode: 1, motor_speed: 0 });
+    async function preview(value) {
+        await slider.evaluate((element, speed) => {
+            element.value = String(speed);
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+        }, value);
+    }
+    await preview(-100);
+    await expect(slider).toHaveValue('-100');
+    await expect(remote.locator('#remote-speed-value')).toHaveText('Down (-100)');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Stop (0)');
+    expect(commands).toHaveLength(1);
+    let release;
+    pendingResponse = new Promise((resolve) => {
+        release = resolve;
+    });
+    await slider.dispatchEvent('change');
+    await expect(slider).toBeDisabled();
+    await expect(mode).toBeDisabled();
+    await expect(remote.locator('[role="status"]')).toContainText('Saving');
+    await expect.poll(() => commands.length).toBe(2);
+    release();
+    await expect(slider).toBeEnabled();
+    await expect(remote.locator('#remote-saved-speed')).toHaveText(
+        'Saved motor speed: Down (-100)',
+    );
+    await expect(remote.locator('[role="status"]')).toHaveText('Motor speed saved: Down (-100).');
+    await slider.focus();
+    await page.keyboard.press('End');
+    await expect(slider).toHaveValue('100');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Up (100)');
+    expect(commands).toHaveLength(3);
+    expect(commands[2]).toMatchObject({ mode: 1, motor_speed: 100 });
+    await expect(slider).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Up (90)');
+    await expect(slider).toHaveValue('90');
+    await expect(slider).toBeFocused();
+    expect(commands).toHaveLength(4);
+    expect(commands[3]).toMatchObject({ mode: 1, motor_speed: 90 });
+    await page.keyboard.press('ArrowRight');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Up (100)');
+    await expect(slider).toHaveValue('100');
+    await expect(slider).toBeFocused();
+    expect(commands).toHaveLength(5);
+    expect(commands[4]).toMatchObject({ mode: 1, motor_speed: 100 });
+
+    failNext = true;
+    await preview(-40);
+    await expect(remote.locator('#remote-speed-value')).toHaveText('Down (-40)');
+    pendingResponse = new Promise((resolve) => {
+        release = resolve;
+    });
+    await slider.dispatchEvent('change');
+    await expect(slider).toBeDisabled();
+    const editDevice = dialog.getByRole('button', { name: 'Edit device', exact: true });
+    await editDevice.focus();
+    await expect.poll(() => commands.length).toBe(6);
+    release();
+    await expect(remote.getByRole('alert')).toBeVisible();
+    await expect(slider).toBeEnabled();
+    await expect(slider).toHaveValue('100');
+    await expect(remote.locator('#remote-speed-value')).toHaveText('Up (100)');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Up (100)');
+    expect(commands).toHaveLength(6);
+    await expect(editDevice).toBeFocused();
+    await dialog.getByRole('button', { name: 'Close device', exact: true }).click();
+    await expect(alias).toBeFocused();
+    await alias.click();
+    await dialog.getByRole('tab', { name: 'Control', exact: true }).click();
+    await expect(mode).toBeChecked();
+    await expect(slider).toHaveValue('100');
+    await expect(remote.locator('#remote-saved-speed')).toHaveText('Saved motor speed: Up (100)');
+    expect(commands).toHaveLength(6);
+    await checkAccessibility(page);
+
+    await mode.uncheck();
+    await expect(slider).toBeDisabled();
+    await expect(mode).toBeEnabled();
+    await expect(slider).toHaveValue('0');
+    expect(commands[6]).toMatchObject({ mode: 0, motor_speed: 0 });
+    await mode.check();
+    await expect(slider).toBeEnabled();
+    await expect(slider).toHaveValue('0');
+    expect(commands[7]).toMatchObject({ mode: 1, motor_speed: 0 });
+    expect(commands).toHaveLength(8);
+    const unchanged = await page.request.get('/api/remote-control/BROWSER-SIMULATOR-1');
+    expect(unchanged.ok()).toBe(true);
+    expect(await unchanged.json()).toMatchObject({ mode: 0, motor_speed: 0 });
 });
 
 test('auth and public documents retain URLs, form labels and keyboard access', async ({ page }) => {
