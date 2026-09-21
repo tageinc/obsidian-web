@@ -11,6 +11,12 @@ class DevelopmentDataSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('DevelopmentDataSeeder is restricted to local and testing environments.');
+
+            return;
+        }
+
         $userId = DB::table('users')->insertGetId([
             'name' => 'Obsidian Development User',
             'email' => 'developer@example.test',
