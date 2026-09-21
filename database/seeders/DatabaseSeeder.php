@@ -5,14 +5,16 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * Billing and license fixtures were retired. Historical billing tables remain
- * available for audit, but new seed runs never create orders or licenses.
+ * Billing, license, product, and software fixtures are retired. Development
+ * seed data contains only active application entities.
  */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([
+            HardwareSeeder::class,
+            AdminUserSeeder::class,
             UserSeeder::class,
             DevelopmentDataSeeder::class,
         ]);

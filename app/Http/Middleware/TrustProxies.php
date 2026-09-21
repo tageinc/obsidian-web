@@ -14,6 +14,12 @@ class TrustProxies extends Middleware
      */
     protected $proxies;
 
+    public function __construct(\Illuminate\Contracts\Config\Repository $config)
+    {
+        parent::__construct($config);
+        $this->proxies = $config->get('proxies.trusted', []);
+    }
+
     /**
      * The headers that should be used to detect proxies.
      *
