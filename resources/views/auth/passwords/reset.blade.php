@@ -1,6 +1,24 @@
+@php
+    $usesVue = config('frontend.vue3.auth');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $resetEmail = $email ?? old('email');
+    @endphp
+    @include('frontend.mount', ['page' => 'auth', 'props' => [
+        'mode' => 'password-reset',
+        'action' => route('password.update'),
+        'csrfToken' => csrf_token(),
+        'resetToken' => $token,
+        'values' => ['email' => is_scalar($resetEmail) ? (string) $resetEmail : ''],
+        'errors' => $errors->messages(),
+        'success' => session('status'),
+        'sessionError' => session('error'),
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -62,4 +80,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

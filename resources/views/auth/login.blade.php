@@ -1,6 +1,28 @@
+@php
+    $usesVue = config('frontend.vue3.auth');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @include('frontend.mount', ['page' => 'auth', 'props' => [
+        'mode' => 'login',
+        'action' => route('login'),
+        'csrfToken' => csrf_token(),
+        'values' => ['email' => is_scalar(old('email')) ? (string) old('email') : '', 'remember' => (bool) old('remember')],
+        'errors' => $errors->messages(),
+        'success' => session('status'),
+        'sessionError' => session('error'),
+        'message' => session('message'),
+        'showResend' => \Illuminate\Support\Str::contains((string) session('error'), 'verify your email'),
+        'links' => [
+            'passwordRequest' => route('password.request'),
+            'contact' => route('contact-us'),
+            'privacy' => asset('pdf/Obsidian Privacy Policy May1st2024.pdf'),
+            'verificationResend' => route('verification.resend'),
+        ],
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -98,4 +120,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

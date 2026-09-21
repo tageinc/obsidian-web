@@ -1,6 +1,27 @@
+@php
+    $usesVue = config('frontend.vue3.auth');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $authValues = [];
+        foreach (['name', 'email', 'phone_number', 'address_1', 'address_2', 'city', 'state', 'zip_code', 'country'] as $field) {
+            $value = old($field);
+            $authValues[$field] = is_scalar($value) ? (string) $value : '';
+        }
+    @endphp
+    @include('frontend.mount', ['page' => 'auth', 'props' => [
+        'mode' => 'register',
+        'action' => route('register'),
+        'csrfToken' => csrf_token(),
+        'values' => $authValues,
+        'errors' => $errors->messages(),
+        'success' => session('status'),
+        'sessionError' => session('error'),
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -167,4 +188,5 @@
         }
     });
 </script>
+@endif
 @endsection

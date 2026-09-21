@@ -1,6 +1,26 @@
+@php
+    $usesVue = config('frontend.vue3.profile');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $profileValues = [];
+        foreach (['name', 'email', 'phone_number', 'address_1', 'address_2', 'city', 'state', 'zip_code', 'country'] as $field) {
+            $profileValues[$field] = old($field, $user->getAttribute($field));
+        }
+    @endphp
+    @include('frontend.mount', ['page' => 'profile', 'props' => [
+        'csrfToken' => csrf_token(),
+        'action' => route('profile.update'),
+        'values' => $profileValues,
+        'errors' => $errors->messages(),
+        'success' => session('success'),
+        'sessionError' => session('error'),
+        'links' => ['dashboard' => route('dashboard')],
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-lg-8">
@@ -88,4 +108,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

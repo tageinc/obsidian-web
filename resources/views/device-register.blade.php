@@ -1,6 +1,33 @@
+@php
+    $usesVue = config('frontend.vue3.device_register');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $deviceValues = [];
+        foreach (['alias', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude'] as $field) {
+            $deviceValues[$field] = old($field);
+        }
+        foreach (['address_1', 'address_2', 'city', 'state', 'zip_code', 'country'] as $field) {
+            $default = Auth::user()->getAttribute($field);
+            $deviceValues[$field] = old($field, $field === 'country' && !$default ? 'US' : $default);
+        }
+        $deviceValues['hardware_id'] = old('hardware_id', 1);
+    @endphp
+    @include('frontend.mount', ['page' => 'device-register', 'props' => [
+        'registering' => true,
+        'csrfToken' => csrf_token(),
+        'action' => route('dataInsert'),
+        'values' => $deviceValues,
+        'hardwareOptions' => $hardwares->map->only(['id', 'name'])->values()->all(),
+        'errors' => $errors->messages(),
+        'success' => session('success'),
+        'sessionError' => session('error'),
+        'links' => ['dashboard' => route('dashboard')],
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-lg-9">
@@ -42,4 +69,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

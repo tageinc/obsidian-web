@@ -1,6 +1,20 @@
+@php
+    $usesVue = config('frontend.vue3.auth');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @include('frontend.mount', ['page' => 'auth', 'props' => [
+        'mode' => 'password-confirm',
+        'action' => route('password.confirm'),
+        'csrfToken' => csrf_token(),
+        'errors' => $errors->messages(),
+        'success' => session('status'),
+        'sessionError' => session('error'),
+        'links' => ['passwordRequest' => route('password.request')],
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -46,4 +60,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

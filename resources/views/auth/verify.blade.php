@@ -1,6 +1,23 @@
+@php
+    $usesVue = config('frontend.vue3.auth');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $verificationEmail = old('email', auth()->user()->email);
+    @endphp
+    @include('frontend.mount', ['page' => 'auth', 'props' => [
+        'mode' => 'verify',
+        'action' => route('verification.resend'),
+        'csrfToken' => csrf_token(),
+        'values' => ['email' => is_scalar($verificationEmail) ? (string) $verificationEmail : ''],
+        'errors' => $errors->messages(),
+        'success' => session('status') ?? (session('resent') ? 'A fresh verification link has been sent to your email address.' : null),
+        'sessionError' => session('error'),
+    ]])
+@else
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -38,4 +55,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection
