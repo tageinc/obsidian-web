@@ -2,15 +2,8 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-
-class TheftVandalismMail extends Mailable
+class TheftVandalismMail extends DeviceStatusMail
 {
-    use Queueable, SerializesModels;
-
     public $name; // Declare the property to hold the name
     public $serialNo; // Declare the property to hold the serial number
     public $address1; // Declare the property for address_1

@@ -15,7 +15,7 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
         libcurl4-openssl-dev libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
         libonig-dev libzip-dev unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" bcmath curl gd mbstring pdo_mysql zip opcache \
+    && docker-php-ext-install -j"$(nproc)" bcmath curl gd mbstring pcntl pdo_mysql zip opcache \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 

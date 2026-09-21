@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\LowVoltageMail;
+use App\Jobs\SendAppUpdateMail;
 use App\Models\Api\SolarTrackerLog;
 use App\Models\DeviceRegister;
 use Carbon\Carbon;
@@ -12,6 +13,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -162,6 +164,7 @@ class DeviceCommunicationsTest extends TestCase
     public function test_status_command_preserves_email_notifications_without_sms_or_twilio(): void
     {
         Mail::fake();
+        Queue::fake();
         DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
         DB::table('device_registers')->insert([
             'serial_no' => 'solar', 'hardware_id' => 1, 'user_id' => 1,
@@ -173,8 +176,36 @@ class DeviceCommunicationsTest extends TestCase
         $this->artisan('device:check-status')->assertExitCode(0);
 
         $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'low voltage']);
-        Mail::assertSent(LowVoltageMail::class, 1);
+        Queue::assertPushedOn('mail', SendAppUpdateMail::class, fn ($job) =>
+            $job->connection === 'app-updates' && $job->recipientId === 1 && $job->mail instanceof LowVoltageMail
+        );
+        Mail::assertNothingSent();
+        $this->artisan('device:check-status')->assertExitCode(0);
+        Queue::assertPushed(SendAppUpdateMail::class, 1);
         $this->assertStringNotContainsString('Twilio', file_get_contents(app_path('Console/Commands/UpdateDeviceStatus.php')));
+    }
+
+    public function test_failed_enqueue_does_not_consume_the_status_transition(): void
+    {
+        DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
+        DB::table('device_registers')->insert([
+            'serial_no' => 'solar', 'hardware_id' => 1, 'user_id' => 1,
+            'status_notification' => true, 'address_1' => '1 Main St',
+        ]);
+        DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline']);
+        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
+        $this->mock(\App\Services\AppUpdateDelivery::class, function ($mock) {
+            $mock->shouldReceive('queue')->once()->andThrow(new \RuntimeException('Queue unavailable'));
+        });
+
+        try {
+            $this->artisan('device:check-status')->run();
+            $this->fail('Expected the enqueue failure to propagate.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Queue unavailable', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'offline']);
     }
 
     public function test_sms_deactivation_is_explicit_and_non_destructive(): void

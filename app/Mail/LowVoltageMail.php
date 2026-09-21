@@ -2,14 +2,8 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-
-class LowVoltageMail extends Mailable
+class LowVoltageMail extends DeviceStatusMail
 {
-    use Queueable, SerializesModels;
-
     public $name;
     public $serialNo;
     public $address1;

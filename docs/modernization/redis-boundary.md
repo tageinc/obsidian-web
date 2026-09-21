@@ -157,7 +157,7 @@ GitHub. No production Redis provisioning or enablement occurred.
 | Workload | Reason / required follow-up |
 | --- | --- |
 | Redis sessions | Changes session availability, logout/migration behavior and stores sensitive session material; requires explicit data/security/operational approval |
-| Redis queues/email | Currently synchronous; needs worker supervision, retry/idempotency/failed-job policy and permission for changed delivery behavior |
+| Redis queues/email | Application emails now use a separate approved [database queue](../application-email.md); moving delivery to Redis remains deferred and needs separate provisioning/durability approval |
 | Rate limiting | Security-sensitive fail-open/fail-closed decision and firmware availability consequences; retain current limits/backends until separately approved |
 | Scheduler/distributed locks | Existing host flock + Laravel file-cache overlap handling works for one server; multi-server coordination is a separate deployment design |
 | User/device graphs, dashboard data, control state | Authorization/freshness/location sensitivity and cache invalidation outweigh first-stage benefit; no approval to cache these |

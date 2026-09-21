@@ -41,6 +41,17 @@ return [
             'retry_after' => 90,
         ],
 
+        'app-updates' => [
+            'driver' => 'database',
+            // Use the application database so status changes and queued notices
+            // can be committed together in the same transaction.
+            'connection' => null,
+            'table' => 'jobs',
+            'queue' => 'mail',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

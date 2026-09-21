@@ -28,6 +28,11 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/device-status-scheduler.log'));
+
+        $schedule->command('mail:work')
+            ->everyMinute()
+            ->withoutOverlapping(5)
+            ->appendOutputTo(storage_path('logs/mail-scheduler.log'));
     }
 
     /**

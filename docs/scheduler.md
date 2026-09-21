@@ -5,8 +5,11 @@ Laravel's `schedule:run` every minute inside the app container. Laravel decides
 which commands are due using `app/Console/Kernel.php`. There are no per-command
 host cron jobs and no second scheduler container.
 
-The current schedule is `device:check-status` hourly, at minute zero, in the
-application timezone (UTC). `withoutOverlapping()` prevents another execution
+The schedule runs `device:check-status` hourly at minute zero and `mail:work`
+every minute, in the application timezone (UTC). The mail command processes a
+bounded batch of application emails from the dedicated database queue; see
+[application email delivery](application-email.md) for pacing and retries.
+`withoutOverlapping()` prevents another execution
 while the command's previous execution holds its Laravel cache lock. Add future
 recurring Artisan commands to the Kernel, not to the host's crontab. Diagnostic
 and one-time maintenance commands remain manual; `device:generate-info` is retired.
@@ -52,7 +55,8 @@ skip that hour's check.
 
 Cron-wrapper and scheduler output go to `/opt/obsidian-web/shared/scheduler.log`.
 The status command's stdout/stderr go to `storage/logs/device-status-scheduler.log`
-in the shared application storage volume. Include both files in normal log
+and the mail worker's output goes to `storage/logs/mail-scheduler.log`
+in the shared application storage volume. Include these files in normal log
 rotation. Application exceptions retain the configured Laravel log destination.
 Read-only checks:
 
@@ -72,8 +76,9 @@ docker compose --env-file .env.docker exec --user www-data app php artisan sched
 ```
 
 Stop it with Ctrl+C. This is a local alternative to cron, not an additional
-production scheduler. It uses the same hourly cadence and does not replay missed
-runs. Local `.env.docker.example` uses the log mailer for notification output.
+production scheduler. It uses the same hourly status and minute mail cadence.
+Missed status runs are not replayed; queued emails persist for the next worker
+run. Local `.env.docker.example` uses the log mailer for notification output.
 
 ## Verification
 
