@@ -45,9 +45,6 @@
         var maxSpbValue = parseFloat("{{ $max_spb_value }}");
 
         // Log values to console
-        console.log("Latest SPB Value: ", latestSpbValue);
-        console.log("Min SPB Value: ", minSpbValue);
-        console.log("Max SPB Value: ", maxSpbValue);
 
         var gauge = new JustGage({
             id: "gauge",

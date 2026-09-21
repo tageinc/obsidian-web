@@ -193,7 +193,7 @@ class AdminControlCenterController extends Controller
                 'description' => $request->input('description') // Use description from the request
             ]);
 
-            Log::info('Config file uploaded successfully! File located at: ' . Storage::disk('public')->url($configFilename));
+            Log::info('device.config_uploaded');
             return back()->with('success', "Config file uploaded successfully!");
         } else {
             return back()->with('error', 'There was an issue uploading the config file.');

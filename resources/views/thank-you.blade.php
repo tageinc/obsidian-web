@@ -1,6 +1,15 @@
+@php
+    $usesVue = config('frontend.vue3.public_pages');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @include('frontend.mount', ['page' => 'public', 'props' => [
+        'mode' => 'thank-you',
+        'links' => ['registerDevice' => route('device-register'), 'deviceManager' => route('device-manager')],
+    ]])
+@else
 
 <!DOCTYPE html>
 <html lang="en">
@@ -23,4 +32,5 @@
     </div>
 </body>
 </html>
+@endif
 @endsection

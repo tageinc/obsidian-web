@@ -221,7 +221,7 @@ $devicesJson = $devices->toJson();
     
             return response()->json($devices);
         } catch (\Exception $e) {
-            Log::error('Error fetching devices: ' . $e->getMessage());
+            Log::error('device.list_failed');
             return response()->json(['error' => 'An error occurred while fetching devices'], 500);
         }
     }

@@ -1,6 +1,51 @@
+@php
+    $usesVue = config('frontend.vue3.admin');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $adminPageData = function ($records, $size) use ($firmwarePaginationSize, $configPaginationSize) {
+            return [
+                'rows' => $records->getCollection()->map(function ($record) {
+                    return [
+                        'version' => $record->version,
+                        'prefix' => $record->prefix,
+                        'description' => $record->description,
+                        'createdAt' => optional($record->created_at)->format('Y-m-d H:i:s'),
+                    ];
+                })->values()->all(),
+                'pagination' => [
+                    'perPage' => (int) $size,
+                    'lastPage' => $records->lastPage(),
+                    'sizes' => array_values(array_unique([2, 10, 20, (int) $size])),
+                    'links' => $records->appends(['firmware_show' => $firmwarePaginationSize, 'config_show' => $configPaginationSize])->linkCollection()->map(function ($link) {
+                        return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
+                    })->all(),
+                ],
+            ];
+        };
+        $activeUpload = old('_upload_kind', $errors->has('config') ? 'config' : 'firmware');
+        $activeUpload = $activeUpload === 'config' ? 'config' : 'firmware';
+    @endphp
+    @include('frontend.mount', ['page' => 'admin', 'props' => [
+        'csrfToken' => csrf_token(),
+        'links' => [
+            'dashboard' => route('dashboard'),
+            'admin' => route('admin-control-center'),
+            'uploadFirmware' => route('uploadFirmware'),
+            'uploadConfig' => route('uploadConfig'),
+        ],
+        'firmware' => $adminPageData($firmwareUpdates, $firmwarePaginationSize),
+        'config' => $adminPageData($configVersions, $configPaginationSize),
+        'activeUpload' => $activeUpload,
+        'values' => ['description' => old('description'), 'prefix' => old('prefix')],
+        'errors' => $errors->messages(),
+        'success' => session('success'),
+        'sessionError' => session('error'),
+    ]])
+@else
 
 <div class="container">
     <h2>Admin Control Center</h2>
@@ -145,4 +190,5 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 
+@endif
 @endsection

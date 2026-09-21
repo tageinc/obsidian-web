@@ -1,6 +1,47 @@
+@php
+    $usesVue = config('frontend.vue3.dashboard');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @php
+        $dashboardDevices = $devices->getCollection()->map(function ($device) {
+            return [
+                'id' => $device->id,
+                'hardwareName' => optional($device->hardware)->name ?? 'Unknown',
+                'alias' => $device->alias,
+                'state' => $device->state,
+                'lastUpdated' => $device->last_updated,
+                'links' => [
+                    'view' => route('device-info', $device->id),
+                    'edit' => route('edit-device', $device->id),
+                    'remove' => route('deleteDevice', $device->id),
+                ],
+            ];
+        })->values()->all();
+        $dashboardPagination = [
+            'currentPage' => $devices->currentPage(),
+            'perPage' => (int) $pagination_size,
+            'lastPage' => $devices->lastPage(),
+            'total' => $devices->total(),
+            'from' => $devices->firstItem(),
+            'to' => $devices->lastItem(),
+            'sizes' => array_values(array_unique([(int) env('PAGINATION_SIZE', 10), 10, 20, 30, (int) $pagination_size])),
+            'links' => $devices->appends(['show' => $pagination_size])->linkCollection()->map(function ($link) {
+                return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
+            })->all(),
+        ];
+    @endphp
+    @include('frontend.mount', ['page' => 'dashboard', 'props' => [
+        'devices' => $dashboardDevices,
+        'pagination' => $dashboardPagination,
+        'mapEndpoints' => ['all' => route('all-devices'), 'paginated' => route('paginated-devices')],
+        'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'register' => route('device-register')],
+        'success' => session('success'),
+        'sessionError' => session('error'),
+    ]])
+@else
 <style>
     .status-dot {
         height: 10px;
@@ -166,8 +207,6 @@
     };
 
         function loadDevices(page = 1, showAll = false, pagination_size = 10) {
-            console.log("Loading devices for page: " + page + ", show all: " + showAll + ", number of devices to show: " + pagination_size); // Logs when devices are being loaded
-
             var url = showAll ? '/all-devices' : '/paginated-devices';
             url += '?page=' + page + '&show=' + pagination_size;
 
@@ -179,8 +218,8 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log("Fetched data:", data); // Logs the fetched data
-
+                    const previousError = document.getElementById('legacy-map-error');
+                    if (previousError) previousError.remove();
                     map.eachLayer(function (layer) {
                         if (layer instanceof L.Marker) {
                             map.removeLayer(layer);
@@ -188,14 +227,9 @@
                     });
 
                     let devices = showAll ? data : data.data; // This line might need adjustment based on the actual data structure
-                    console.log("Devices array after processing:", devices); // Logs the devices array after processing
-
                     devices.forEach(function (device) {
                         var state = device.state ? device.state.toLowerCase().replace(' ', '-') : 'unknown';
                         var color = stateColors[state] || '#808080'; // Default to grey if no match found
-
-                        console.log("Processing device:", device); // Logs each device being processed
-
 
                         var svgIcon = L.divIcon({
                             className: 'custom-div-icon',
@@ -206,17 +240,31 @@
 
                         if (device.latitude && device.longitude) {
 
-                            L.marker([device.latitude, device.longitude], { icon: svgIcon }).addTo(map).bindPopup(
-                                `<strong>Hardware:</strong> ${device.hardware.name}<br>` +
-                                `<strong>Alias:</strong> ${device.alias}<br>` +
-                                `<strong>Address:</strong> ${device.address_1 || 'No Address'}, ${device.address_2 || ''}<br>` +
-                                `<strong>Last Updated:</strong> ${device.last_updated || 'No data'}`
-                            );
+                            const popup = document.createElement('div');
+                            [
+                                ['Hardware', device.hardware ? device.hardware.name : 'Unknown'],
+                                ['Alias', device.alias || ''],
+                                ['Address', (device.address_1 || 'No Address') + ', ' + (device.address_2 || '')],
+                                ['Last Updated', device.last_updated || 'No data'],
+                            ].forEach(function ([label, value]) {
+                                const heading = document.createElement('strong');
+                                heading.textContent = label + ': ';
+                                popup.append(heading, document.createTextNode(String(value)), document.createElement('br'));
+                            });
+                            L.marker([device.latitude, device.longitude], { icon: svgIcon }).addTo(map).bindPopup(popup);
                         }
                     });
                 })
-                .catch(error => {
-                    console.error('Fetch error:', error); // Logs if there's an error during fetch
+                .catch(() => {
+                    const mapElement = document.getElementById('map');
+                    let feedback = document.getElementById('legacy-map-error');
+                    if (!feedback) {
+                        feedback = document.createElement('p');
+                        feedback.id = 'legacy-map-error';
+                        feedback.setAttribute('role', 'alert');
+                        mapElement.after(feedback);
+                    }
+                    feedback.textContent = 'Device locations could not load. Refresh the page to try again.';
                 });
         }
 
@@ -263,4 +311,5 @@
         });
     });
 </script>
+@endif
 @endsection

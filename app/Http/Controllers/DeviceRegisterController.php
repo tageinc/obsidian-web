@@ -77,8 +77,7 @@ class DeviceRegisterController extends Controller
             'user_id' => 'nullable|integer', // Optionally validate the user_id
         ]);
 
-        // Log the validated data
-        Log::info('Validation passed', $validatedData);
+        Log::info('device.registration_validated');
 
         // Retrieve user_id from request, or fallback to Auth if not provided
         $user_id = $request->input('user_id', Auth::id());
@@ -115,7 +114,7 @@ class DeviceRegisterController extends Controller
         ], 422);
     } catch (\Exception $e) {
         // Any other error
-        Log::error('Device registration failed', ['error' => $e->getMessage()]);
+        Log::error('device.registration_failed');
         return response()->json(['message' => 'An error occurred'], 500);
     }
 }
