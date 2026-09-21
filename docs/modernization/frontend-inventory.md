@@ -2,7 +2,7 @@
 
 Baseline: 2026-09-21, preserved in `2045762`; security baseline `306beb8`; Redis increment `712e1c6`. Earlier dashboard, unified forms, raw graphs, remote mode, demo seeder and cron behavior remain part of the migration baseline.
 
-The baseline contains 32 Blade templates, 15 reachable browser screens, one unused Vue 2 component and 88 registered routes. The [file list](file-inventory.json) preserves all 74 original resource/public paths alongside current, new and removed paths. Generated `public/build/**` files are classified together and enumerated by the build manifest. The [route snapshot](route-snapshot.json) preserves the baseline and current 88 registered routes, including repaired middleware.
+The baseline contains 32 Blade templates, 15 reachable browser screens, one unused Vue 2 component and 88 registered routes. The [file list](file-inventory.json) preserves all 74 original resource/public paths alongside current, new and removed paths. Generated `public/build/**` files are classified together and enumerated by the build manifest. The [route snapshot](route-snapshot.json) preserves the 88-route baseline and current routes, including repaired middleware and the Developer Workspace canonical URL with its legacy redirect.
 
 ## Screen and template dispositions
 
@@ -13,9 +13,9 @@ The baseline contains 32 Blade templates, 15 reachable browser screens, one unus
 | `device-manager.blade.php` | `/dashboard`; own devices, Leaflet, `show`/`page`, all/paginated map, view/edit/delete | Migrated: `DashboardPage`/`DeviceMap`, flag `dashboard`; legacy popup text/logs also repaired |
 | `profile.blade.php` | GET/PUT `/profile`; one save, contact/address/optional password | Migrated: `ProfilePage`, flag `profile`; native atomic validation and blank-password behavior |
 | `device-register.blade.php` | GET `/device-register`, POST `/dataInsert`; profile defaults, one save, no opt-in | Migrated: `DeviceFormPage`, flag `device_register`; native validation/transaction |
-| `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/admin checks | Migrated: `DeviceFormPage`, flag `device_edit`; immutable identity and paired coordinates |
-| `device-info.blade.php` | `/device-info/{id}`; status, raw charts, remote mode/speed | Migrated: `DeviceInfoPage`/`HistoryCharts`/`RemoteControl`, flag `device_info`; server owner/admin checks on both frontends |
-| `admin-control-center.blade.php` | Admin tables, multipart firmware/config uploads, downloads | Migrated: `AdminPage`/`UploadSection`, flag `admin`; server admin restriction on both frontends |
+| `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/developer checks | Migrated: `DeviceFormPage`, flag `device_edit`; immutable identity and paired coordinates |
+| `device-info.blade.php` | `/device-info/{id}`; status, raw charts, remote mode/speed | Migrated: `DeviceInfoPage`/`HistoryCharts`/`RemoteControl`, flag `device_info`; server owner/developer checks on both frontends |
+| `admin-control-center.blade.php` | `/developer-workspace`; firmware/config uploads and downloads; old URL redirects | Migrated: `AdminPage`/`UploadSection`, flag `admin`; server developer restriction on both frontends, internal names retained for compatibility |
 | `auth/login.blade.php` | GET/POST `/login`, remember me, verification resend, reset links | Migrated: `AuthPage`, flag `auth`; cookie authentication and native redirects |
 | `auth/register.blade.php` | GET/POST `/register`; account/contact/address/password | Migrated: `AuthPage`, flag `auth`; server validation and one native submission |
 | `auth/verify.blade.php` | `/email/verify`, resend and verification-link flow | Migrated: `AuthPage`, flag `auth`; signatures/hash/expiry/throttling repaired; old non-expiring links require resend |

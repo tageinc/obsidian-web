@@ -1,7 +1,7 @@
 {
   "captured": "2026-09-21",
   "baseline": "2045762; current middleware includes security baseline 306beb8 and the Vue page-response boundary",
-  "note": "Current registered route metadata; no request/account/environment values. baseline_routes preserves the original 88-route inventory for comparison.",
+  "note": "Current registered route metadata; no request/account/environment values. baseline_routes preserves the original 88-route inventory for comparison. Developer Workspace adds a canonical route and preserves the old URL as an authorized redirect.",
   "routes": [
     {
       "domain": null,
@@ -20,12 +20,12 @@
       "method": "GET|HEAD",
       "uri": "admin-control-center",
       "name": "admin-control-center",
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@index",
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@legacyRedirect",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
-        "App\\Http\\Middleware\\AdminMiddleware"
+        "App\\Http\\Middleware\\DeveloperMiddleware"
       ]
     },
     {
@@ -446,6 +446,19 @@
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "developer-workspace",
+      "name": "developer-workspace",
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\DeveloperMiddleware"
       ]
     },
     {
@@ -982,7 +995,7 @@
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
-        "App\\Http\\Middleware\\AdminMiddleware"
+        "App\\Http\\Middleware\\DeveloperMiddleware"
       ]
     },
     {
@@ -995,7 +1008,7 @@
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
-        "App\\Http\\Middleware\\AdminMiddleware"
+        "App\\Http\\Middleware\\DeveloperMiddleware"
       ]
     },
     {

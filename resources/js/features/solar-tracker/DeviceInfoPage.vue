@@ -1,7 +1,8 @@
 <script setup>
+import { computed, nextTick, ref } from 'vue';
 import HistoryCharts from './HistoryCharts.vue';
 import RemoteControl from './RemoteControl.vue';
-defineProps({
+const props = defineProps({
     device: { type: Object, required: true },
     status: { type: Object, required: true },
     remote: { type: Object, required: true },
@@ -9,33 +10,165 @@ defineProps({
     links: { type: Object, required: true },
     csrfToken: { type: String, required: true },
 });
+const activeSection = ref('overview');
+const historyPanel = ref(null);
+const mode = ref(props.remote.mode);
+const sections = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'history', label: 'History' },
+    { id: 'control', label: 'Control' },
+];
+const hasReading = computed(() => Boolean(props.status.Updated && props.status.Updated !== 'N/A'));
+const reading = (key) => (hasReading.value ? (props.status[key] ?? '—') : '—');
+const sensors = ['PS1', 'PS2', 'PS Average', 'PDS', 'CTS'];
+async function exploreHistory() {
+    activeSection.value = 'history';
+    await nextTick();
+    historyPanel.value?.focus();
+}
+function navigateSection(event, index) {
+    const keys = {
+        ArrowRight: (index + 1) % sections.length,
+        ArrowLeft: (index + sections.length - 1) % sections.length,
+        Home: 0,
+        End: sections.length - 1,
+    };
+    if (!(event.key in keys)) return;
+    event.preventDefault();
+    const next = keys[event.key];
+    activeSection.value = sections[next].id;
+    event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
+}
 </script>
 <template>
-    <div class="container">
-        <a :href="links.dashboard" class="btn btn-secondary mb-3">Back</a>
-        <h1 class="h3">{{ device.alias || 'Device information' }}</h1>
-        <div class="row">
-            <div class="col-md-4">
-                <section class="card mb-3" aria-labelledby="device-title">
-                    <h2 id="device-title" class="card-header h6">Device Info</h2>
-                    <dl class="card-body">
-                        <template v-for="(value, label) in device.details" :key="label"
-                            ><dt>{{ label }}</dt>
-                            <dd>{{ value || 'N/A' }}</dd></template
-                        >
-                    </dl>
-                </section>
+    <div class="container device-page">
+        <a :href="links.dashboard" class="device-back">← Devices</a>
+        <header class="device-heading">
+            <div>
+                <p class="device-eyebrow">{{ device.details.Hardware || 'Solar tracker' }}</p>
+                <h1>{{ device.alias || 'Device information' }}</h1>
+                <p class="device-identity">
+                    Serial <span>{{ device.serial }}</span>
+                </p>
             </div>
-            <div class="col-md-8">
-                <section class="card mb-3" aria-labelledby="status-title">
-                    <h2 id="status-title" class="card-header h6">Current Status</h2>
-                    <dl class="card-body row">
-                        <div v-for="(value, label) in status" :key="label" class="col-md-6">
-                            <dt>{{ label }}</dt>
-                            <dd>{{ value ?? 'N/A' }}</dd>
+            <a v-if="links.edit" :href="links.edit" class="btn btn-outline-secondary"
+                >Edit device</a
+            >
+        </header>
+        <div class="device-tabs" role="tablist" aria-label="Device sections">
+            <button
+                v-for="(section, index) in sections"
+                :id="'device-tab-' + section.id"
+                :key="section.id"
+                type="button"
+                role="tab"
+                :aria-controls="'device-panel-' + section.id"
+                :aria-selected="activeSection === section.id"
+                :tabindex="activeSection === section.id ? 0 : -1"
+                @click="activeSection = section.id"
+                @keydown="navigateSection($event, index)"
+            >
+                {{ section.label }}
+            </button>
+        </div>
+
+        <section
+            v-show="activeSection === 'overview'"
+            id="device-panel-overview"
+            role="tabpanel"
+            aria-labelledby="device-tab-overview"
+            tabindex="0"
+        >
+            <div class="section-heading">
+                <div>
+                    <h2>At a glance</h2>
+                    <p>The latest reported readings from this device.</p>
+                </div>
+                <p class="reading-time">
+                    {{
+                        hasReading
+                            ? 'Last reading · ' + status.Updated
+                            : 'No telemetry received yet'
+                    }}
+                </p>
+            </div>
+            <dl class="device-metrics">
+                <div>
+                    <dt>Reported state</dt>
+                    <dd class="state-value">{{ reading('State') }}</dd>
+                </div>
+                <div>
+                    <dt>Temperature</dt>
+                    <dd>{{ reading('Temperature (°C)') }}<span v-if="hasReading"> °C</span></dd>
+                </div>
+                <div>
+                    <dt>Motor speed</dt>
+                    <dd>{{ reading('Motor Speed') }}</dd>
+                </div>
+                <div>
+                    <dt>Control mode</dt>
+                    <dd class="state-value">{{ mode === 1 ? 'Remote control' : 'Automatic' }}</dd>
+                </div>
+            </dl>
+            <div class="device-overview-grid">
+                <section class="device-surface" aria-labelledby="sensors-title">
+                    <h2 id="sensors-title">Sensor readings</h2>
+                    <p class="section-description">Values from the same reported reading.</p>
+                    <dl class="device-sensors">
+                        <div v-for="sensor in sensors" :key="sensor">
+                            <dt>{{ sensor }}</dt>
+                            <dd>{{ reading(sensor) }}</dd>
+                        </div>
+                    </dl>
+                    <button type="button" class="btn btn-link px-0" @click="exploreHistory">
+                        Explore history →
+                    </button>
+                </section>
+                <section class="device-surface" aria-labelledby="details-title">
+                    <h2 id="details-title">Device details</h2>
+                    <dl class="device-details">
+                        <div>
+                            <dt>Hardware</dt>
+                            <dd>{{ device.details.Hardware || '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt>SKU</dt>
+                            <dd>{{ device.details.SKU || '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt>Location</dt>
+                            <dd>{{ device.details.Address || 'No address added' }}</dd>
                         </div>
                     </dl>
                 </section>
+            </div>
+        </section>
+
+        <section
+            v-show="activeSection === 'history'"
+            id="device-panel-history"
+            ref="historyPanel"
+            role="tabpanel"
+            aria-labelledby="device-tab-history"
+            tabindex="0"
+        >
+            <HistoryCharts :points="points" :active="activeSection === 'history'" />
+        </section>
+
+        <section
+            v-show="activeSection === 'control'"
+            id="device-panel-control"
+            role="tabpanel"
+            aria-labelledby="device-tab-control"
+            tabindex="0"
+        >
+            <div class="section-heading">
+                <div>
+                    <h2>Device control</h2>
+                    <p>Choose automatic tracking or send a manual motor command.</p>
+                </div>
+            </div>
+            <div class="device-control-layout">
                 <RemoteControl
                     :key="device.serial"
                     :mode="remote.mode"
@@ -43,9 +176,255 @@ defineProps({
                     :serial="device.serial"
                     :endpoint="links.remote"
                     :csrf-token="csrfToken"
+                    @change="mode = $event.mode"
                 />
+                <aside class="control-guide" aria-labelledby="control-guide-title">
+                    <h3 id="control-guide-title">How control works</h3>
+                    <dl>
+                        <dt>Automatic</dt>
+                        <dd>
+                            The tracker follows its own tracking program. Manual controls are
+                            disabled.
+                        </dd>
+                        <dt>Remote control</dt>
+                        <dd>Up, Stop, and Down save a manual motor command for the device.</dd>
+                    </dl>
+                    <p>
+                        Changing modes sets the manual command to Stop. The reported motor speed
+                        updates when the device sends a new reading.
+                    </p>
+                </aside>
             </div>
-        </div>
-        <HistoryCharts :points="points" />
+        </section>
     </div>
 </template>
+
+<style scoped>
+.device-page {
+    --device-muted: #5c6879;
+    --device-border: #e0e6ee;
+    color: #202e42;
+    padding-bottom: 2rem;
+}
+.device-back {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin: 0.25rem 0 1.5rem;
+}
+.device-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+.device-heading h1 {
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    margin: 0.3rem 0 0.5rem;
+    overflow-wrap: anywhere;
+}
+.device-eyebrow {
+    color: var(--device-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 650;
+    margin: 0;
+}
+.device-identity {
+    font-size: 0.85rem;
+    color: var(--device-muted);
+    margin: 0;
+}
+.device-identity span {
+    color: #35445b;
+    margin-left: 0.3rem;
+    overflow-wrap: anywhere;
+}
+.device-heading > .btn {
+    flex-shrink: 0;
+}
+.device-tabs {
+    display: flex;
+    gap: 1.75rem;
+    border-bottom: 1px solid var(--device-border);
+    margin-bottom: 1.75rem;
+}
+.device-tabs button {
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    color: var(--device-muted);
+    padding: 0.75rem 0.2rem 1rem;
+    font-size: 0.925rem;
+    font-weight: 600;
+}
+.device-tabs button[aria-selected='true'] {
+    color: #084298;
+    border-bottom-color: #275bb5;
+}
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1.25rem;
+}
+.section-heading h2,
+.device-surface h2 {
+    font-size: 1.05rem;
+    font-weight: 650;
+    margin: 0 0 0.45rem;
+}
+.section-heading p,
+.section-description {
+    font-size: 0.85rem;
+    color: var(--device-muted);
+    margin: 0;
+}
+.section-heading .reading-time {
+    font-size: 0.75rem;
+    padding-top: 0.25rem;
+}
+.device-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--device-border);
+    border-radius: 0.8rem;
+}
+.device-metrics > div {
+    padding: 1.4rem;
+    min-width: 0;
+}
+.device-metrics > div + div {
+    border-left: 1px solid var(--device-border);
+}
+.device-metrics dt {
+    font-size: 0.8rem;
+    color: var(--device-muted);
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+.device-metrics dd {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.device-metrics dd span {
+    font-size: 0.9rem;
+    color: var(--device-muted);
+    font-weight: 400;
+}
+.device-metrics .state-value {
+    font-size: 1.2rem;
+}
+.device-overview-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1.5rem;
+}
+.device-surface {
+    background: #fff;
+    border: 1px solid var(--device-border);
+    border-radius: 0.8rem;
+    padding: 1.5rem;
+}
+.device-sensors {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+    margin: 1.6rem 0 0.75rem;
+}
+.device-sensors dt,
+.device-details dt {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--device-muted);
+    margin-bottom: 0.4rem;
+}
+.device-sensors dd {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+.device-details {
+    margin: 1.5rem 0 0;
+}
+.device-details > div + div {
+    margin-top: 1.2rem;
+}
+.device-details dd {
+    font-size: 0.9rem;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.device-control-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 2rem;
+}
+.control-guide {
+    padding: 0.75rem 0;
+    color: var(--device-muted);
+    font-size: 0.9rem;
+}
+.control-guide h3 {
+    font-size: 0.9rem;
+    color: #202e42;
+    font-weight: 650;
+    margin-bottom: 1.25rem;
+}
+.control-guide dt {
+    color: #35445b;
+    margin-bottom: 0.25rem;
+}
+.control-guide dd {
+    margin-bottom: 1.2rem;
+    line-height: 1.65;
+}
+.control-guide p {
+    font-size: 0.8rem;
+    line-height: 1.65;
+}
+@media (max-width: 767px) {
+    .device-heading {
+        align-items: flex-start;
+    }
+    .device-heading > .btn {
+        font-size: 0.8rem;
+    }
+    .device-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .device-metrics > div {
+        padding: 1rem;
+    }
+    .device-metrics > div:nth-child(3) {
+        border-left: 0;
+    }
+    .device-metrics > div:nth-child(n + 3) {
+        border-top: 1px solid var(--device-border);
+    }
+    .device-overview-grid,
+    .device-control-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+    .device-tabs {
+        gap: 1.5rem;
+    }
+    .device-surface {
+        padding: 1.2rem;
+    }
+}
+</style>

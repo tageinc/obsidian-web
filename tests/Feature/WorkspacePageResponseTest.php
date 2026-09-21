@@ -93,7 +93,7 @@ class WorkspacePageResponseTest extends TestCase
         foreach (['/edit-device/', '/device-info/'] as $prefix) {
             $this->page($prefix.$this->device->id)->assertForbidden();
         }
-        config(['app.admin_email' => $other->email]);
+        config(['app.developer_email' => $other->email]);
         $this->page('/device-info/'.$this->device->id)->assertOk()->assertJsonPath('page', 'device-info');
         $this->page('/edit-device/'.$this->device->id)->assertOk()->assertJsonPath('page', 'edit-device');
     }

@@ -23,7 +23,7 @@ class EnsureBrowserDeviceAccess
         if ($device) {
             $user = $request->user();
             abort_unless($user && (
-                (int) $device->user_id === (int) $user->id || $user->isAdministrator()
+                (int) $device->user_id === (int) $user->id || $user->isDeveloper()
             ), 403);
         }
 

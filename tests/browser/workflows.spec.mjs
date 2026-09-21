@@ -162,22 +162,47 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
     await expect(
         page.getByRole('heading', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('6 raw readings.', { exact: false })).toBeVisible();
-    await expect(page.locator('canvas')).toHaveCount(3);
+    await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
+    await expect(page.getByRole('switch', { name: 'Remote control mode' })).not.toBeVisible();
+    await expect(page.locator('#device-panel-control')).not.toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole('button', { name: /^Explore history/ }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#device-panel-history')).toBeFocused();
+    await expect(page.getByRole('tab', { name: 'History', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
+    await expect(page.getByText('6 raw readings', { exact: true })).toBeVisible();
+    await expect(page.locator('canvas')).toHaveCount(1);
     await expect(page.getByRole('img', { name: /Temperature.*Pacific Time/ })).toHaveAttribute(
         'aria-label',
         /(?:AM|PM)/,
     );
     await page.getByRole('button', { name: '1 hour', exact: true }).click();
-    await expect(page.getByText('2 raw readings.', { exact: false })).toBeVisible();
+    await expect(page.getByText('2 raw readings', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '12 hours', exact: true }).click();
-    await expect(page.getByText('4 raw readings.', { exact: false })).toBeVisible();
+    await expect(page.getByText('4 raw readings', { exact: true })).toBeVisible();
+    await page.getByLabel('Measurement', { exact: true }).selectOption('panels');
+    await expect(page.getByRole('img', { name: /Panel sensors.*Pacific Time/ })).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole('tab', { name: 'Control', exact: true }).click();
+    await expect(page.locator('#device-panel-control')).toBeVisible();
+    await expect(page.locator('#device-panel-history')).not.toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Remote control mode' })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Remote control mode' })).not.toBeChecked();
     await expect(page.getByRole('button', { name: 'Up', exact: true })).toBeDisabled();
+    await checkAccessibility(page);
     await page.reload();
-    await expect(page.getByText('6 raw readings.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
     expect(commands).toEqual([]);
-    await page.getByRole('link', { name: 'Back', exact: true }).click();
+    await page.getByRole('link', { name: '← Devices', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
     expect(commands).toEqual([]);
 });
@@ -201,17 +226,32 @@ test('auth and public documents retain URLs, form labels and keyboard access', a
     await checkAccessibility(page);
 });
 
-test('admin authorization and multipart server validation remain in Laravel', async ({ page }) => {
+test('developer authorization and multipart server validation remain in Laravel', async ({
+    page,
+}) => {
     await login(page);
-    const forbidden = await page.goto('/admin-control-center');
+    const forbidden = await page.goto('/developer-workspace');
     expect(forbidden.status()).toBe(403);
     await page.context().clearCookies();
     await login(page, 'admin');
-    await page.goto('/admin-control-center');
+    await page.goto('/developer-workspace');
     await expect(
-        page.getByRole('heading', { name: 'Admin Control Center', exact: true }),
+        page.getByRole('heading', { name: 'Developer Workspace', exact: true }),
     ).toBeVisible();
-    await expect(page.locator('form[enctype="multipart/form-data"]')).toHaveCount(2);
+    await expect(page.locator('#developer-firmware-panel')).toBeVisible();
+    await expect(page.locator('#firmware-upload')).not.toBeVisible();
+    await expect(page.locator('#developer-config-panel')).not.toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole('tab', { name: /^Firmware/ }).focus();
+    await page.keyboard.press('End');
+    await expect(page.getByRole('tab', { name: /^Configuration/ })).toBeFocused();
+    await expect(page.locator('#developer-config-panel')).toBeVisible();
+    await expect(page.locator('#developer-firmware-panel')).not.toBeVisible();
+    await page
+        .locator('#developer-config-panel')
+        .getByRole('button', { name: 'New upload' })
+        .click();
+    await expect(page.locator('#config')).toBeFocused();
     await page.locator('#config').setInputFiles({
         name: 'invalid.json',
         mimeType: 'text/plain',

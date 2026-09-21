@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import FormField from '../../shared/components/FormField.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 
@@ -22,6 +22,24 @@ const firmware = computed(() => props.kind === 'firmware');
 const description = ref(props.values.description ?? '');
 const prefix = ref(props.values.prefix ?? '');
 const perPage = ref(props.pagination.perPage);
+const showUpload = ref(
+    Object.keys(props.errors).length > 0 ||
+        Boolean(props.values.description || props.values.prefix),
+);
+const fileInput = ref(null);
+watch(
+    () => props.errors,
+    (errors) => {
+        if (Object.keys(errors).length) showUpload.value = true;
+    },
+);
+async function toggleUpload() {
+    showUpload.value = !showUpload.value;
+    if (showUpload.value) {
+        await nextTick();
+        fileInput.value?.focus();
+    }
+}
 watch(
     () => props.pagination.perPage,
     (value) => {
@@ -48,105 +66,138 @@ function checkFile(event) {
 </script>
 
 <template>
-    <section class="card mb-4" :aria-labelledby="`${kind}-heading`">
-        <div class="card-header">
-            <h2 :id="`${kind}-heading`" class="h5 mb-0">{{ title }}</h2>
-        </div>
-        <div class="card-body">
-            <FormFeedback :errors="summaryErrors" />
-            <form
-                :id="`${kind}-upload`"
-                :action="action"
-                method="POST"
-                enctype="multipart/form-data"
-                :aria-busy="pending && active"
-                @submit="$emit('submit', $event)"
+    <section class="card border-0 shadow-sm" :aria-labelledby="`${kind}-heading`">
+        <div class="p-4 pb-3 d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h2 :id="`${kind}-heading`" class="h4 mb-1">{{ title }}</h2>
+                <p class="text-secondary mb-0">
+                    {{
+                        firmware
+                            ? 'Release binaries for your devices.'
+                            : 'Versioned settings for your devices.'
+                    }}
+                </p>
+            </div>
+            <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                :aria-expanded="showUpload"
+                :aria-controls="`${kind}-upload-section`"
+                :disabled="pending"
+                @click="toggleUpload"
             >
-                <input type="hidden" name="_token" :value="csrfToken" />
-                <input type="hidden" name="_upload_kind" :value="kind" />
-                <div class="mb-3">
-                    <label :for="kind" class="form-label">{{
-                        firmware ? 'Firmware File (.bin)' : 'Configuration File (.json)'
-                    }}</label>
-                    <input
-                        :id="kind"
-                        :name="kind"
-                        type="file"
-                        :accept="firmware ? '.bin' : '.json'"
-                        required
-                        class="form-control"
-                        :class="{ 'is-invalid': errors[kind]?.length }"
-                        :aria-invalid="errors[kind]?.length ? 'true' : undefined"
-                        :aria-describedby="`${kind}-help${errors[kind]?.length ? ` ${kind}-errors` : ''}`"
-                        @change="checkFile"
-                    />
-                    <div :id="`${kind}-help`" class="form-text">
-                        Maximum {{ firmware ? '10 MB' : '1 MB' }}. Select the file again after a
-                        validation error.
-                    </div>
-                    <div
-                        v-if="errors[kind]?.length"
-                        :id="`${kind}-errors`"
-                        class="invalid-feedback"
-                    >
-                        <div v-for="message in errors[kind]" :key="message">{{ message }}</div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label :for="`${kind}-description`" class="form-label">{{
-                        firmware ? 'Firmware Description' : 'Config Description'
-                    }}</label>
-                    <textarea
-                        :id="`${kind}-description`"
-                        v-model="description"
-                        name="description"
-                        class="form-control"
-                        :class="{ 'is-invalid': errors.description?.length }"
-                        required
-                        maxlength="255"
-                        :aria-invalid="errors.description?.length ? 'true' : undefined"
-                        :aria-describedby="
-                            errors.description?.length ? `${kind}-description-errors` : undefined
-                        "
-                    />
-                    <div
-                        v-if="errors.description?.length"
-                        :id="`${kind}-description-errors`"
-                        class="invalid-feedback"
-                    >
-                        <div v-for="message in errors.description" :key="message">
-                            {{ message }}
+                {{ showUpload ? 'Close upload' : 'New upload' }}
+            </button>
+        </div>
+        <div class="p-4 pt-0">
+            <div :id="`${kind}-upload-section`" v-show="showUpload" class="developer-upload mb-4">
+                <h3 class="h5 mb-3">{{ firmware ? 'Upload firmware' : 'Upload configuration' }}</h3>
+                <FormFeedback :errors="summaryErrors" />
+                <form
+                    :id="`${kind}-upload`"
+                    :action="action"
+                    method="POST"
+                    enctype="multipart/form-data"
+                    :aria-busy="pending && active"
+                    @submit="$emit('submit', $event)"
+                >
+                    <input type="hidden" name="_token" :value="csrfToken" />
+                    <input type="hidden" name="_upload_kind" :value="kind" />
+                    <div class="mb-3">
+                        <label :for="kind" class="form-label">{{
+                            firmware ? 'Firmware File (.bin)' : 'Configuration File (.json)'
+                        }}</label>
+                        <input
+                            :id="kind"
+                            ref="fileInput"
+                            :name="kind"
+                            type="file"
+                            :accept="firmware ? '.bin' : '.json'"
+                            required
+                            class="form-control"
+                            :class="{ 'is-invalid': errors[kind]?.length }"
+                            :aria-invalid="errors[kind]?.length ? 'true' : undefined"
+                            :aria-describedby="`${kind}-help${errors[kind]?.length ? ` ${kind}-errors` : ''}`"
+                            @change="checkFile"
+                        />
+                        <div :id="`${kind}-help`" class="form-text">
+                            Maximum {{ firmware ? '10 MB' : '1 MB' }}. Select the file again after a
+                            validation error.
+                        </div>
+                        <div
+                            v-if="errors[kind]?.length"
+                            :id="`${kind}-errors`"
+                            class="invalid-feedback"
+                        >
+                            <div v-for="message in errors[kind]" :key="message">{{ message }}</div>
                         </div>
                     </div>
-                </div>
-                <FormField
-                    :id="`${kind}-prefix`"
-                    v-model="prefix"
-                    name="prefix"
-                    label="Prefix"
-                    maxlength="255"
-                    required
-                    :errors="errors.prefix"
-                />
-                <button type="submit" class="btn btn-success" :disabled="pending">
-                    {{
-                        pending && active
-                            ? 'Uploading…'
-                            : firmware
-                              ? 'Upload Firmware'
-                              : 'Upload JSON Config'
-                    }}
-                </button>
-                <span class="visually-hidden" role="status">{{
-                    pending && active ? 'Uploading file. Please wait.' : ''
+                    <div class="mb-3">
+                        <label :for="`${kind}-description`" class="form-label">{{
+                            firmware ? 'Firmware Description' : 'Config Description'
+                        }}</label>
+                        <textarea
+                            :id="`${kind}-description`"
+                            v-model="description"
+                            name="description"
+                            class="form-control"
+                            :class="{ 'is-invalid': errors.description?.length }"
+                            required
+                            maxlength="255"
+                            rows="3"
+                            :aria-invalid="errors.description?.length ? 'true' : undefined"
+                            :aria-describedby="
+                                errors.description?.length
+                                    ? `${kind}-description-errors`
+                                    : undefined
+                            "
+                        />
+                        <div
+                            v-if="errors.description?.length"
+                            :id="`${kind}-description-errors`"
+                            class="invalid-feedback"
+                        >
+                            <div v-for="message in errors.description" :key="message">
+                                {{ message }}
+                            </div>
+                        </div>
+                    </div>
+                    <FormField
+                        :id="`${kind}-prefix`"
+                        v-model="prefix"
+                        name="prefix"
+                        label="Prefix"
+                        maxlength="255"
+                        required
+                        :errors="errors.prefix"
+                    />
+                    <button type="submit" class="btn btn-primary" :disabled="pending">
+                        {{
+                            pending && active
+                                ? 'Uploading…'
+                                : firmware
+                                  ? 'Upload Firmware'
+                                  : 'Upload JSON Config'
+                        }}
+                    </button>
+                    <span class="visually-hidden" role="status">{{
+                        pending && active ? 'Uploading file. Please wait.' : ''
+                    }}</span>
+                </form>
+            </div>
+            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-3">
+                <h3 class="h5 mb-0">Release history</h3>
+                <span class="small text-secondary">{{
+                    firmware ? 'Firmware versions' : 'Configuration versions'
                 }}</span>
-            </form>
-            <div class="table-responsive mt-4">
-                <table class="table table-bordered">
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle developer-history">
                     <caption class="visually-hidden">
                         {{
                             title
                         }}
+                        release history
                     </caption>
                     <thead>
                         <tr>
@@ -160,11 +211,11 @@ function checkFile(event) {
                         <tr v-for="(row, index) in rows" :key="index">
                             <th scope="row">{{ row.version }}</th>
                             <td>{{ row.prefix }}</td>
-                            <td>{{ row.description }}</td>
-                            <td>{{ row.createdAt }}</td>
+                            <td class="developer-description">{{ row.description }}</td>
+                            <td class="text-nowrap small">{{ row.createdAt }}</td>
                         </tr>
                         <tr v-if="rows.length === 0">
-                            <td colspan="4">
+                            <td colspan="4" class="py-4 text-secondary text-center">
                                 {{
                                     firmware
                                         ? 'No firmware updates found.'
@@ -175,20 +226,25 @@ function checkFile(event) {
                     </tbody>
                 </table>
             </div>
-            <form :action="adminUrl" method="GET" class="mb-3">
+            <form
+                :action="adminUrl"
+                method="GET"
+                class="d-flex align-items-center flex-wrap gap-2 mt-3 mb-3"
+            >
+                <input type="hidden" name="section" :value="kind" />
                 <input
                     type="hidden"
                     :name="firmware ? 'config_show' : 'firmware_show'"
                     :value="otherSize"
                 />
-                <label :for="`${kind}-per-page`" class="form-label me-2">{{
+                <label :for="`${kind}-per-page`" class="form-label small mb-0">{{
                     firmware ? 'Firmware updates per page' : 'Configuration updates per page'
                 }}</label>
                 <select
                     :id="`${kind}-per-page`"
                     v-model="perPage"
                     :name="`${kind}_show`"
-                    class="form-select d-inline-block w-auto"
+                    class="form-select form-select-sm d-inline-block w-auto"
                     :disabled="pending"
                     @change="$event.target.form.requestSubmit()"
                 >
@@ -219,3 +275,29 @@ function checkFile(event) {
         </div>
     </section>
 </template>
+
+<style scoped>
+.developer-upload {
+    --bs-form-invalid-color: #b02a37;
+    padding: 1.5rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    background: var(--bs-tertiary-bg);
+}
+.developer-history th {
+    font-size: 0.875rem;
+}
+.developer-history thead th {
+    color: var(--bs-secondary-color);
+    font-weight: 500;
+}
+.developer-description {
+    min-width: 10rem;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 575.98px) {
+    .developer-upload {
+        padding: 1rem;
+    }
+}
+</style>

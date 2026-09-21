@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 
-class AdminMiddleware
+class DeveloperMiddleware
 {
     /**
      * Handle an incoming request.
@@ -16,7 +16,7 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        abort_unless($request->user() && $request->user()->isAdministrator(), 403);
+        abort_unless($request->user() && $request->user()->isDeveloper(), 403);
 
         return $next($request);
     }

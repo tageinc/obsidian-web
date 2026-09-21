@@ -15,11 +15,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $hidden = ['password', 'remember_token'];
 
-    public function isAdministrator(): bool
+    public function isDeveloper(): bool
     {
-        $email = config('app.admin_email');
+        $email = config('app.developer_email');
 
-        return is_string($email) && $email !== '' && $this->email === $email;
+        return is_string($email) && trim($email) !== '' && $this->email === $email;
     }
 
     /**

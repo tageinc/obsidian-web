@@ -27,11 +27,23 @@ it('uses native POST logout and clears only ephemeral display state', async () =
         props: { ...props, user: { name: 'Synthetic user' } },
         global: { plugins: [pinia] },
     });
-    expect(wrapper.find('a[href="/admin-control-center"]').exists()).toBe(false);
+    expect(wrapper.find('a[href="/developer-workspace"]').exists()).toBe(false);
     const form = wrapper.get('form');
     expect(form.attributes('method')).toBe('POST');
     await form.trigger('submit');
     expect(useSessionStore(pinia).signedIn).toBe(false);
     // Native submission must retain its connected form after ephemeral state clears.
     expect(wrapper.find('form').exists()).toBe(true);
+});
+it('shows the canonical Developer Workspace link when the server grants access', () => {
+    const wrapper = mount(NavigationPage, {
+        props: {
+            ...props,
+            user: { name: 'Developer' },
+            links: { ...links, admin: '/developer-workspace' },
+        },
+        global: { plugins: [createPinia()] },
+    });
+    expect(wrapper.get('a[href="/developer-workspace"]').text()).toBe('Developer Workspace');
+    wrapper.unmount();
 });

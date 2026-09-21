@@ -53,7 +53,7 @@
                     'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
                     'registerDevice' => route('device-register'), 'login' => route('login'),
                     'register' => route('register'), 'logout' => route('logout'),
-                    'admin' => Auth::check() && Auth::user()->isAdministrator() ? route('admin-control-center') : null,
+                    'admin' => Auth::check() && Auth::user()->isDeveloper() ? route('developer-workspace') : null,
                 ],
             ]])
         @else
@@ -104,9 +104,9 @@
                                 <a class="dropdown-item" href="{{ route('device-register') }}">
                                     {{ __('Register my device') }}
                                 </a>
-								@if(Auth::user() && Auth::user()->email == config('app.admin_email'))
-                                <a class="dropdown-item" href="{{ route('admin-control-center') }}">
-                                    {{ __('Admin control center') }}
+								@if(Auth::user() && Auth::user()->isDeveloper())
+                                <a class="dropdown-item" href="{{ route('developer-workspace') }}">
+                                    {{ __('Developer Workspace') }}
                                 </a>
                                 @endif
 		

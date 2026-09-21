@@ -35,7 +35,7 @@ or the separately listed security changes.
 - [Target architecture and dependency decisions](architecture.md)
 - [Redis boundaries, expiration, invalidation and failure policy](redis-boundary.md)
 - [Reviewable increments, tests, rollout and rollback](delivery-plan.md)
-- [Original/current 88 registered routes and middleware](route-snapshot.json)
+- [88 original and 89 current registered routes and middleware](route-snapshot.json)
 - [All 74 original resource/public files plus new/removed paths](file-inventory.json)
 
 Fourteen reachable pages are migrated to Vue 3, with a reproducible container
@@ -44,10 +44,17 @@ workloads. Delta is deferred because its source spreadsheet is absent; email
 templates remain Blade. All 32 original Blade templates and 74 original
 resource/public paths are accounted for, including retained rollback assets.
 
-Final local checks passed: 131 PHP tests (9,104 assertions), 78 Vue tests,
+Original migration checks passed: 131 PHP tests (9,104 assertions), 78 Vue tests,
 12 desktop/mobile Playwright tests with strict axe checks, lint/format checks,
 PHP syntax, legacy helper/cron checks, production Docker build and real Redis
 integration. GitHub CI is configured but was not executed on GitHub.
+
+The subsequent device-page and Developer Workspace update is locally verified:
+135 PHP tests (9,176 assertions), Vue component/regression checks, 12 desktop/mobile
+browser tests with strict axe checks, lint/format checks, and the pinned production
+Docker build passed. Device sections preserve raw timestamps and confirmed control
+state; the workspace separates release history from on-demand uploads. The canonical
+URL and `DEVELOPER_EMAIL` policy are documented in the [access model](../access-model.md).
 
 The verified local app runs at `http://localhost:8080` with ignored local
 frontend/workspace/Redis flags enabled. Committed flags default off. Production

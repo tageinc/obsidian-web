@@ -177,14 +177,14 @@ class DeviceFormsTest extends TestCase
         ]);
     }
 
-    public function test_configured_admin_can_edit_and_missing_devices_return_not_found(): void
+    public function test_configured_developer_can_edit_and_missing_devices_return_not_found(): void
     {
         $device = $this->device();
         $admin = User::create([
             'name' => 'Admin', 'email' => 'device-admin@example.test',
             'password' => 'test-hash', 'email_verified_at' => now(),
         ]);
-        config(['app.admin_email' => $admin->email]);
+        config(['app.developer_email' => $admin->email]);
         $this->actingAs($admin)->get('/edit-device/'.$device->id)->assertOk();
         $this->put('/edit-device/'.$device->id, $this->fields(['alias' => 'Admin updated']))
             ->assertSessionHasNoErrors()->assertRedirect('/edit-device/'.$device->id);

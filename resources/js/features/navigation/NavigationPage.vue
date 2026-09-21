@@ -49,7 +49,7 @@ session.initialize(props.user);
                             <a class="nav-link" :href="links.registerDevice">Register my device</a>
                         </li>
                         <li v-if="links.admin" class="nav-item">
-                            <a class="nav-link" :href="links.admin">Admin control center</a>
+                            <a class="nav-link" :href="links.admin">Developer Workspace</a>
                         </li>
                     </template>
                     <template v-else>

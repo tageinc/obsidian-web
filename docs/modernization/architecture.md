@@ -8,6 +8,11 @@ This is a frontend migration, not a Laravel business-domain rewrite. Laravel
 a supported Laravel release is a separate follow-up and remains a release risk.
 Vue 3 alone does not make Laravel 8 supported.
 
+The former admin management screen is now Developer Workspace at
+`/developer-workspace`, authorized by `DEVELOPER_EMAIL` with no `ADMIN_EMAIL`
+fallback. Historical admin terminology below and the internal `admin` feature
+flag refer to this same policy; see [the current access model](../access-model.md).
+
 ## Grounding in current TAGCSOFT
 
 Reference: sibling repository `tagcsoft-web`, clean HEAD `e67cbaa2`, inspected

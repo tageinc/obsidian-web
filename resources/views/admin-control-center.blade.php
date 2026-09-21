@@ -6,7 +6,7 @@
 @section('content')
 @if ($usesVue)
     @php
-        $adminPageData = function ($records, $size) use ($firmwarePaginationSize, $configPaginationSize) {
+        $adminPageData = function ($records, $size, $section) use ($firmwarePaginationSize, $configPaginationSize) {
             return [
                 'rows' => $records->getCollection()->map(function ($record) {
                     return [
@@ -20,26 +20,27 @@
                     'perPage' => (int) $size,
                     'lastPage' => $records->lastPage(),
                     'sizes' => array_values(array_unique([2, 10, 20, (int) $size])),
-                    'links' => $records->appends(['firmware_show' => $firmwarePaginationSize, 'config_show' => $configPaginationSize])->linkCollection()->map(function ($link) {
+                    'links' => $records->appends(['firmware_show' => $firmwarePaginationSize, 'config_show' => $configPaginationSize, 'section' => $section])->linkCollection()->map(function ($link) {
                         return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
                     })->all(),
                 ],
             ];
         };
-        $activeUpload = old('_upload_kind', $errors->has('config') ? 'config' : 'firmware');
+        $activeUpload = old('_upload_kind', session('active_upload', $errors->has('config') ? 'config' : request('section', 'firmware')));
         $activeUpload = $activeUpload === 'config' ? 'config' : 'firmware';
     @endphp
     @include('frontend.mount', ['page' => 'admin', 'props' => [
         'csrfToken' => csrf_token(),
         'links' => [
             'dashboard' => route('dashboard'),
-            'admin' => route('admin-control-center'),
+            'admin' => route('developer-workspace'),
             'uploadFirmware' => route('uploadFirmware'),
             'uploadConfig' => route('uploadConfig'),
         ],
-        'firmware' => $adminPageData($firmwareUpdates, $firmwarePaginationSize),
-        'config' => $adminPageData($configVersions, $configPaginationSize),
+        'firmware' => $adminPageData($firmwareUpdates, $firmwarePaginationSize, 'firmware'),
+        'config' => $adminPageData($configVersions, $configPaginationSize, 'config'),
         'activeUpload' => $activeUpload,
+        'activeSection' => $activeUpload,
         'values' => ['description' => old('description'), 'prefix' => old('prefix')],
         'errors' => $errors->messages(),
         'success' => session('success'),
@@ -48,7 +49,7 @@
 @else
 
 <div class="container">
-    <h2>Admin Control Center</h2>
+    <h2>Developer Workspace</h2>
 
     <!-- Success and Error Messages -->
     @if (session('success'))
@@ -108,7 +109,7 @@
 							</tbody>
 						</table>
 						{{-- Firmware Pagination Size Selection --}}
-						<form action="{{ route('admin-control-center') }}" method="GET">
+						<form action="{{ route('developer-workspace') }}" method="GET">
 							<select name="firmware_show" onchange="this.form.submit()">
 								<option value="2"{{ $firmwarePaginationSize == 2 ? ' selected' : '' }}>Show 2</option>
 								<option value="10"{{ $firmwarePaginationSize == 10 ? ' selected' : '' }}>Show 10</option>
@@ -167,7 +168,7 @@
 						</tbody>
 					</table>
 					{{-- Configuration Pagination Size Selection --}}
-					<form action="{{ route('admin-control-center') }}" method="GET">
+						<form action="{{ route('developer-workspace') }}" method="GET">
 						<select name="config_show" onchange="this.form.submit()">
 							<option value="2"{{ $configPaginationSize == 2 ? ' selected' : '' }}>Show 2</option>
 							<option value="10"{{ $configPaginationSize == 10 ? ' selected' : '' }}>Show 10</option>

@@ -16,7 +16,7 @@
             'Updated' => $latestStatus->updated_at_pst ?: 'N/A', 'PS2' => $latestStatus->ps2,
             'PDS' => $latestStatus->pds, 'Temperature (°C)' => $latestStatus->temp],
         'remote' => $remoteControl, 'points' => $graph['points'], 'csrfToken' => csrf_token(),
-        'links' => ['dashboard' => route('dashboard'), 'remote' => route('update-solar-tracker')],
+        'links' => ['dashboard' => route('dashboard'), 'edit' => route('edit-device', $device->id), 'remote' => route('update-solar-tracker')],
     ]])
 @else
 <div class="container">

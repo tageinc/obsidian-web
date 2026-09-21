@@ -10,7 +10,7 @@ function page(overrides = {}) {
         sizes: [2, 10, 20],
         links: [
             {
-                url: '/admin-control-center?firmware_show=2&config_show=10&page=2',
+                url: '/developer-workspace?firmware_show=2&config_show=10&section=firmware&page=2',
                 label: '2',
                 active: false,
             },
@@ -22,7 +22,7 @@ function page(overrides = {}) {
             csrfToken: 'test-csrf',
             links: {
                 dashboard: '/dashboard',
-                admin: '/admin-control-center',
+                admin: '/developer-workspace',
                 uploadFirmware: '/upload-firmware',
                 uploadConfig: '/upload-config',
             },
@@ -49,7 +49,49 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('admin upload workflow', () => {
+describe('developer workspace upload workflow', () => {
+    it('starts with one history and reveals uploads on demand without losing drafts across sections', async () => {
+        const wrapper = page();
+        expect(wrapper.get('h1').text()).toBe('Developer Workspace');
+        expect(wrapper.get('#developer-firmware-panel').isVisible()).toBe(true);
+        expect(wrapper.get('#developer-config-panel').isVisible()).toBe(false);
+        expect(wrapper.get('#firmware-upload').isVisible()).toBe(false);
+        await wrapper.get('[aria-controls="firmware-upload-section"]').trigger('click');
+        expect(wrapper.get('#firmware-upload').isVisible()).toBe(true);
+        expect(document.activeElement).toBe(wrapper.get('#firmware').element);
+        await wrapper.get('#firmware-description').setValue('A draft release');
+        await wrapper.get('#developer-config-tab').trigger('click');
+        expect(wrapper.get('#developer-firmware-panel').isVisible()).toBe(false);
+        expect(wrapper.get('#developer-config-panel').isVisible()).toBe(true);
+        expect(wrapper.get('#config-upload').isVisible()).toBe(false);
+        await wrapper.get('#developer-firmware-tab').trigger('click');
+        expect(wrapper.get('#firmware-description').element.value).toBe('A draft release');
+        await wrapper.get('[aria-controls="firmware-upload-section"]').trigger('click');
+        expect(wrapper.get('#firmware-upload').isVisible()).toBe(false);
+        expect(wrapper.get('#firmware-description').element.value).toBe('A draft release');
+    });
+
+    it('supports section links from the server and keyboard tab navigation with one tab stop', async () => {
+        const wrapper = page({ activeSection: 'config' });
+        const firmware = wrapper.get('#developer-firmware-tab');
+        const config = wrapper.get('#developer-config-tab');
+        expect(config.attributes('aria-selected')).toBe('true');
+        expect(config.attributes('tabindex')).toBe('0');
+        expect(firmware.attributes('tabindex')).toBe('-1');
+        await config.trigger('keydown', { key: 'ArrowRight' });
+        expect(firmware.attributes('aria-selected')).toBe('true');
+        expect(document.activeElement).toBe(firmware.element);
+        await firmware.trigger('keydown', { key: 'End' });
+        expect(document.activeElement).toBe(config.element);
+        await config.trigger('keydown', { key: 'Home' });
+        expect(document.activeElement).toBe(firmware.element);
+        expect(wrapper.findAll('[role="tab"][tabindex="0"]')).toHaveLength(1);
+        for (const tab of [firmware, config]) {
+            const panel = wrapper.get(`#${tab.attributes('aria-controls')}`);
+            expect(panel.attributes('aria-labelledby')).toBe(tab.attributes('id'));
+        }
+    });
+
     it('preserves both native multipart endpoints and never restores file contents or unsafe table markup', () => {
         const wrapper = page({
             values: {
@@ -80,6 +122,7 @@ describe('admin upload workflow', () => {
     it('retains failed upload text and exposes server errors only on the originating form with correct field links', () => {
         const wrapper = page({
             activeUpload: 'config',
+            activeSection: 'firmware',
             values: { description: 'Retained', prefix: 'CFG' },
             errors: {
                 config: ['Choose JSON.'],
@@ -87,6 +130,9 @@ describe('admin upload workflow', () => {
                 prefix: ['Prefix is invalid.'],
             },
         });
+        expect(wrapper.get('#developer-config-panel').isVisible()).toBe(true);
+        expect(wrapper.get('#config-upload').isVisible()).toBe(true);
+        expect(wrapper.get('#developer-firmware-panel').isVisible()).toBe(false);
         expect(wrapper.get('#config-description').element.value).toBe('Retained');
         expect(wrapper.get('#firmware-description').element.value).toBe('');
         expect(wrapper.get('#config-prefix').element.value).toBe('CFG');
@@ -129,6 +175,7 @@ describe('admin upload workflow', () => {
         expect(competing.defaultPrevented).toBe(true);
         await wrapper.vm.$nextTick();
         expect(wrapper.findAll('button[type="submit"]:disabled')).toHaveLength(2);
+        expect(wrapper.findAll('[role="tab"]:disabled')).toHaveLength(2);
         expect(wrapper.get('#config-upload').attributes('aria-busy')).toBe('true');
         window.dispatchEvent(new Event('pageshow'));
         await wrapper.vm.$nextTick();
@@ -144,11 +191,12 @@ describe('admin upload workflow', () => {
         expect(submit).toHaveBeenCalledOnce();
         expect(form.method).toBe('get');
         expect(Object.fromEntries(new FormData(form))).toEqual({
+            section: 'firmware',
             config_show: '10',
             firmware_show: '20',
         });
         expect(wrapper.get('nav a').attributes('href')).toBe(
-            '/admin-control-center?firmware_show=2&config_show=10&page=2',
+            '/developer-workspace?firmware_show=2&config_show=10&section=firmware&page=2',
         );
     });
 });

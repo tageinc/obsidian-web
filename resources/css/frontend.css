@@ -20,8 +20,8 @@ body {
     box-shadow: 0 1px 4px #00000012;
 }
 .obsidian-logo {
-    width: 150px;
-    height: 150px;
+    width: 48px;
+    height: 48px;
     object-fit: contain;
 }
 .form-label {
@@ -51,8 +51,8 @@ body {
 }
 @media (max-width: 575.98px) {
     .obsidian-logo {
-        width: 75px;
-        height: 75px;
+        width: 40px;
+        height: 40px;
     }
     .map-panel {
         height: 300px;

@@ -3,6 +3,21 @@
 Status: implementation and local verification completed on 2026-09-21. Fourteen reachable pages are migrated; delta remains deferred and email templates remain Blade. Production enablement requires separate approval.
 No production deployment, application data migration or production Redis provisioning has occurred. The opt-in local Redis profile was provisioned and tested; local enablement does not authorize production changes.
 
+Subsequent naming update: Developer Workspace uses `/developer-workspace` and
+`DEVELOPER_EMAIL`; the prior management URL remains an authorized redirect.
+The historical admin labels/feature flag in this migration record refer to the
+same developer policy, documented in [the access model](../access-model.md).
+
+The accompanying device-page update groups content into Overview, History, and
+Control; History creates one selected measurement chart only while visible.
+Developer Workspace uses Firmware/Configuration sections and reveals uploads on
+demand. Existing raw timestamps, control commands, native upload forms, validation
+recovery, and server ownership boundaries remain covered. Verification passed:
+135 PHP tests / 9,176 assertions, frontend unit/lint/format/helper checks, 12
+desktop/mobile browser tests with strict axe checks, the pinned Docker production
+build, and live local rendering. Browser checks cover keyboard section navigation,
+shortcut focus, zero commands on navigation, and rejected-upload recovery.
+
 ## Baseline and commit discipline
 
 Prior dashboard/forms, graph, seeder, remote-control and scheduler work was

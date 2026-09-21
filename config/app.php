@@ -12,7 +12,7 @@ return [
     | any other location as required by the application or its packages.
     |
     */
-    'admin_email' => env('ADMIN_EMAIL', 'default@example.com'),
+    'developer_email' => env('DEVELOPER_EMAIL'),
 
 
     'name' => env('APP_NAME', 'Laravel'),

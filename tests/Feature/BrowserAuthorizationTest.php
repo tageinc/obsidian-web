@@ -8,6 +8,7 @@ use App\Models\DeviceRegister;
 use App\Models\FirmwareVersions;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -25,7 +26,7 @@ class BrowserAuthorizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['app.admin_email' => 'admin@example.test']);
+        config(['app.developer_email' => 'admin@example.test']);
         foreach (['owner', 'admin', 'other'] as $role) {
             $this->{$role} = User::create([
                 'name' => $role, 'email' => $role.'@example.test',
@@ -39,7 +40,7 @@ class BrowserAuthorizationTest extends TestCase
         SolarTrackerLog::create(['serial_no' => $this->device->serial_no, 'ps1' => 10]);
     }
 
-    public function test_device_page_graph_and_both_refresh_urls_require_owner_or_admin(): void
+    public function test_device_page_graph_and_both_refresh_urls_require_owner_or_developer(): void
     {
         foreach ([$this->owner, $this->admin, $this->other] as $user) {
             $this->actingAs($user);
@@ -87,29 +88,66 @@ class BrowserAuthorizationTest extends TestCase
             ->assertStatus(410);
     }
 
-    public function test_admin_page_and_uploads_are_restricted_server_side(): void
+    public function test_developer_workspace_and_uploads_are_restricted_server_side(): void
     {
-        $this->get('/admin-control-center')->assertRedirect('/login');
-        $this->actingAs($this->other)->get('/admin-control-center')->assertForbidden();
+        $this->get('/developer-workspace')->assertRedirect('/login');
+        $this->actingAs($this->other)->get('/developer-workspace')->assertForbidden();
         foreach (['/upload-firmware', '/upload-config'] as $url) {
             $this->postJson($url)->assertForbidden();
         }
-        $this->actingAs($this->admin)->get('/admin-control-center')->assertOk();
-        // Validation runs only after the admin boundary permits the request.
+        $this->actingAs($this->admin)->get('/developer-workspace')->assertOk();
+        // Validation runs only after the developer boundary permits the request.
         $this->postJson('/upload-firmware')->assertUnprocessable()->assertJsonValidationErrors('firmware');
         $this->postJson('/upload-config')->assertUnprocessable()->assertJsonValidationErrors('config');
         $this->admin->email_verified_at = null;
         $this->admin->save();
-        $this->get('/admin-control-center')->assertRedirect('/email/verify');
+        $this->get('/developer-workspace')->assertRedirect('/email/verify');
     }
 
-    public function test_configured_admin_requires_a_nonempty_exact_email(): void
+    public function test_configured_developer_requires_a_nonempty_exact_email_without_legacy_fallback(): void
     {
-        $this->assertTrue($this->admin->isAdministrator());
-        $this->assertFalse($this->other->isAdministrator());
-        config(['app.admin_email' => '']);
-        $this->assertFalse($this->admin->isAdministrator());
-        $this->actingAs($this->admin)->get('/admin-control-center')->assertForbidden();
+        $this->assertTrue($this->admin->isDeveloper());
+        $this->assertFalse($this->other->isDeveloper());
+        foreach (['', null, '   ', 'ADMIN@example.test'] as $email) {
+            config(['app.developer_email' => $email, 'app.admin_email' => $this->admin->email]);
+            $this->assertFalse($this->admin->isDeveloper());
+            $this->actingAs($this->admin)->get('/developer-workspace')->assertForbidden();
+            $this->get('/admin-control-center')->assertForbidden();
+            $this->postJson('/upload-firmware')->assertForbidden();
+            $this->postJson('/upload-config')->assertForbidden();
+            $this->get('/edit-device/'.$this->device->id)->assertForbidden();
+            $this->get('/device-info/'.$this->device->id)->assertForbidden();
+        }
+    }
+
+    public function test_legacy_workspace_bookmarks_redirect_with_the_same_access_policy_and_query(): void
+    {
+        $url = '/admin-control-center?section=config&config_show=10&firmware_show=2&page=3&label=one%20two';
+        $this->get($url)->assertRedirect('/login');
+        $this->actingAs($this->other)->get($url)->assertForbidden();
+        $this->actingAs($this->admin)->get($url)->assertRedirect('/developer-workspace?section=config&config_show=10&firmware_show=2&page=3&label=one%20two');
+        $this->get('/developer-workspace')->assertOk();
+        $this->admin->email_verified_at = null;
+        $this->admin->save();
+        $this->get($url)->assertRedirect('/email/verify');
+    }
+
+    public function test_uploads_keep_their_post_contract_and_reopen_the_matching_workspace_section(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->admin);
+        $this->from('/developer-workspace?section=firmware')->post('/upload-firmware', [
+            'firmware' => UploadedFile::fake()->createWithContent('firmware.bin', 'synthetic firmware'),
+            'description' => 'Firmware fixture', 'prefix' => 'TEST', '_upload_kind' => 'firmware',
+        ])->assertRedirect('/developer-workspace?section=firmware')
+            ->assertSessionHas('active_upload', 'firmware')->assertSessionHas('success');
+        $this->from('/developer-workspace?section=config')->post('/upload-config', [
+            'config' => UploadedFile::fake()->createWithContent('config.json', '{"synthetic":true}'),
+            'description' => 'Config fixture', 'prefix' => 'TEST', '_upload_kind' => 'config',
+        ])->assertRedirect('/developer-workspace?section=config')
+            ->assertSessionHas('active_upload', 'config')->assertSessionHas('success');
+        $this->assertDatabaseCount('firmware_versions', 1);
+        $this->assertDatabaseCount('config_versions', 1);
     }
 
     public function test_software_read_downloads_remain_available_to_verified_users_and_public_device_api(): void

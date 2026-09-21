@@ -14,7 +14,8 @@ published to the host. The app defaults to `http://localhost:8080`.
 
 1. Copy `.env.docker.example` to `.env.docker` (`cp` on Linux or `Copy-Item` in
    PowerShell). Set distinct, strong `DB_PASSWORD` and `DB_ROOT_PASSWORD` values,
-   plus `APP_URL`, mail settings, and administrator email. Keep this file private.
+   plus `APP_URL`, mail settings, and `DEVELOPER_EMAIL` for Developer Workspace
+   access. Keep this file private. See [the access policy](docs/access-model.md).
 2. Build the image:
 
    ```sh

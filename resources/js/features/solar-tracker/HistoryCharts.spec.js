@@ -31,11 +31,36 @@ it('redraws selected ranges and destroys every chart on navigation', async () =>
     });
     await vi.dynamicImportSettled();
     await flushPromises();
-    expect(Chart).toHaveBeenCalledTimes(3);
+    expect(Chart).toHaveBeenCalledTimes(1);
     await wrapper.get('button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('1 raw readings');
+    expect(destroy).toHaveBeenCalledTimes(1);
+    await wrapper.get('select').setValue('panels');
+    await flushPromises();
+    expect(Chart.mock.calls.at(-1)[1].data.datasets.map((set) => set.label)).toEqual([
+        'PS1',
+        'PS2',
+    ]);
+    await wrapper.setProps({ active: false });
     expect(destroy).toHaveBeenCalledTimes(3);
+    await wrapper.setProps({ active: true });
+    await flushPromises();
+    expect(wrapper.get('select').element.value).toBe('panels');
+    expect(wrapper.text()).toContain('1 raw readings');
     wrapper.unmount();
-    expect(destroy).toHaveBeenCalledTimes(6);
+    expect(destroy).toHaveBeenCalledTimes(4);
+});
+it('waits until the history section is opened before initializing a chart', async () => {
+    Chart.mockClear();
+    const wrapper = mount(HistoryCharts, {
+        props: { active: false, points: [{ epoch_ms: 0, temp: 2 }] },
+    });
+    await flushPromises();
+    expect(Chart).not.toHaveBeenCalled();
+    await wrapper.setProps({ active: true });
+    await vi.dynamicImportSettled();
+    await flushPromises();
+    expect(Chart).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
 });

@@ -8,6 +8,7 @@ const props = defineProps({
     endpoint: { type: String, required: true },
     csrfToken: { type: String, required: true },
 });
+const emit = defineEmits(['change']);
 const confirmed = ref({ mode: props.mode === 1 ? 1 : 0, motor_speed: props.motorSpeed || 0 });
 const pending = ref(null);
 const feedback = ref('');
@@ -37,6 +38,7 @@ async function save(mode, speed, toggle = false) {
             );
         if (!alive) return;
         confirmed.value = { mode: result.mode, motor_speed: result.motor_speed };
+        emit('change', { ...confirmed.value });
         feedback.value = toggle
             ? `${result.mode ? 'Remote Control' : 'Automatic'} mode saved.`
             : `${result.motor_speed === 0 ? 'Stop' : result.motor_speed > 0 ? 'Up' : 'Down'} command saved.`;

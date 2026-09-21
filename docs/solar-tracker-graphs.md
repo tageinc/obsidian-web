@@ -1,5 +1,27 @@
 # Solar Tracker Graph Time Policy
 
+## Device page organization
+
+The Vue 3 device page opens on Overview: the latest reported state, temperature,
+motor speed, confirmed control mode, sensor readings, and device details. The
+reading timestamp makes freshness explicit; devices without telemetry show
+missing values rather than placeholder zero readings.
+
+History shows one selected measurement at a time (temperature, panel sensors,
+or motor speed), with the existing 1-hour, 12-hour, 24-hour, and all-data ranges.
+Its chart is created only while History is visible and released when leaving;
+measurement and range selections survive section changes. Control has its own
+section, with the same automatic/remote switch and manual command behavior.
+The control component stays mounted across section changes so confirmed state
+and pending requests remain intact. Switching sections sends no device commands.
+
+The compact header, clear page context, white content surfaces, and separation
+of tasks are grounded in TAGCSOFT's dashboard layout and developer workspace;
+device-specific behavior remains Obsidian's. Section tabs support arrow keys,
+Home, and End. Cards stack on small screens.
+
+## Timestamp and raw-data behavior
+
 Solar Tracker charts use each telemetry row's `updated_at` timestamp as the
 recorded time. The API returns its ISO-8601 timestamp and epoch milliseconds;
 the browser plots the epoch value on a linear time axis, so sparse readings keep

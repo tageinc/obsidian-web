@@ -116,21 +116,32 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertStringNotContainsString('authorizenet', file_get_contents(base_path('composer.json')));
     }
 
-    public function test_admin_user_seeder_creates_the_configured_account_once(): void
+    public function test_developer_user_seeder_creates_the_configured_account_once(): void
     {
-        putenv('ADMIN_EMAIL=admin@example.test');
+        config(['app.developer_email' => 'developer@example.test']);
         putenv('ADMIN_BOOTSTRAP_PASSWORD=seed-password');
 
         try {
             $this->seed(AdminUserSeeder::class);
             $this->seed(AdminUserSeeder::class);
 
-            $admin = DB::table('users')->where('email', 'admin@example.test')->first();
+            $admin = DB::table('users')->where('email', 'developer@example.test')->first();
             $this->assertNotNull($admin);
             $this->assertTrue(Hash::check('seed-password', $admin->password));
-            $this->assertSame(1, DB::table('users')->where('email', 'admin@example.test')->count());
+            $this->assertSame(1, DB::table('users')->where('email', 'developer@example.test')->count());
         } finally {
-            putenv('ADMIN_EMAIL');
+            putenv('ADMIN_BOOTSTRAP_PASSWORD');
+        }
+    }
+
+    public function test_developer_seeder_does_not_use_old_email_policy_when_new_setting_is_missing(): void
+    {
+        config(['app.developer_email' => null, 'app.admin_email' => 'old-admin@example.test']);
+        putenv('ADMIN_BOOTSTRAP_PASSWORD=seed-password');
+        try {
+            $this->seed(AdminUserSeeder::class);
+            $this->assertDatabaseCount('users', 0);
+        } finally {
             putenv('ADMIN_BOOTSTRAP_PASSWORD');
         }
     }

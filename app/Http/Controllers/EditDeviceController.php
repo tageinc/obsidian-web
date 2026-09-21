@@ -61,7 +61,7 @@ class EditDeviceController extends Controller
         $user = $request->user();
         abort_unless($user && (
             (int) $device->user_id === (int) $user->id
-            || $user->email === config('app.admin_email')
+            || $user->isDeveloper()
         ), 403);
 
         return $device;

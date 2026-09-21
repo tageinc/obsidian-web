@@ -14,7 +14,7 @@ Device registration uses one `POST /dataInsert` action. Device editing uses one
 `PUT /edit-device/{id}` action (`device.update`) for alias, address, and location.
 Registration identity remains read-only when editing because serial number and
 hardware identify telemetry and remote-control records. Device changes require
-the owner or configured administrator.
+the owner or configured developer (`DEVELOPER_EMAIL`).
 
 Register and Edit device no longer show notification opt-in controls. New web
 registrations have email/SMS notifications off; editing preserves existing

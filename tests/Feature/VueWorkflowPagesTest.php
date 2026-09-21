@@ -32,7 +32,7 @@ class VueWorkflowPagesTest extends TestCase
             'frontend.vue3.device_edit' => true,
             'frontend.vue3.dashboard' => true,
             'frontend.vue3.admin' => true,
-            'app.admin_email' => 'admin@example.test',
+            'app.developer_email' => 'admin@example.test',
         ]);
         foreach (['owner', 'other', 'admin'] as $role) {
             $this->{$role} = User::create([
@@ -148,40 +148,58 @@ class VueWorkflowPagesTest extends TestCase
         $this->getJson('/paginated-devices?show=1&page=2')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('total', 2);
     }
 
-    public function test_admin_payload_requires_server_admin_and_never_serializes_storage_paths(): void
+    public function test_developer_payload_requires_server_developer_and_never_serializes_storage_paths(): void
     {
         for ($version = 1; $version <= 3; $version++) {
             FirmwareVersions::create(['version' => $version, 'prefix' => 'SP1', 'description' => 'Firmware '.$version, 'file_path' => 'private-storage-must-not-be-serialized']);
             ConfigVersions::create(['version' => $version, 'prefix' => 'SP1', 'description' => 'Config '.$version, 'file_path' => 'private-storage-must-not-be-serialized']);
         }
-        $this->actingAs($this->owner)->get('/admin-control-center')->assertForbidden();
+        $this->actingAs($this->owner)->get('/developer-workspace')->assertForbidden();
         $response = $this->actingAs($this->admin)->withSession([
             '_old_input' => ['_upload_kind' => 'config', 'description' => 'Retained description', 'prefix' => 'CFG', 'file_path' => 'old-path-must-not-be-serialized'],
             'errors' => (new ViewErrorBag)->put('default', new MessageBag(['config' => ['JSON required.']])),
-        ])->get('/admin-control-center?firmware_show=2&config_show=1');
+        ])->get('/developer-workspace?firmware_show=2&config_show=1');
         $props = $this->props($response, 'admin');
         $this->assertSame('config', $props['activeUpload']);
+        $this->assertSame('config', $props['activeSection']);
         $this->assertSame(['description' => 'Retained description', 'prefix' => 'CFG'], $props['values']);
         $this->assertSame(['JSON required.'], $props['errors']['config']);
         $this->assertCount(2, $props['firmware']['rows']);
         $this->assertCount(1, $props['config']['rows']);
         $this->assertSame(route('uploadFirmware'), $props['links']['uploadFirmware']);
         $this->assertSame(route('uploadConfig'), $props['links']['uploadConfig']);
+        $this->assertSame(route('developer-workspace'), $props['links']['admin']);
         foreach (['firmware', 'config'] as $kind) {
             $this->assertSame(['version', 'prefix', 'description', 'createdAt'], array_keys($props[$kind]['rows'][0]));
             foreach ($props[$kind]['pagination']['links'] as $link) {
                 if ($link['url']) {
                     $this->assertStringContainsString('firmware_show=2', $link['url']);
                     $this->assertStringContainsString('config_show=1', $link['url']);
+                    $this->assertStringContainsString('section='.$kind, $link['url']);
                 }
             }
         }
         $response->assertDontSee('private-storage-must-not-be-serialized')->assertDontSee('old-path-must-not-be-serialized');
     }
 
+    public function test_developer_sections_follow_safe_query_or_upload_feedback_and_work_with_legacy_renderer(): void
+    {
+        $this->actingAs($this->admin);
+        $props = $this->props($this->get('/developer-workspace?section=config'), 'admin');
+        $this->assertSame('config', $props['activeSection']);
+        $props = $this->props($this->get('/developer-workspace?section=unexpected'), 'admin');
+        $this->assertSame('firmware', $props['activeSection']);
+        $props = $this->props($this->withSession(['active_upload' => 'config'])->get('/developer-workspace?section=firmware'), 'admin');
+        $this->assertSame('config', $props['activeSection']);
+        config(['frontend.vue3.admin' => false]);
+        $this->get('/developer-workspace')->assertOk()->assertSee('Developer Workspace')
+            ->assertDontSee('data-vue-page="admin"', false)
+            ->assertSee('action="'.route('developer-workspace').'"', false);
+    }
+
     public function test_modern_pages_preserve_guest_and_unverified_redirects_and_flags_restore_blade(): void
     {
-        foreach (['/profile', '/device-register', '/dashboard', '/admin-control-center'] as $url) {
+        foreach (['/profile', '/device-register', '/dashboard', '/developer-workspace'] as $url) {
             $this->get($url)->assertRedirect('/login');
         }
         $this->owner->email_verified_at = null;

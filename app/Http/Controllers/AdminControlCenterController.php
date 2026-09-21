@@ -18,6 +18,13 @@ use App\Models\Api\SolarTrackerLog;
 
 class AdminControlCenterController extends Controller
 {
+    public function legacyRedirect(Request $request)
+    {
+        $query = $request->server->get('QUERY_STRING', '');
+
+        return redirect()->to(route('developer-workspace').($query !== '' ? '?'.$query : ''));
+    }
+
     /**
      * Show the firmware update form.
      *
@@ -159,9 +166,9 @@ class AdminControlCenterController extends Controller
 
             $fullPath = Storage::disk('public')->url($filename);
             $message = "Firmware v{$version} uploaded successfully! File located at: " . $fullPath;
-            return back()->with('success', $message);
+            return back()->with('success', $message)->with('active_upload', 'firmware');
         } else {
-            return back()->with('error', 'There was an issue uploading the firmware file.');
+            return back()->with('error', 'There was an issue uploading the firmware file.')->with('active_upload', 'firmware');
         }
     }
 
@@ -194,9 +201,9 @@ class AdminControlCenterController extends Controller
             ]);
 
             Log::info('device.config_uploaded');
-            return back()->with('success', "Config file uploaded successfully!");
+            return back()->with('success', "Config file uploaded successfully!")->with('active_upload', 'config');
         } else {
-            return back()->with('error', 'There was an issue uploading the config file.');
+            return back()->with('error', 'There was an issue uploading the config file.')->with('active_upload', 'config');
         }
     }
     /**
