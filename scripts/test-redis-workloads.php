@@ -125,12 +125,26 @@ try {
     $outageMilliseconds = (hrtime(true) - $started) / 1e6;
     check($outageMilliseconds < 1000, 'Refused connection exceeded the test latency ceiling.');
 
+    // .invalid is reserved; exercise a real resolver failure without a private hostname.
+    // DNS duration is resolver-owned and is not bounded by the Redis socket timeout.
+    $failedConfig['workloads']['host'] = 'obsidian-redis-integration.invalid';
+    $failedConfig['workloads']['port'] = 6379;
+    $app->instance('redis', new RedisManager($app, 'phpredis', $failedConfig));
+    Cache::purge('redis-workloads');
+    $app->instance('request', Request::create('/'));
+    $started = hrtime(true);
+    $dnsService = $app->make(RedisWorkloads::class);
+    check($dnsService->version('firmware', 'synthetic', fn () => 'dns-fallback') === 'dns-fallback', 'DNS failure did not use authoritative reader.');
+    $dnsService->countRoute('api.login');
+    $dnsMilliseconds = (hrtime(true) - $started) / 1e6;
+
     $timeoutPipes = [];
     $timeoutProcess = proc_open([PHP_BINARY, __FILE__, '--timeout-worker'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $timeoutPipes);
     check(is_resource($timeoutProcess), 'Unable to start timeout fixture.');
     $processes[] = [$timeoutProcess, $timeoutPipes];
     $address = trim(fgets($timeoutPipes[1]));
     check((bool) preg_match('/^127\.0\.0\.1:([0-9]+)$/', $address, $matches), 'Invalid local timeout fixture.');
+    $failedConfig['workloads']['host'] = '127.0.0.1';
     $failedConfig['workloads']['port'] = (int) $matches[1];
     $app->instance('redis', new RedisManager($app, 'phpredis', $failedConfig));
     Cache::purge('redis-workloads');
@@ -145,7 +159,7 @@ try {
     $app->instance('request', Request::create('/'));
     check($app->make(RedisWorkloads::class)->version('firmware', 'synthetic', fn () => 'recovered') === 'recovered', 'Next request did not recover.');
 
-    printf("PASS: Redis hit/miss, TTL, invalidation, namespace, 300 parallel increments, outage, timeout and recovery.\n100 cached reads: %.2f ms; refused-connection fallback: %.2f ms; read-timeout fallback: %.2f ms.\n", $cacheMilliseconds, $outageMilliseconds, $timeoutMilliseconds);
+    printf("PASS: Redis hit/miss, TTL, invalidation, namespace, 300 parallel increments, outage, DNS, timeout and recovery.\n100 cached reads: %.2f ms; refused-connection fallback: %.2f ms; DNS fallback: %.2f ms; read-timeout fallback: %.2f ms.\n", $cacheMilliseconds, $outageMilliseconds, $dnsMilliseconds, $timeoutMilliseconds);
 } finally {
     foreach ($processes as [$process, $pipes]) {
         if (is_resource($process)) {
