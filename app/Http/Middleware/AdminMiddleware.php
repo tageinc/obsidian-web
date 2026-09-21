@@ -16,13 +16,8 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if(auth()->user()->isAdmin())
-        {
-            return $next($request);
-        }
-        else
-        {
-            return abort(401);
-        }
+        abort_unless($request->user() && $request->user()->isAdministrator(), 403);
+
+        return $next($request);
     }
 }

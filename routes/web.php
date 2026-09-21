@@ -34,7 +34,6 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/email/verify', 'Auth\VerificationController@show')->name('verification.notice');
 
-Route::post('/email/resend', 'Auth\VerificationController@resend')->name('verification.resend');
 Route::post('/email/resend', [VerificationController::class, 'resend'])->name('verification.resend');
 
 Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->name('verification.verify');
@@ -59,25 +58,25 @@ Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
     Route::put('/edit-device/{id}/address2', [EditDeviceController::class, 'updateAddress2'])->name('update.address2');
     Route::put('/edit-device/{id}/zipcode', [EditDeviceController::class, 'updateZipCode'])->name('update.zipcode');
     Route::put('/edit-device/{id}/statecity', [EditDeviceController::class, 'updateStateCity'])->name('update.statecity');
-    Route::get('/admin-control-center', [AdminControlCenterController::class, 'index'])->name('admin-control-center');
-    Route::post('/upload-firmware', [AdminControlCenterController::class, 'uploadFirmware'])->name('uploadFirmware');
-    Route::post('/upload-config', [AdminControlCenterController::class, 'uploadConfig'])->name('uploadConfig');
+    Route::get('/admin-control-center', [AdminControlCenterController::class, 'index'])->middleware('browser.admin')->name('admin-control-center');
+    Route::post('/upload-firmware', [AdminControlCenterController::class, 'uploadFirmware'])->middleware('browser.admin')->name('uploadFirmware');
+    Route::post('/upload-config', [AdminControlCenterController::class, 'uploadConfig'])->middleware('browser.admin')->name('uploadConfig');
     Route::get('/firmware-file/version/{version?}', [AdminControlCenterController::class, 'serveFirmwareByVersion']);
     Route::get('/config-file/version/{version?}', [AdminControlCenterController::class, 'serveConfigByVersion']);
     Route::get('/firmware-file/prefix/{prefix?}', [AdminControlCenterController::class, 'serveFirmwareByPrefix']);
     Route::get('/config-file/prefix/{prefix?}', [AdminControlCenterController::class, 'serveConfigByPrefix']);
     Route::get('/firmware-version/{prefix?}', [AdminControlCenterController::class, 'getLatestFirmwareVersionNumber']);
     Route::get('/config-version/{prefix?}', [AdminControlCenterController::class, 'getLatestConfigVersionNumber']);
-    Route::get('/device-info/{id}', [DeviceInfoController::class, 'index'])->name('device-info');
-    Route::post('/device/refresh/{id}', [DeviceInfoController::class, 'refresh'])->name('device.refresh');
+    Route::get('/device-info/{id}', [DeviceInfoController::class, 'index'])->middleware('browser.device')->name('device-info');
+    Route::post('/device/refresh/{id}', [DeviceInfoController::class, 'refresh'])->middleware('browser.device')->name('device.refresh');
     Route::get('/all-devices', [DeviceManagerController::class, 'allDevices'])->name('all-devices');
     Route::get('/paginated-devices', [DeviceManagerController::class, 'paginatedDevices'])->name('paginated-devices');
     Route::get('/thank-you', [ThankYouController::class, 'index'])->name('thank-you');
-    Route::get('/device/{id}/fetch-graph-data', 'DeviceInfoController@fetchGraphData')->name('device.fetchGraphData');
+    Route::get('/device/{id}/fetch-graph-data', 'DeviceInfoController@fetchGraphData')->middleware('browser.device')->name('device.fetchGraphData');
     Route::put('/device/{id}/update-status-notification', 'EditDeviceController@updateStatusNotification')->name('update.status_notification');
     Route::put('/device/{id}/update-product-alias', [EditDeviceController::class, 'updateProductAlias'])->name('update.alias');
-    Route::get('/device/{id}/refresh', 'DeviceInfoController@refresh')->name('device.refresh');
-    Route::post('/update-solar-tracker', [DeviceInfoController::class, 'updateSolarTracker'])->name('update-solar-tracker');
+    Route::get('/device/{id}/refresh', 'DeviceInfoController@refresh')->middleware('browser.device')->name('device.refresh');
+    Route::post('/update-solar-tracker', [DeviceInfoController::class, 'updateSolarTracker'])->middleware('browser.device')->name('update-solar-tracker');
 });
 
 Route::get('/contact-us', [ContactUsController::class, 'index'])->name('contact-us');

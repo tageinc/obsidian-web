@@ -11,8 +11,16 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable;
-use HasApiTokens, Notifiable;
+    use HasFactory, HasApiTokens, Notifiable;
+
+    protected $hidden = ['password', 'remember_token'];
+
+    public function isAdministrator(): bool
+    {
+        $email = config('app.admin_email');
+
+        return is_string($email) && $email !== '' && $this->email === $email;
+    }
 
     /**
      * The attributes that are mass assignable.

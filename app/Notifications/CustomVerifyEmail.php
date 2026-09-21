@@ -7,7 +7,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Log;
 
 class CustomVerifyEmail extends Notification
 {
@@ -43,12 +42,10 @@ class CustomVerifyEmail extends Notification
 
     public function toMail($notifiable)
     {
-        $verifyUrl = URL::signedRoute('verification.verify', [
+        $verifyUrl = URL::temporarySignedRoute('verification.verify', now()->addMinutes(60), [
             'id' => $notifiable->getKey(),
             'hash' => sha1($notifiable->getEmailForVerification())
         ]);
-
-        Log::info("custom email Verification URL: " . $verifyUrl);
 
         return (new MailMessage)
             ->greeting('Hello!')
