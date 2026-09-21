@@ -1,8 +1,1015 @@
 {
   "captured": "2026-09-21",
-  "baseline": "c8c32c9 plus the existing working tree",
-  "note": "Static route metadata only; no request, account or environment values. Preserve these external contracts during migration.",
+  "baseline": "2045762; current middleware includes security baseline 306beb8 and the Vue page-response boundary",
+  "note": "Current registered route metadata; no request/account/environment values. baseline_routes preserves the original 88-route inventory for comparison.",
   "routes": [
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "/",
+      "name": "home",
+      "action": "App\\Http\\Controllers\\HomeController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "admin-control-center",
+      "name": "admin-control-center",
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\AdminMiddleware"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "all-devices",
+      "name": "all-devices",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@allDevices",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/all-devices-api",
+      "name": "device.all-devices-api",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@allDevicesAPI",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/config-file/prefix/{prefix?}",
+      "name": "device.config-by-prefix",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@serveConfigByPrefix",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/config-file/version/{version?}",
+      "name": "device.config-by-version",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@serveConfigByVersion",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/config-version/{prefix?}",
+      "name": "device.config-version",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@getLatestConfigVersionNumber",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/device-register",
+      "name": null,
+      "action": "App\\Http\\Controllers\\DeviceRegisterController@apiRegisterDevice",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "DELETE",
+      "uri": "api/device/{id}",
+      "name": "device.delete-api",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@deleteAPI",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/address1",
+      "name": "device.api-update-address1",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateAddress1",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/address2",
+      "name": "device.api-update-address2",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateAddress2",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/alias",
+      "name": "device.api-update-product-alias",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateProductAlias",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/device/{id}/data",
+      "name": "device.get-device-data",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@getDeviceData",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/statecity",
+      "name": "device.api-update-statecity",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateStateCity",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/statusnotification",
+      "name": "device.api-update-status-notification",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateStatusNotification",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/zipcode",
+      "name": "device.api-update-zipcode",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateZipCode",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/firmware-file/prefix/{prefix?}",
+      "name": "device.firmware-by-prefix",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@serveFirmwareByPrefix",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/firmware-file/version/{version?}",
+      "name": "device.firmware-by-version",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@serveFirmwareByVersion",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/firmware-version/{prefix?}",
+      "name": "device.firmware-version",
+      "action": "App\\Http\\Controllers\\Api\\DeviceSoftwareController@getLatestFirmwareVersionNumber",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/get-solar-tracker-status",
+      "name": "device.get-solar-tracker-status",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@getSolarTrackerStatus",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/log",
+      "name": "device.log-data",
+      "action": "App\\Http\\Controllers\\Api\\DeviceLogController@logData",
+      "middleware": [
+        "api",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:device-telemetry"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/login",
+      "name": "api.login",
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@apiLogin",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/logout",
+      "name": "api.logout",
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@logout",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/profile/update-email",
+      "name": "profile.update-email",
+      "action": "App\\Http\\Controllers\\ProfileController@updateEmailApi",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/profile/update-password",
+      "name": "profile.update-password",
+      "action": "App\\Http\\Controllers\\ProfileController@updatePasswordApi",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/profile/update-phone-number",
+      "name": "profile.update-phone-number",
+      "action": "App\\Http\\Controllers\\ProfileController@updatePhoneNumberApi",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/remote-control-set/{data?}",
+      "name": "device.remote-control-set",
+      "action": "App\\Http\\Controllers\\Api\\DeviceRemoteController@remoteControl",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/remote-control/{serial_no?}",
+      "name": "device.remote-control-info",
+      "action": "App\\Http\\Controllers\\Api\\DeviceRemoteController@getRemoteControlInfo",
+      "middleware": [
+        "api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/solar-tracker/{serial_no}",
+      "name": "device.get-latest-status-json",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@getLatestStatusJson",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/update-name",
+      "name": "profile.update-name",
+      "action": "App\\Http\\Controllers\\ProfileController@updateNameApi",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/update-solar-tracker",
+      "name": "device.update-solar-tracker",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@updateSolarTracker",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:sanctum"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "config-file/prefix/{prefix?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveConfigByPrefix",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "config-file/version/{version?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveConfigByVersion",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "config-version/{prefix?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@getLatestConfigVersionNumber",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "contact-us",
+      "name": "contact-us",
+      "action": "App\\Http\\Controllers\\ContactUsController@index",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "dashboard",
+      "name": "dashboard",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "dataInsert",
+      "name": "dataInsert",
+      "action": "App\\Http\\Controllers\\DeviceRegisterController@dataInsert",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "delete-device/{id}",
+      "name": "deleteDevice",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@delete",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "delta",
+      "name": "delta",
+      "action": "App\\Http\\Controllers\\Delta@showDelta",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "device-info/{id}",
+      "name": "device-info",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "device-manager",
+      "name": "device-manager",
+      "action": "App\\Http\\Controllers\\HomeController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "device-register",
+      "name": "device-register",
+      "action": "App\\Http\\Controllers\\DeviceRegisterController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "device/refresh/{id}",
+      "name": "device.refresh",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@refresh",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "device/{id}/fetch-graph-data",
+      "name": "device.fetchGraphData",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@fetchGraphData",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "device/{id}/refresh",
+      "name": "device.refresh",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@refresh",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "device/{id}/update-product-alias",
+      "name": "update.alias",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateProductAlias",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "device/{id}/update-status-notification",
+      "name": "update.status_notification",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateStatusNotification",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "edit-device/{id}",
+      "name": "edit-device",
+      "action": "App\\Http\\Controllers\\EditDeviceController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "edit-device/{id}",
+      "name": "device.update",
+      "action": "App\\Http\\Controllers\\EditDeviceController@update",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "edit-device/{id}/address1",
+      "name": "update.address1",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateAddress1",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "edit-device/{id}/address2",
+      "name": "update.address2",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateAddress2",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "edit-device/{id}/statecity",
+      "name": "update.statecity",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateStateCity",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "edit-device/{id}/zipcode",
+      "name": "update.zipcode",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateZipCode",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "email/resend",
+      "name": "verification.resend",
+      "action": "App\\Http\\Controllers\\Auth\\VerificationController@resend",
+      "middleware": [
+        "web",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:6,1"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "email/verify",
+      "name": "verification.notice",
+      "action": "App\\Http\\Controllers\\Auth\\VerificationController@show",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "email/verify/{id}/{hash}",
+      "name": "verification.verify",
+      "action": "App\\Http\\Controllers\\Auth\\VerificationController@verify",
+      "middleware": [
+        "web",
+        "Illuminate\\Routing\\Middleware\\ValidateSignature",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:6,1"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "firmware-file/prefix/{prefix?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveFirmwareByPrefix",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "firmware-file/version/{version?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveFirmwareByVersion",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "firmware-version/{prefix?}",
+      "name": null,
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@getLatestFirmwareVersionNumber",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "livewire/livewire.js",
+      "name": null,
+      "action": "Livewire\\Controllers\\LivewireJavaScriptAssets@source",
+      "middleware": []
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "livewire/livewire.js.map",
+      "name": null,
+      "action": "Livewire\\Controllers\\LivewireJavaScriptAssets@maps",
+      "middleware": []
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "livewire/message/{name}",
+      "name": "livewire.message",
+      "action": "Livewire\\Controllers\\HttpConnectionHandler",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "livewire/preview-file/{filename}",
+      "name": "livewire.preview-file",
+      "action": "Livewire\\Controllers\\FilePreviewHandler@handle",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "livewire/upload-file",
+      "name": "livewire.upload-file",
+      "action": "Livewire\\Controllers\\FileUploadHandler@handle",
+      "middleware": [
+        "web",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:60,1"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "login",
+      "name": "login",
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@showLoginForm",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "login",
+      "name": null,
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@login",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "logout",
+      "name": "logout",
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@logout",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "paginated-devices",
+      "name": "paginated-devices",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@paginatedDevices",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "password/confirm",
+      "name": "password.confirm",
+      "action": "App\\Http\\Controllers\\Auth\\ConfirmPasswordController@showConfirmForm",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "password/confirm",
+      "name": null,
+      "action": "App\\Http\\Controllers\\Auth\\ConfirmPasswordController@confirm",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "password/email",
+      "name": "password.email",
+      "action": "App\\Http\\Controllers\\Auth\\ForgotPasswordController@sendResetLinkEmail",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "password/reset",
+      "name": "password.request",
+      "action": "App\\Http\\Controllers\\Auth\\ForgotPasswordController@showLinkRequestForm",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "password/reset",
+      "name": "password.update",
+      "action": "App\\Http\\Controllers\\Auth\\ResetPasswordController@reset",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "password/reset/{token}",
+      "name": "password.reset",
+      "action": "App\\Http\\Controllers\\Auth\\ResetPasswordController@showResetForm",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "profile",
+      "name": "profile",
+      "action": "App\\Http\\Controllers\\ProfileController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "profile",
+      "name": "profile.update",
+      "action": "App\\Http\\Controllers\\ProfileController@update",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "profile/update-email",
+      "name": "profile.updateEmail",
+      "action": "App\\Http\\Controllers\\ProfileController@updateEmail",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "profile/update-name",
+      "name": "profile.updateName",
+      "action": "App\\Http\\Controllers\\ProfileController@updateName",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "profile/update-password",
+      "name": "profile.updatePassword",
+      "action": "App\\Http\\Controllers\\ProfileController@updatePassword",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "profile/update-phone-number",
+      "name": "profile.updatePhoneNumber",
+      "action": "App\\Http\\Controllers\\ProfileController@updatePhoneNumber",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "register",
+      "name": "register",
+      "action": "App\\Http\\Controllers\\Auth\\RegisterController@showRegistrationForm",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "register",
+      "name": null,
+      "action": "App\\Http\\Controllers\\Auth\\RegisterController@register",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "sanctum/csrf-cookie",
+      "name": null,
+      "action": "Laravel\\Sanctum\\Http\\Controllers\\CsrfCookieController@show",
+      "middleware": [
+        "web"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "thank-you",
+      "name": "thank-you",
+      "action": "App\\Http\\Controllers\\ThankYouController@index",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "update-solar-tracker",
+      "name": "update-solar-tracker",
+      "action": "App\\Http\\Controllers\\DeviceInfoController@updateSolarTracker",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "upload-config",
+      "name": "uploadConfig",
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@uploadConfig",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\AdminMiddleware"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "upload-firmware",
+      "name": "uploadFirmware",
+      "action": "App\\Http\\Controllers\\AdminControlCenterController@uploadFirmware",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\AdminMiddleware"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "{locale}/livewire/message/{name}",
+      "name": "livewire.message-localized",
+      "action": "Livewire\\Controllers\\HttpConnectionHandler",
+      "middleware": [
+        "web"
+      ]
+    }
+  ],
+  "baseline_routes": [
     {
       "domain": null,
       "method": "GET|HEAD",

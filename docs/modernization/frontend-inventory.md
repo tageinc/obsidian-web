@@ -1,43 +1,33 @@
 # Frontend inventory
 
-Snapshot: 2026-09-21; Obsidian HEAD `c8c32c9` **plus existing uncommitted work**.
-The dashboard, unified forms, raw graphs, remote mode and cron work from earlier
-increments are part of the observed baseline and must not be discarded.
+Baseline: 2026-09-21, preserved in `2045762`; security baseline `306beb8`; Redis increment `712e1c6`. Earlier dashboard, unified forms, raw graphs, remote mode, demo seeder and cron behavior remain part of the migration baseline.
 
-There are 32 Blade templates, 15 reachable browser screens, one unused Vue 2
-component and 88 registered routes. The [file list](file-inventory.json) includes
-every one of the 74 files currently under `resources/` and `public/`, including
-hidden hosting files. The [route snapshot](route-snapshot.json) records methods,
-names, actions and middleware from `php artisan route:list --json`.
+The baseline contains 32 Blade templates, 15 reachable browser screens, one unused Vue 2 component and 88 registered routes. The [file list](file-inventory.json) preserves all 74 original resource/public paths alongside current, new and removed paths. Generated `public/build/**` files are classified together and enumerated by the build manifest. The [route snapshot](route-snapshot.json) preserves the baseline and current 88 registered routes, including repaired middleware.
 
 ## Screen and template dispositions
 
-**Nothing is migrated or removed by this planning increment.** `Deferred/Sn`
-means intentionally deferred until approval and the indicated delivery stage.
-`Retain` is a documented server-rendered exception. Cleanup candidates stay in
-place until the S8 reference check; they are not evidence of active workflows.
-Paths in this table are relative to `resources/views/`.
+`Migrated` means Vue 3 implementation and regression coverage are complete, with the final backend/component/browser/build checks passing as recorded in the delivery plan. Fourteen reachable pages are migrated. Committed flags remain off by default; the local app is explicitly enabled and verified. Production enablement is separate. `Retain` and `Deferred` are explicit exceptions. All 32 original Blade files remain accounted for; no orphan Blade was deleted. Paths below are relative to `resources/views/`.
 
 | File | Current workflow / contract | Disposition and reason |
 | --- | --- | --- |
-| `device-manager.blade.php` | `/dashboard`; own devices, Leaflet, `show`/`page`, all/paginated map, view/edit/delete | Deferred/S3; migrate table and map, preserve filtering, flash and aliases |
-| `profile.blade.php` | GET/PUT `/profile`; one save, contact/address/optional password | Deferred/S2; retain atomic validation, unchanged legacy phones and blank-password behavior |
-| `device-register.blade.php` | GET `/device-register`, POST `/dataInsert`; profile defaults, one save, no opt-in | Deferred/S2; preserve serial uniqueness, transaction and notification defaults |
-| `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/admin checks | Deferred/S2; preserve immutable identity and paired coordinates |
-| `device-info.blade.php` | `/device-info/{id}`; status, raw charts, remote mode/speed | Deferred/S4; requires security gate and graph/control regression coverage |
-| `admin-control-center.blade.php` | Admin tables, multipart firmware/config uploads, downloads | Deferred/S6; server permission gate, two independent filters and upload contracts |
-| `auth/login.blade.php` | GET/POST `/login`, remember me, verification resend, reset links | Deferred/S5; preserve cookie authentication and error redirects |
-| `auth/register.blade.php` | GET/POST `/register`; account/contact/address/password | Deferred/S5; preserve validation; remove stale listener for nonexistent contractor inputs |
-| `auth/verify.blade.php` | `/email/verify`, resend and verification-link flow | Deferred/S5; signature/hash enforcement pending security gate |
-| `auth/passwords/email.blade.php` | GET `/password/reset`, POST `/password/email` | Deferred/S5; keep server token/email processing |
-| `auth/passwords/reset.blade.php` | GET `/password/reset/{token}`, POST `/password/reset` | Deferred/S5; token stays transient, preserve errors/confirmation |
-| `auth/passwords/confirm.blade.php` | GET/POST `/password/confirm` | Deferred/S5; preserve session confirmation behavior |
-| `contact-us.blade.php` | Public `/contact-us`, contact links | Deferred/S2; simple page; fix nested document markup without redesign |
-| `thank-you.blade.php` | Authenticated `/thank-you`, device links | Deferred/S2; still a supported direct URL |
+| `device-manager.blade.php` | `/dashboard`; own devices, Leaflet, `show`/`page`, all/paginated map, view/edit/delete | Migrated: `DashboardPage`/`DeviceMap`, flag `dashboard`; legacy popup text/logs also repaired |
+| `profile.blade.php` | GET/PUT `/profile`; one save, contact/address/optional password | Migrated: `ProfilePage`, flag `profile`; native atomic validation and blank-password behavior |
+| `device-register.blade.php` | GET `/device-register`, POST `/dataInsert`; profile defaults, one save, no opt-in | Migrated: `DeviceFormPage`, flag `device_register`; native validation/transaction |
+| `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/admin checks | Migrated: `DeviceFormPage`, flag `device_edit`; immutable identity and paired coordinates |
+| `device-info.blade.php` | `/device-info/{id}`; status, raw charts, remote mode/speed | Migrated: `DeviceInfoPage`/`HistoryCharts`/`RemoteControl`, flag `device_info`; server owner/admin checks on both frontends |
+| `admin-control-center.blade.php` | Admin tables, multipart firmware/config uploads, downloads | Migrated: `AdminPage`/`UploadSection`, flag `admin`; server admin restriction on both frontends |
+| `auth/login.blade.php` | GET/POST `/login`, remember me, verification resend, reset links | Migrated: `AuthPage`, flag `auth`; cookie authentication and native redirects |
+| `auth/register.blade.php` | GET/POST `/register`; account/contact/address/password | Migrated: `AuthPage`, flag `auth`; server validation and one native submission |
+| `auth/verify.blade.php` | `/email/verify`, resend and verification-link flow | Migrated: `AuthPage`, flag `auth`; signatures/hash/expiry/throttling repaired; old non-expiring links require resend |
+| `auth/passwords/email.blade.php` | GET `/password/reset`, POST `/password/email` | Migrated: `AuthPage`, flag `auth`; server token/email processing retained |
+| `auth/passwords/reset.blade.php` | GET `/password/reset/{token}`, POST `/password/reset` | Migrated: `AuthPage`, flag `auth`; transient reset token, no client persistence |
+| `auth/passwords/confirm.blade.php` | GET/POST `/password/confirm` | Migrated: `AuthPage`, flag `auth`; server session confirmation retained |
+| `contact-us.blade.php` | Public `/contact-us`, contact links | Migrated: `PublicPage`, flag `public_pages`; minimal valid Vue page |
+| `thank-you.blade.php` | Authenticated `/thank-you`, device links | Migrated: `PublicPage`, flag `public_pages`; direct URL retained |
 | `delta.blade.php` | Authenticated `/delta`, spreadsheet analysis, Raphael/JustGage | Deferred/follow-up; `public/Delta Analysis - Smart Panels.xlsx` is absent; retain URL until source/workflow decision |
-| `layouts/app.blade.php` | Shared HTML, navigation, CSRF, asset loading | Deferred/S1 then S2; retain minimal Blade envelope, move interactive navigation to Vue |
-| `partials/device-form-fields.blade.php` | Shared device address/coordinate inputs | Deferred/S2; replace with prop/event Vue fields after both forms pass |
-| `partials/device-form-feedback.blade.php` | Server success/errors | Deferred/S2; shared accessible feedback component |
+| `layouts/app.blade.php` | Shared HTML, navigation, CSRF, asset loading | Migrated envelope: manifest assets and `NavigationPage` on Vue documents; frozen assets on fallback documents |
+| `partials/device-form-fields.blade.php` | Shared device address/coordinate inputs | Retain for flag-off rollback; Vue uses `DeviceFields`/`FormField` |
+| `partials/device-form-feedback.blade.php` | Server success/errors | Retain for flag-off rollback; Vue uses `FormFeedback` |
 | `emails/low_voltage.blade.php` | `LowVoltageMail` | Retain Blade; server-rendered email, not browser frontend |
 | `emails/theft_vandalism.blade.php` | `TheftVandalismMail` | Retain Blade; server-rendered email |
 | `emails/support.blade.php` | `SupportMail` | Retain Blade; server-rendered email |
@@ -57,25 +47,27 @@ Paths in this table are relative to `resources/views/`.
 
 | Paths | Current role | Target disposition |
 | --- | --- | --- |
-| `resources/js/app.js` | Only Mix JS entry; global Vue 2 mounts all `#app` content | S1 replace with explicit Vue 3 mounts; never mount over untouched Blade DOM |
-| `resources/js/bootstrap.js` | Global Axios/Lodash/Bootstrap, swallowed Bootstrap errors | S1 replace with one client and explicit module imports |
-| `resources/js/components/ExampleComponent.vue` | Only Vue SFC; unused scaffold | S1 remove after reference assertion; no Vue 2 compatibility runtime needed |
+| `resources/js/app.js` | Only Mix JS entry; global Vue 2 mounts all `#app` content | Removed: only build reference was the retired Mix entry; compiled legacy bundle retained |
+| `resources/js/bootstrap.js` | Global Axios/Lodash/Bootstrap, swallowed Bootstrap errors | Removed: only importer was removed Vue 2 entry; shared API client replaces it |
+| `resources/js/components/ExampleComponent.vue` | Only Vue SFC; unused scaffold | Removed: unused scaffold, only registered in removed Vue 2 entry |
 | `resources/js/reg.js`, `public/js/reg.js` | Different, unused legacy validators | S8 removal candidate; don't port stale form assumptions |
-| `resources/js/payment.js`, `public/js/payment.js` | Duplicated generated payment library, no current use | S8 removal candidate with unused `payment` dependency |
-| `public/js/solar-tracker-graph.js` | Active UMD/global helper + Node tests | S4 move source into ESM; preserve raw timestamps, ordering, missing points and Pacific formatting |
-| `public/js/solar-tracker-remote.js` | Active UMD/global remote helper + Node tests | S4 Vue adapter; preserve explicit action-only writes and confirmed/pending/error state |
-| `resources/sass/app.scss`, `_variables.scss` | Mix Sass entry and theme | S1 import through new build; retain visual defaults and test Bootstrap consolidation |
+| `resources/js/payment.js`, `public/js/payment.js` | Duplicated generated payment library, no current use | Deferred cleanup candidate; the unused `payment` dependency is removed from the modern manifest |
+| `public/js/solar-tracker-graph.js` | Active UMD/global helper + Node tests | Retain frozen fallback and Node regressions; Vue uses `features/solar-tracker/timeSeries.js`/`HistoryCharts.vue` |
+| `public/js/solar-tracker-remote.js` | Active UMD/global remote helper + Node tests | Retain frozen fallback and Node regressions; Vue uses `RemoteControl.vue`, preserving explicit action-only writes |
+| `resources/sass/app.scss`, `_variables.scss` | Mix Sass entry and theme | Retain retired theme source as rollback reference; no active build import; Vue uses pinned Bootstrap and `resources/css/frontend.css` |
 | `resources/css/app.css`, `resources/css/dash.css` | Unused stylesheet and empty file | S8 removal candidates |
 | `public/css/dash.css` | Legacy web layout styling | Retain with legacy shell until S8 |
 | `public/js/app.js`, `public/js/app.js.LICENSE.txt`, `public/css/app.css`, `public/mix-manifest.json` | Committed generated Mix artifacts | Keep frozen during transition; S8 remove from active loading after rollback window |
-| `package.json`, `package-lock.json`, `webpack.mix.js` | Vue 2/Mix 5 build definition and stale lock | S1 replace toolchain and regenerate exact lock; S8 remove Mix config |
+| `package.json`, `package-lock.json`, `webpack.mix.js` | Vue 2/Mix 5 build definition and stale lock | Migrated manifest/lock to Vite/Vue 3; removed `webpack.mix.js` after proving no remaining build reference |
 
-Styles/scripts embedded directly in Blade must be migrated with their owner:
+New entries are `resources/js/entries/app.js`, `vite.config.mjs` and `resources/css/frontend.css`. `App\Support\FrontendAssets` reads the Vite manifest; `frontend/mount.blade.php` emits allowlisted props. Feature folders cover navigation, profile, devices, dashboard, solar-tracker, auth, admin and public. Shared API, controls, form composable and Pinia session-display state live under `resources/js/shared/`; bounded routing lives under `resources/js/workspace/`. New source files are enumerated in the JSON file list; focused tests live under `tests/Feature`, `tests/Unit`, `tests/js` and `tests/browser`.
+
+Legacy inline code remains only in its owner's flag-off branch:
 layout navbar/logout and CDN imports; dashboard Leaflet/popup/fetch/history;
 device-info chart/control bootstrap; auth/register obsolete listener; delta
 Raphael/JustGage; contact/thank-you nested documents; legacy web layout inline
 styles/analytics/Livewire. No frontend dependency should remain an unpinned CDN
-runtime after its owning workflow is migrated.
+runtime on a Vue document. Delta remains a documented legacy exception. No parallel Vue 2 dependency installation or active Mix toolchain remains.
 
 ## Static, hosting and non-browser entries
 
@@ -97,30 +89,41 @@ runtime after its owning workflow is migrated.
   message sources. `codebits/map_device_regis_admin_center.txt` is a historical
   snippet, not an executable frontend entry.
 
-## Baseline defects and compatibility constraints
+## Baseline defects and disposition
 
-1. `package-lock.json` is v2 and disagrees with the manifest: Bootstrap 4.5.3 vs
+1. Baseline `package-lock.json` was v2 and disagreed with the manifest: Bootstrap 4.5.3 vs
    requested 5.1.3; Sass loader 8 vs 11; no locked Vue runtime or Popper core.
-   Mix is locked at 5.0.7/Webpack 4.44.2. Clean-install reproducibility is not met.
-2. The active layout mixes three Bootstrap CSS sources, duplicate Bootstrap JS,
-   CDN jQuery and unpinned Chart.js. Dashboard Leaflet is also unpinned. Admin
-   loads unused Leaflet. Consolidation requires visible/keyboard regression checks.
-3. Docker serves committed assets without a Node build. The only workflow deploys
-   `main` without frontend checks; the modernization branch must not trigger it.
-4. `VerifyCsrfToken` logs tokens; API login logs credentials and serializes a User
-   model lacking hidden password fields. `LogRequests` logs full URLs. Dashboard
-   prints data payloads and interpolates unescaped popup HTML. See security gates.
-5. Actual `DeviceInfoController` checks device existence/hardware, **not ownership**.
-   Admin routes use auth+verified but no server admin check. In contrast, web
-   `EditDeviceController` does check owner/configured admin. Do not infer access
-   enforcement from navbar visibility or from `docs/access-model.md` alone.
-6. Custom verification currently ignores the URL hash, has commented middleware,
-   and resends twice. Resolving it changes server behavior and needs the separate
-   prerequisite scope in the approval package.
+   Mix was locked at 5.0.7/Webpack 4.44.2. Resolved by the modern lock and clean container dependency install/build.
+2. The baseline layout mixed three Bootstrap CSS sources, duplicate Bootstrap JS,
+   CDN jQuery and unpinned Chart.js. Dashboard Leaflet was also unpinned; admin
+   loaded unused Leaflet. Vue documents now use one pinned bundle; old assets are a rollback exception.
+3. Baseline Docker served committed assets without a Node build, and the only
+   workflow deployed `main` without frontend checks. Docker now compiles Vite assets; deployment remains separately approved.
+4. Baseline `VerifyCsrfToken` logged tokens; API login logged credentials and
+   serialized a User model lacking hidden password fields. `LogRequests` logged
+   full URLs. Dashboard printed payloads and interpolated unescaped popup HTML. Server redaction/allowlisting is implemented; legacy browser logs/popups were also repaired so frontend-flag rollback does not restore those exposures.
+5. Baseline `DeviceInfoController` checked device existence/hardware without
+   ownership enforcement; admin routes lacked a server admin check. The existing
+   web `EditDeviceController` already checked owner/configured admin. Approved server middleware now enforces the owner/admin browser policy on both frontend paths.
+6. Baseline custom verification ignored the URL hash, lacked enforcement
+   middleware and resent twice. The separately approved prerequisite correction
+   is implemented. Old non-expiring verification links, previously signed forever,
+   require a fresh resend; expired or tampered signatures are rejected.
 7. Device deletion mutates through GET; do not router-prefetch, replay or cache it.
    Preserve its compatibility URL pending a separately approved mutation change.
 8. Duplicate email-resend declarations and duplicate device-refresh route names
-   exist. Preserve observed resolution until their transport cleanup is reviewed.
+   existed. Verification routes are now canonical; both existing device-refresh URL/method contracts remain supported.
+
+## Verified cleanup in this increment
+
+Removed only `resources/js/app.js`, `resources/js/bootstrap.js`,
+`resources/js/components/ExampleComponent.vue` and `webpack.mix.js`. The
+retired Mix entry was the only build reference to the old app entry; that app
+entry was the only importer of bootstrap and the unused example component.
+Vite builds from the new entry. All frozen `public/js/**` and `public/css/**`
+assets remain available for flag-off rollback. All 32 baseline Blade templates
+remain, including orphan candidates and email templates; no dynamic Blade or
+Livewire removal is assumed from a static search.
 
 ## Refreshing the inventory
 

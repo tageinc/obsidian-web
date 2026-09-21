@@ -1,6 +1,8 @@
-# Proposed architecture
+# Implemented architecture and release boundaries
 
 Status: approved on 2026-09-21 as recorded in [the decision package](README.md).
+Implementation and final local backend, frontend, browser/accessibility and
+production-build checks are complete; see [the delivery record](delivery-plan.md).
 This is a frontend migration, not a Laravel business-domain rewrite. Laravel
 8.83.27/PHP 8.3 remain the immediate backend baseline; upgrading the backend to
 a supported Laravel release is a separate follow-up and remains a release risk.
@@ -25,29 +27,30 @@ TAGCSOFT currently locks Vue 3.5.25, Pinia 3.0.4, Router 4.6.3, Mix 6.0.49 and
 Axios 1.15.2. Vite 8.2.2 is present for testing, not its production build. Its
 Vue compiler/runtime versions differ; Obsidian must align them. The reference's
 frontend guide discourages history routing while its actual workspace routers
-use it; this proposal chooses and tests an explicit boundary instead of copying
+use it; this implementation chooses and tests an explicit boundary instead of copying
 that inconsistency.
 
 ## Dependency decisions
 
-Approval covers these version families and responsibilities. S1 resolves current
-stable compatible patches, pins them in the lockfile and records engines; no
-pre-release or unreviewed major substitution. Pin exact Node/npm versions in CI
-and the build image; Node 24 LTS is the selected runtime family. The locally
-available Node 24.13.1 meets the currently documented Vue/Vite prerequisites.
+The approved families are resolved in `package-lock.json`. Use Node **24.15.0**
+and npm **11.8.0**, pinned in `.nvmrc`, package metadata and the Docker build.
+The original host Node 24.13.1 is below the transitive `nopt` engine minimum;
+use the pinned container or update the host runtime. No unreviewed major
+substitution is permitted. The recorded final npm audit reports zero advisories;
+this is a point-in-time dependency check, not a claim about Laravel support.
 
 | Choice | Purpose and scope |
 | --- | --- |
-| Vue 3, matching `@vue/compiler-sfc` | Runtime-only SFCs, Composition API and `<script setup>`; no compat build needed |
-| Pinia 3 | Shared auth-display metadata, notices and cross-component workspace state; no persistent-store plugin |
-| Vue Router 4 | Explicit authenticated workspace route map, lazy page components, query/history/focus management |
-| Vite 8.3 + compatible `@vitejs/plugin-vue` | Supported build family; JS/CSS asset manifest, code splitting, local HMR |
-| Axios 1 | One request client matching useful TAGCSOFT patterns; cancelable reads and normalized errors |
-| Bootstrap 5.3 + required Popper core | One pinned CSS source and only necessary interactive behavior; preserve appearance, no new UI framework |
-| Chart.js 4 and stable Leaflet 1.9 | Keep existing chart/map behavior through lifecycle wrappers; import only on relevant screens |
-| Vitest 4, Vue Test Utils 2, compatible jsdom | Unit/component tests, including existing graph/remote helper behavior |
-| ESLint + Vue plugin, Prettier | Check new frontend source/config; avoid a repository-wide unrelated formatting diff |
-| Playwright + axe-core test integration | Workflow, responsive and accessibility regression checks in CI/local test environment |
+| Vue / `@vue/compiler-sfc` 3.5.43 | Runtime-only SFCs, Composition API and `<script setup>`; no compat build |
+| Pinia 3.0.4 | Shared auth-display metadata and workspace state; no persistent-store plugin |
+| Vue Router 4.6.4 | Explicit authenticated route map, lazy pages, query/history/focus management |
+| Vite 8.3.0 / `@vitejs/plugin-vue` 6.0.9 | JS/CSS asset manifest, code splitting, local HMR |
+| Axios 1.20.0 | One cancelable same-origin request client and normalized errors |
+| Bootstrap 5.3.8 / Popper core 2.11.8 | One CSS source and only required behavior; no replacement UI framework |
+| Chart.js 4.5.1 / Leaflet 1.9.4 | Lifecycle wrappers preserve chart/map behavior; loaded on relevant screens |
+| Vitest 4.1.11 / Vue Test Utils 2.5.1 / jsdom 29.1.1 | Component and helper tests |
+| ESLint / Vue plugin 10.11.0 / Prettier 3.9.8 | Scoped source/config checks; ESLint 10 is the selected supported major |
+| Playwright 1.63.0 / axe-core 4.13.0 | Live workflow, responsive and accessibility checks |
 
 Use JavaScript SFCs and JSDoc for API payloads initially. A repository-wide
 TypeScript conversion, Inertia, Nuxt, Vuex, a design-system replacement and a
@@ -70,8 +73,8 @@ Sources: [Vue recommendations](https://v3-migration.vuejs.org/recommendations),
 2. New pages use a minimal Blade envelope, one pinned stylesheet and one Vue 3
    mount. Unconverted pages continue using the frozen legacy assets. Asset
    selection is per document; Vue 2 and Vue 3 never own the same DOM subtree.
-3. No active workflow renders the Vue 2 ExampleComponent. Remove that source and
-   the Vue 2 mount as the foundation switches to explicit page roots. Frozen
+3. No active workflow rendered the Vue 2 ExampleComponent. Its source, the old
+   `resources/js/app.js`/`bootstrap.js` and `webpack.mix.js` are removed. Frozen
    legacy bundles may remain available during rollback, but are not loaded on
    Vue 3 pages. No new Vue 2 code or parallel Vue 2 dependency install.
 4. Introduce server-side per-workflow flags (`frontend.vue3.*`) defaulting off
@@ -81,13 +84,28 @@ Sources: [Vue recommendations](https://v3-migration.vuejs.org/recommendations),
    only production assets to PHP image. Do not copy `.env*` into the build stage,
    run Composer with frontend credentials, or expose server values via `VITE_*`.
 6. Keep legacy and fingerprinted assets for the rollback window. A previous
-   image is the whole-release rollback. For old open tabs requesting lazy chunks,
+   security-corrected image is the whole-release rollback: at least `93a3fc7`,
+   including the earlier server and Redis request-log fixes plus legacy
+   browser/API redaction. For old open tabs requesting lazy chunks,
    retain previous-release hashed assets at the approved serving layer; this is
    a production rollout prerequisite, not an assumption about the current image.
-   A one-time guarded refresh/error message is the secondary chunk-failure path.
+   A visible refresh/error message is the secondary chunk-failure path; no mutation is replayed.
 
 This transition is **Vue 3 alongside Blade**, with frozen legacy assets where
 needed, not a rewrite into one unrestricted SPA. Email templates stay Blade.
+
+`FRONTEND_VUE3_ENABLED` is the default-off master switch. Each page can override
+it with `FRONTEND_VUE3_PROFILE`, `FRONTEND_VUE3_DEVICE_REGISTER`,
+`FRONTEND_VUE3_DEVICE_EDIT`, `FRONTEND_VUE3_DASHBOARD`,
+`FRONTEND_VUE3_DEVICE_INFO`, `FRONTEND_VUE3_AUTH`, `FRONTEND_VUE3_ADMIN`,
+`FRONTEND_VUE3_PUBLIC_PAGES` or `FRONTEND_VUE3_WORKSPACE`.
+Navigation follows the document's Vue/legacy asset choice. The workspace
+must have all five destination flags enabled before client routing is used;
+otherwise normal document navigation remains available. Flags select rendering
+only and never disable server ownership/admin/verification protections.
+The local app at `http://localhost:8080` has these frontend/workspace switches
+enabled in its ignored environment and passed the final browser checks.
+Committed defaults remain off; production enablement needs separate approval.
 
 ## Routing and server contracts
 
@@ -165,17 +183,18 @@ The inventory distinguishes intended policy from current implementation.
   logging in login, CSRF, request middleware and dashboard. Keep per-request
   CSRF material only in its normal transient same-origin transport, never built
   assets, persisted browser state, Redis caches or diagnostics.
-- Separate approval requested: apply the documented owner/configured-admin policy
+- Approved and implemented: apply the documented owner/configured-admin policy
   to browser device detail/read/control routes, enforce admin management access,
   and verify email-link signatures/hash/throttling with one resend. No broader
   role model, tenant system or device-firmware authentication scheme is proposed.
-- If that security scope is not approved, S4/S5 verification/S6 stay explicitly
-  deferred. Do not advertise these workflows as securely migrated or recreate
-  their missing checks as client-side guards.
+- The security tests cover both frontend paths. Old non-expiring verification
+  links (previously signed forever) require a fresh resend. Expired or tampered
+  signatures are rejected.
+  Never restore permissive checks to make an old link succeed.
 - Existing mobile/firmware API security remediation and changing destructive GET
   semantics are separate follow-ups. Do not point the Vue browser client at
   those legacy endpoints to avoid proper session-backed web boundaries.
 
 All page bootstrap responses are user-specific and must not be public/shared
 HTTP cache entries. Redis is not used for page DTOs, users, credentials, device
-locations, live telemetry or remote-control state in this proposal.
+locations, live telemetry or remote-control state in this implementation.
