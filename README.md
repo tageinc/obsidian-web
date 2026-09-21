@@ -44,8 +44,10 @@ published to the host. The app defaults to `http://localhost:8080`.
 For an existing installation, back up and import its database before migrating,
 and transfer its `storage/app` files into the app container's storage volume.
 Do not generate a replacement application key. Migrations and seeding are never
-run automatically. This setup uses synchronous queues; separate worker and
-scheduler services are needed if you later enable background jobs or schedules.
+run automatically during manual setup. This setup uses synchronous queues.
+Automated VPS deployments install one host cron entry for Laravel's scheduler;
+see [scheduler setup and local development](docs/scheduler.md). A separate queue
+worker is needed if you later enable asynchronous queues.
 
 On a VPS, place an HTTPS reverse proxy in front of `127.0.0.1:8080`, configure
 Laravel's `TrustProxies` middleware for that proxy, and set `APP_URL` to your HTTPS

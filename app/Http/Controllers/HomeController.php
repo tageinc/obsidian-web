@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\DeviceRegister;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth; // Import Auth
-use Illuminate\Support\Facades\View; // Import View
 
 // this is the dashboard controller
 
@@ -23,35 +19,14 @@ class HomeController extends Controller
     }
 
     /**
-     * Show the application dashboard.
+     * Redirect home and legacy device-manager URLs to the dashboard.
      *
-     * @return \Illuminate\Contracts\Support\Renderable
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Get the authenticated user
-        $user = Auth::user();
-
-        // Retrieve address details from the user model
-        $address_1 = $user->address_1;
-		$address_2 = $user->address_2;
-        $city = $user->city;
-        $state = $user->state;
-        $country = $user->country;
-        $zip_code = $user->zip_code;
-
-        // Count the number of matching rows in the DeviceRegister table (if needed)
-        $deviceRegisterCount = DeviceRegister::where('user_id', $user->id)->count();
-
-        // Pass the address details to the view
-        return view('dashboard', [
-            'address_1' => $address_1,
-			'address_2' => $address_2,
-            'city' => $city,
-            'state' => $state,
-            'country' => $country,
-            'zip_code' => $zip_code,
-            'deviceRegisterCount' => $deviceRegisterCount,
-        ]);
+        // Keep home and legacy device-manager links on the shared dashboard.
+        $request->session()->reflash();
+        return redirect()->route('dashboard', $request->query());
     }
 }

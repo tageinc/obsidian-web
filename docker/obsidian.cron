@@ -1,0 +1,1 @@
+* * * * * /bin/bash /opt/obsidian-web/current/docker/schedule.sh >> /opt/obsidian-web/shared/scheduler.log 2>&1 # obsidian-web-laravel-scheduler

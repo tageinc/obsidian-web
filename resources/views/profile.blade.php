@@ -3,79 +3,86 @@
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h3 mb-0">{{ __('Profile') }}</h1>
+                <a href="{{ route('dashboard') }}">{{ __('Back to dashboard') }}</a>
+            </div>
+
+            @if (session('success'))
+                <div class="alert alert-success" role="status">{{ session('success') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="alert alert-danger" role="alert">{{ __('Please correct the highlighted fields and save your profile again.') }}</div>
+            @endif
+
             <div class="card">
-                <div class="card-header">{{ __('Profile') }} </div>
-
                 <div class="card-body">
-                    <!-- Display the user's current name, email, and password -->
-
-                    <!-- Form for updating the name -->
-                    <form method="POST" action="{{ route('profile.updateName') }}">
+                    <form method="POST" action="{{ route('profile.update') }}">
                         @csrf
                         @method('PUT')
 
-                        <div class="mb-2 mt-2"> <!-- Increased margin-top and margin-bottom -->
-                            <label for="name" class="form-label">{{ __('Current name') }}: {{ $user->name }}</label>
-                            <input type="text" class="form-control small-input @error('name') is-invalid @enderror" id="name" name="name" value="{{ $user->name }}" required>
-                            @error('name')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <button type="submit" class="btn btn-primary">{{ __('Update Name') }}</button>
+                        <fieldset class="mb-4">
+                            <legend class="h5">{{ __('Contact information') }}</legend>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">{{ __('Name') }}</label>
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $user->name) }}" autocomplete="name" maxlength="255" required>
+                                @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">{{ __('Email address') }}</label>
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" value="{{ old('email', $user->email) }}" autocomplete="email" maxlength="255" required>
+                                    @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone_number" class="form-label">{{ __('Phone number') }}</label>
+                                    <input type="tel" class="form-control @error('phone_number') is-invalid @enderror" id="phone_number" name="phone_number" value="{{ old('phone_number', $user->phone_number) }}" autocomplete="tel" maxlength="20" aria-describedby="phone-help">
+                                    <div id="phone-help" class="form-text">{{ __('You may keep your current number. For a new number, use 10–15 digits, including the country code if needed.') }}</div>
+                                    @error('phone_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="mb-4">
+                            <legend class="h5">{{ __('Address') }}</legend>
+                            <div class="row">
+                                @foreach ([
+                                    'address_1' => ['Address line 1', 'address-line1', 'col-12'],
+                                    'address_2' => ['Address line 2', 'address-line2', 'col-12'],
+                                    'city' => ['City', 'address-level2', 'col-md-6'],
+                                    'state' => ['State / Province', 'address-level1', 'col-md-6'],
+                                    'zip_code' => ['ZIP / Postal code', 'postal-code', 'col-md-6'],
+                                    'country' => ['Country', 'country-name', 'col-md-6'],
+                                ] as $field => [$label, $autocomplete, $column])
+                                    <div class="{{ $column }} mb-3">
+                                        <label for="{{ $field }}" class="form-label">{{ __($label) }}</label>
+                                        <input type="text" class="form-control @error($field) is-invalid @enderror" id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $user->{$field}) }}" autocomplete="{{ $autocomplete }}" maxlength="255">
+                                        @error($field)<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                @endforeach
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="mb-4">
+                            <legend class="h5">{{ __('Change password') }}</legend>
+                            <p id="password-help" class="text-muted small">{{ __('Leave both fields blank to keep your current password. A new password must contain at least 8 characters.') }}</p>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="password" class="form-label">{{ __('New password') }}</label>
+                                    <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" autocomplete="new-password" minlength="8" aria-describedby="password-help">
+                                    @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="password_confirmation" class="form-label">{{ __('Confirm new password') }}</label>
+                                    <input type="password" class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" name="password_confirmation" autocomplete="new-password" minlength="8">
+                                    @error('password_confirmation')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <button type="submit" class="btn btn-primary">{{ __('Save profile') }}</button>
                     </form>
-
-                    <!-- Form for updating the phone number -->
-                    <form method="POST" action="{{ route('profile.updatePhoneNumber') }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="mb-2 mt-4"> <!-- Increased margin-top and margin-bottom -->
-                            <label for="phone_number" class="form-label">{{ __('Current phone number') }}: {{ $user->phone_number }}</label>
-                            <input type="phone_numbermail" class="form-control small-input @error('phone_number') is-invalid @enderror" id="phone_number" name="phone_number" value="{{ $user->phone_number }}" required>
-                            @error('phone_number')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <button type="submit" class="btn btn-primary">{{ __('Update Phone #') }}</button>
-                    </form>
-
-                    <!-- Form for updating the email -->
-                    <form method="POST" action="{{ route('profile.updateEmail') }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="mb-2 mt-4"> <!-- Increased margin-top and margin-bottom -->
-                            <label for="email" class="form-label">{{ __('Current email') }}: {{ $user->email }}</label>
-                            <input type="email" class="form-control small-input @error('email') is-invalid @enderror" id="email" name="email" value="{{ $user->email }}" required>
-                            @error('email')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <button type="submit" class="btn btn-primary">{{ __('Update Email') }}</button>
-                    </form>
-
-                    <!-- Form for updating the password -->
-                    <form method="POST" action="{{ route('profile.updatePassword') }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="mb-2 mt-5"> <!-- Increased margin-top and margin-bottom -->
-                            <label for="password" class="form-label">{{ __('New Password') }}</label>
-                            <input type="password" class="form-control small-input @error('password') is-invalid @enderror" id="password" name="password" required>
-                            @error('password')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-2"> <!-- Only increased margin-bottom -->
-                            <label for="password_confirmation" class="form-label">{{ __('Confirm Password') }}</label>
-                            <input type="password" class="form-control small-input" id="password_confirmation" name="password_confirmation" required>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">{{ __('Update Password') }}</button>
-                    </form>
-
                 </div>
             </div>
         </div>

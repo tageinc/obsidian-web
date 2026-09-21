@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 
 class ProfileController extends Controller
@@ -15,6 +16,45 @@ class ProfileController extends Controller
     {
         $user = Auth::user(); // Get the currently logged-in user
         return view('profile', compact('user'));
+    }
+
+    public function update(Request $request)
+    {
+        $user = $request->user();
+        $phoneRules = ['nullable', 'string', 'max:20'];
+        // Registration historically allowed formatted and shared numbers. Leave
+        // those values intact when users save other parts of their profile.
+        if ($request->input('phone_number') !== $user->phone_number) {
+            $phoneRules[] = 'regex:/^[0-9]{10,15}$/';
+            $phoneRules[] = Rule::unique('users')->ignore($user->id);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'phone_number' => $phoneRules,
+            'address_1' => ['nullable', 'string', 'max:255'],
+            'address_2' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'zip_code' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        foreach (['name', 'email', 'phone_number', 'address_1', 'address_2', 'city', 'state', 'country', 'zip_code'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $user->{$field} = $validated[$field];
+            }
+        }
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return redirect()->route('profile')->with('success', 'Profile updated successfully.');
     }
 
     public function updateName(Request $request)

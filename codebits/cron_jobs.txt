@@ -1,2 +1,4 @@
-/usr/bin/php /home/u882932635/domains/tezca.net/public_html/obsidian/artisan device:generate-info
-/usr/bin/php /home/u882932635/domains/tezca.net/public_html/obsidian/artisan device:check-status
+Use the single Laravel scheduler entry in docker/obsidian.cron.
+Deployments install it with docker/install-cron.sh; see docs/scheduler.md.
+All recurring command frequencies belong in app/Console/Kernel.php.
+The retired device:generate-info command must not be scheduled.

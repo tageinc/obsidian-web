@@ -49,6 +49,16 @@
     .gray { background-color: #808080; } /* Gray */
 </style>
 <div class="container">
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+        <div>
+            <h1 class="h3 mb-1">Dashboard</h1>
+            <p class="text-muted mb-2">Manage your devices and their locations.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="{{ route('profile') }}">Edit profile</a>
+            <a class="btn btn-primary" href="{{ route('device-register') }}">Register device</a>
+        </div>
+    </div>
     @if (session('success'))
     <div
         style="color: green; background-color: lightgreen; border: 1px solid green; padding: 10px; margin-top: 10px; font-size: 16px; text-align: center;">
@@ -74,9 +84,9 @@
                         <div class="col-md-2"><strong>Hardware</strong></div>
                         <div class="col-md-2"><strong>Alias</strong></div>
                         <div class="col-md-4"><strong>Status</strong></div>
-                        <div class="col-md-3"><strong>Actions<strong></div>
+                        <div class="col-md-3"><strong>Actions</strong></div>
                     </div>
-                    @foreach ($devices as $device)
+                    @forelse ($devices as $device)
                     <div class="row mt-2">
                         <div class="col-md-2">{{ $device->hardware->name }}</div>
                         <div class="col-md-2">{{ $device->alias }}</div>
@@ -98,11 +108,13 @@
                                 class="text-danger delete-link">Remove</a>
                         </div>
                     </div>
-                    @endforeach
+                    @empty
+                    <p class="text-muted mt-3 mb-0">No devices registered yet. Use Register device to add your first device.</p>
+                    @endforelse
                     <!-- Show Devices Features -->
                     <div class="row mt-4">
                         <div class="col-md-12">
-                            <form action="{{ route('device-manager') }}" method="GET">
+                            <form action="{{ route('dashboard') }}" method="GET">
                                 <select name="show" onchange="this.form.submit()">
                                     <option value="{{ env('PAGINATION_SIZE', 10) }}" {{
                                         $pagination_size==env('PAGINATION_SIZE', 10) ? ' selected' : '' }}>Show (Default
@@ -120,7 +132,6 @@
             </div>
         </div>
     </div>
-</div>
 </div>
 
 <!-- Include Leaflet.js -->

@@ -92,7 +92,7 @@ class RegisterController extends Controller
     protected function redirectTo()
     {
         if (auth()->user() && auth()->user()->hasVerifiedEmail()) {
-            return '/home';
+            return RouteServiceProvider::HOME;
         }
         return '/email/verify';
     }

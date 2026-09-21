@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Api\SolarTrackerLog;
 use App\Models\DeviceRegister;
 use App\Models\SolarTrackerRemoteControl;
+use App\Services\SolarTrackerGraphData;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -22,8 +23,14 @@ class DeviceInfoController extends Controller
             return redirect()->route('device-manager')->with('error', 'This device type is archived and is no longer available.');
         }
 
+        $remoteControl = SolarTrackerRemoteControl::where('serial_no', $device->serial_no)->first();
+
         return view('device-info', array_merge([
             'device' => $device,
+            'remoteControl' => [
+                'mode' => $remoteControl ? (int) $remoteControl->mode : 0,
+                'motor_speed' => $remoteControl ? (float) $remoteControl->motor_speed : 0,
+            ],
         ], $this->statusPayload($device->serial_no)));
     }
 
@@ -92,12 +99,18 @@ class DeviceInfoController extends Controller
             return response()->json(['error' => 'Unsupported hardware type'], 410);
         }
 
-        SolarTrackerRemoteControl::updateOrCreate(
+        $mode = (int) $data['mode'];
+        $panel = SolarTrackerRemoteControl::updateOrCreate(
             ['serial_no' => $data['serial_no']],
-            ['mode' => $data['mode'], 'motor_speed' => $data['motor_speed']]
+            ['mode' => $mode, 'motor_speed' => $mode === 0 ? 0 : $data['motor_speed']]
         );
 
-        return response()->json(['success' => true, 'message' => 'Solar panel updated successfully.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Solar panel updated successfully.',
+            'mode' => (int) $panel->mode,
+            'motor_speed' => (float) $panel->motor_speed,
+        ]);
     }
 
     public function getSolarTrackerStatus(Request $request)
@@ -125,21 +138,6 @@ class DeviceInfoController extends Controller
         return $this->getDeviceData($id);
     }
 
-    public function getTempAverages($serialNo)
-    {
-        return $this->averages($serialNo, 'temp');
-    }
-
-    public function getPSAverages($serialNo)
-    {
-        return $this->averages($serialNo, 'ps_avg');
-    }
-
-    public function getmotorAvgs($serialNo)
-    {
-        return $this->averages($serialNo, 'motor_speed');
-    }
-
     private function statusPayload($serialNo)
     {
         $status = SolarTrackerLog::where('serial_no', $serialNo)->latest('updated_at')->first();
@@ -164,25 +162,6 @@ class DeviceInfoController extends Controller
 
     private function graphPayload($serialNo)
     {
-        return [
-            'tempAverages' => $this->getTempAverages($serialNo),
-            'psAverages' => $this->getPSAverages($serialNo),
-            'motorAvgs' => $this->getmotorAvgs($serialNo),
-        ];
-    }
-
-    private function averages($serialNo, $field)
-    {
-        $values = SolarTrackerLog::where('serial_no', $serialNo)
-            ->latest('updated_at')
-            ->limit(9000)
-            ->pluck($field);
-
-        $averages = [];
-        foreach ($values->chunk(360) as $chunk) {
-            $averages[] = round((float) $chunk->avg(), 3);
-        }
-
-        return array_reverse($averages);
+        return ['graph' => app(SolarTrackerGraphData::class)->forSerial($serialNo)];
     }
 }

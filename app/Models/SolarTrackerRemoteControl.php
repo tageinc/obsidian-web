@@ -15,6 +15,9 @@ class SolarTrackerRemoteControl extends Model
     // If the table does not have timestamps, disable them
     public $timestamps = false;
 
+    // Firmware and the mode switch share the persisted 0=automatic, 1=remote contract.
+    protected $casts = ['mode' => 'integer'];
+
     // Define the fillable fields for mass assignment
     protected $fillable = [
         'mode',

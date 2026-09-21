@@ -2,7 +2,8 @@
 
 The `Deploy VPS` workflow uploads the exact main-branch commit over SSH, builds
 the Docker image on the VPS, starts MySQL and the app, runs migrations, and checks
-the login page. It runs on pushes to `main` or manually from the Actions tab.
+the login page, and installs one host cron entry for Laravel's scheduler. It runs
+on pushes to `main` or manually from the Actions tab.
 Concurrent deployments are serialized. No GitHub credentials are stored on the VPS.
 
 ## Prepare the VPS once
@@ -15,6 +16,9 @@ Confirm `docker compose version` works. The commands below assume a Linux VPS
 with an existing SSH administrator and a dedicated `deploy` account:
 
 ```sh
+sudo apt-get update
+sudo apt-get install -y cron
+sudo systemctl enable --now cron
 sudo adduser --disabled-password --gecos '' deploy
 sudo usermod -aG docker deploy
 sudo install -d -o deploy -g deploy -m 750 /opt/obsidian-web

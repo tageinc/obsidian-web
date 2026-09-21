@@ -42,17 +42,19 @@ Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationC
 Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
-    Route::get('/dashboard', [HomeController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DeviceManagerController::class, 'index'])->name('dashboard');
     Route::get('/device-register', [DeviceRegisterController::class, 'index'])->name('device-register');
     Route::post('/dataInsert', [DeviceRegisterController::class, 'dataInsert'])->name('dataInsert');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/update-name', [ProfileController::class, 'updateName'])->name('profile.updateName');
     Route::put('/profile/update-email', [ProfileController::class, 'updateEmail'])->name('profile.updateEmail');
     Route::put('/profile/update-phone-number', [ProfileController::class, 'updatePhoneNumber'])->name('profile.updatePhoneNumber');
     Route::put('/profile/update-password', [ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
-    Route::get('/device-manager', [DeviceManagerController::class, 'index'])->name('device-manager');
+    Route::get('/device-manager', [HomeController::class, 'index'])->name('device-manager');
     Route::get('/delete-device/{id}', [DeviceManagerController::class, 'delete'])->name('deleteDevice');
     Route::get('/edit-device/{id}', [EditDeviceController::class, 'index'])->name('edit-device');
+    Route::put('/edit-device/{id}', [EditDeviceController::class, 'update'])->name('device.update');
     Route::put('/edit-device/{id}/address1', [EditDeviceController::class, 'updateAddress1'])->name('update.address1');
     Route::put('/edit-device/{id}/address2', [EditDeviceController::class, 'updateAddress2'])->name('update.address2');
     Route::put('/edit-device/{id}/zipcode', [EditDeviceController::class, 'updateZipCode'])->name('update.zipcode');

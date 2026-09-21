@@ -6,6 +6,13 @@ test -s /opt/obsidian-web/shared/.env.docker || {
     echo 'Create /opt/obsidian-web/shared/.env.docker before deploying.' >&2
     exit 1
 }
+command -v crontab >/dev/null || {
+    echo 'Install and enable cron on the VPS before deploying (see docs/scheduler.md).' >&2
+    exit 1
+}
+# Wait for any current tick, and prevent new ticks during build and migrations.
+exec 9>/opt/obsidian-web/shared/scheduler.lock
+flock 9
 ln -sfn /opt/obsidian-web/shared/.env.docker .env.docker
 # The transport archive must not be baked into the app image.
 rm -f release.tar.gz
@@ -23,4 +30,5 @@ compose=(docker compose --project-name obsidian-web --env-file .env.docker)
     }
 '
 ln -sfn "$PWD" /opt/obsidian-web/current
+bash docker/install-cron.sh
 echo 'Deployment completed successfully.'

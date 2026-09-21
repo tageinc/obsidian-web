@@ -87,9 +87,6 @@
                                 <a class="dropdown-item" href="{{ route('device-register') }}">
                                     {{ __('Register my device') }}
                                 </a>
-                                <a class="dropdown-item" href="{{ route('device-manager') }}">
-                                    {{ __('Manage my devices') }}
-                                </a>
 								@if(Auth::user() && Auth::user()->email == config('app.admin_email'))
                                 <a class="dropdown-item" href="{{ route('admin-control-center') }}">
                                     {{ __('Admin control center') }}

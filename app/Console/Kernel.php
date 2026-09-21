@@ -13,8 +13,6 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //Commands\CheckConnections::class,
-		
     ];
 
     /**
@@ -25,7 +23,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-		$schedule->command('device:check-status')->hourly();
+        // Cron only invokes schedule:run; keep each command's cadence here.
+        $schedule->command('device:check-status')
+            ->hourly()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/device-status-scheduler.log'));
     }
 
     /**

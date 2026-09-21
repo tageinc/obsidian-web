@@ -38,27 +38,60 @@
                     </div>
                 </div>
 
-                <div class="card mb-3">
+                <div class="card mb-3" id="solar-tracker-remote">
                     <div class="card-header">Remote Control</div>
                     <div class="card-body">
-                        <button class="btn btn-primary" data-speed="20">Up</button>
-                        <button class="btn btn-secondary" data-speed="0">Stop</button>
-                        <button class="btn btn-primary" data-speed="-20">Down</button>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                id="remote-control-mode" data-remote-toggle
+                                aria-describedby="remote-control-help"
+                                @if($remoteControl['mode'] === 1) checked @endif>
+                            <label class="form-check-label" for="remote-control-mode">Remote control mode</label>
+                        </div>
+                        <p class="mb-2">Mode: <strong data-remote-mode>{{ $remoteControl['mode'] === 1 ? 'Remote Control' : 'Automatic' }}</strong></p>
+                        <p id="remote-control-help" class="text-muted small">Enable Remote Control to use Up, Stop, and Down. Switching modes resets the manual motor command to Stop.</p>
+                        <div data-remote-controls role="group" aria-label="Motor controls">
+                            <button type="button" class="btn btn-primary" data-speed="20" @if($remoteControl['mode'] !== 1) disabled @endif>Up</button>
+                            <button type="button" class="btn btn-secondary" data-speed="0" @if($remoteControl['mode'] !== 1) disabled @endif>Stop</button>
+                            <button type="button" class="btn btn-primary" data-speed="-20" @if($remoteControl['mode'] !== 1) disabled @endif>Down</button>
+                        </div>
+                        <p class="small mt-2 mb-0" data-remote-feedback role="status" aria-live="polite"></p>
                     </div>
                 </div>
         </div>
     </div>
+
+    <div class="card mb-3" id="solar-tracker-graphs">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>Solar Tracker History <small class="text-muted">Raw readings</small></span>
+            <div class="btn-group btn-group-sm" aria-label="Graph time range">
+                <button type="button" class="btn btn-outline-secondary" data-graph-hours="1">1 hour</button>
+                <button type="button" class="btn btn-outline-secondary" data-graph-hours="12">12 hours</button>
+                <button type="button" class="btn btn-outline-secondary" data-graph-hours="24">24 hours</button>
+                <button type="button" class="btn btn-outline-secondary" data-graph-hours="0">All</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small" data-graph-range-label></p>
+            <p class="text-muted" data-graph-empty hidden>No telemetry was recorded for this time range.</p>
+            <div class="row g-3">
+                <div class="col-12"><div style="height: 260px"><canvas data-chart="temperature"></canvas></div></div>
+                <div class="col-md-6"><div style="height: 220px"><canvas data-chart="panel"></canvas></div></div>
+                <div class="col-md-6"><div style="height: 220px"><canvas data-chart="motor"></canvas></div></div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="{{ asset('js/solar-tracker-graph.js') }}"></script>
+<script src="{{ asset('js/solar-tracker-remote.js') }}"></script>
 <script>
-document.querySelectorAll('[data-speed]').forEach(function (button) {
-    button.addEventListener('click', function () {
-        fetch('{{ route('update-solar-tracker') }}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-            body: JSON.stringify({mode: true, motor_speed: Number(button.dataset.speed), serial_no: '{{ $device->serial_no }}'})
-        });
-    });
+SolarTrackerRemote.render(document.getElementById('solar-tracker-remote'), {
+    ...@json($remoteControl),
+    serial_no: @json($device->serial_no),
+    endpoint: @json(route('update-solar-tracker')),
+    csrfToken: @json(csrf_token())
 });
+SolarTrackerGraph.render(document.getElementById('solar-tracker-graphs'), @json($graph['points']));
 </script>
 @endsection

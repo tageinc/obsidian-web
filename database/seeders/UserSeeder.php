@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 /** Creates the documented local development administrator account. */
 class UserSeeder extends Seeder
 {
+    public const EMAIL = 'andre.troncoso@tezca.net';
+
     public function run(): void
     {
         if (!app()->environment(['local', 'testing'])) {
@@ -23,7 +25,7 @@ class UserSeeder extends Seeder
         }
 
         DB::table('users')->updateOrInsert(
-            ['email' => 'andre.troncoso@tezca.net'],
+            ['email' => self::EMAIL],
             [
                 'name' => 'Andre Troncoso',
                 'password' => Hash::make($password),

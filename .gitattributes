@@ -1,2 +1,4 @@
 docker/*.sh text eol=lf
+docker/*.cron text eol=lf
+tests/scripts/*.sh text eol=lf
 .github/workflows/*.yml text eol=lf
