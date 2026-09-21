@@ -7,6 +7,7 @@ use App\Models\Api\SolarTrackerLog;
 use App\Models\DeviceRegister;
 use Carbon\Carbon;
 use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\HardwareSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -60,6 +61,12 @@ class DeviceCommunicationsTest extends TestCase
             $table->string('email');
             $table->string('password')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('hardware', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('prefix')->unique();
             $table->timestamps();
         });
     }
@@ -126,6 +133,19 @@ class DeviceCommunicationsTest extends TestCase
             putenv('ADMIN_EMAIL');
             putenv('ADMIN_BOOTSTRAP_PASSWORD');
         }
+    }
+
+    public function test_hardware_seeder_creates_the_solar_tracker_at_legacy_id_one(): void
+    {
+        $this->seed(HardwareSeeder::class);
+        $this->seed(HardwareSeeder::class);
+
+        $this->assertDatabaseHas('hardware', [
+            'id' => HardwareSeeder::SOLAR_TRACKER_ID,
+            'name' => 'Solar Tracker',
+            'prefix' => HardwareSeeder::SOLAR_TRACKER_PREFIX,
+        ]);
+        $this->assertSame(1, DB::table('hardware')->count());
     }
 
     public function test_status_command_preserves_email_notifications_without_sms_or_twilio(): void

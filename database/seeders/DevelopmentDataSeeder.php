@@ -25,9 +25,8 @@ class DevelopmentDataSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $hardwareId = DB::table('hardware')->insertGetId([
-            'name' => 'Solar Tracker', 'prefix' => 'sp1', 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        $this->call(HardwareSeeder::class);
+        $hardwareId = HardwareSeeder::SOLAR_TRACKER_ID;
         $serial = '202600000001';
         DB::table('device_registers')->insert([
             'user_id' => $userId, 'hardware_id' => $hardwareId, 'serial_no' => $serial,
