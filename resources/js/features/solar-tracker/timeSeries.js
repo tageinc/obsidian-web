@@ -1,0 +1,133 @@
+export const TIME_ZONE = 'America/Los_Angeles';
+const clock = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TIME_ZONE };
+const date = { month: 'short', day: 'numeric', year: 'numeric', timeZoneName: 'short' };
+export const formatTime = (value) => new Intl.DateTimeFormat('en-US', clock).format(value);
+export const formatTimestamp = (value) =>
+    new Intl.DateTimeFormat('en-US', { ...clock, ...date }).format(value);
+function numeric(value) {
+    if (!['string', 'number'].includes(typeof value) || String(value).trim() === '') return null;
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+}
+export function normalizePoints(points) {
+    return (Array.isArray(points) ? points : [])
+        .map((point, index) => {
+            if (!point) return null;
+            const epoch = numeric(point.epoch_ms) ?? Date.parse(point.timestamp);
+            if (!Number.isFinite(epoch) || !Number.isFinite(new Date(epoch).getTime())) return null;
+            return {
+                id: point.id,
+                epoch_ms: epoch,
+                index,
+                ...Object.fromEntries(
+                    ['temp', 'ps1', 'ps2', 'motor_speed'].map((key) => [key, numeric(point[key])]),
+                ),
+            };
+        })
+        .filter(Boolean)
+        .sort(
+            (a, b) =>
+                a.epoch_ms - b.epoch_ms ||
+                (numeric(a.id) ?? Infinity) - (numeric(b.id) ?? Infinity) ||
+                a.index - b.index,
+        );
+}
+export function filterRange(points, hours) {
+    if (!hours || !points.length) return points;
+    const start = points.at(-1).epoch_ms - hours * 3600000;
+    return points.filter((point) => point.epoch_ms >= start);
+}
+export function rangeLabel(points) {
+    if (!points.length) return 'No telemetry recorded';
+    return `${formatTimestamp(points[0].epoch_ms)} – ${formatTimestamp(points.at(-1).epoch_ms)} (Pacific Time)`;
+}
+export function axisFormatter(points) {
+    const day = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    const zone = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, timeZoneName: 'short' });
+    const offset = (value) =>
+        zone.formatToParts(value).find((part) => part.type === 'timeZoneName')?.value;
+    const first = points[0]?.epoch_ms;
+    const last = points.at(-1)?.epoch_ms;
+    return points.length > 1 &&
+        (day.format(first) !== day.format(last) || offset(first) !== offset(last))
+        ? formatTimestamp
+        : formatTime;
+}
+export function chartOptions(points, series) {
+    const label = axisFormatter(points);
+    const first = points[0]?.epoch_ms;
+    const last = points.at(-1)?.epoch_ms;
+    const min = first === last ? first - 1800000 : first;
+    const max = first === last ? last + 1800000 : last;
+    return {
+        type: 'line',
+        data: {
+            datasets: series.map(([field, title, color]) => ({
+                label: title,
+                data: points.map((point) => ({ x: point.epoch_ms, y: point[field], id: point.id })),
+                borderColor: color,
+                backgroundColor: color,
+                pointRadius: 2,
+                tension: 0,
+                spanGaps: false,
+            })),
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            parsing: false,
+            interaction: { intersect: false, mode: 'nearest' },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min,
+                    max,
+                    afterBuildTicks: (scale) => {
+                        scale.ticks = timeTicks(scale.min, scale.max).map((value) => ({ value }));
+                    },
+                    ticks: {
+                        maxTicksLimit: 7,
+                        maxRotation: 0,
+                        callback: (value) => {
+                            const text = label(Number(value));
+                            const split = text.lastIndexOf(', ');
+                            return label === formatTimestamp
+                                ? [text.slice(0, split), text.slice(split + 2)]
+                                : text;
+                        },
+                    },
+                    title: { display: true, text: 'Recorded time (Pacific Time)' },
+                },
+                y: { beginAtZero: false },
+            },
+            plugins: {
+                legend: { display: series.length > 1 },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => (items.length ? formatTimestamp(items[0].parsed.x) : ''),
+                        afterLabel: (item) =>
+                            item.raw.id != null ? `Reading #${item.raw.id}` : '',
+                    },
+                },
+            },
+        },
+    };
+}
+
+// Keep numeric epoch positioning, but choose clock-aligned ticks instead of decimal epoch rounding.
+export function timeTicks(min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return [];
+    const target = (max - min) / 6;
+    const steps = [1, 5, 15, 30, 60, 120, 240, 360, 720, 1440, 2880, 10080].map(
+        (minutes) => minutes * 60000,
+    );
+    const step =
+        steps.find((duration) => duration >= target) || Math.ceil(target / 86400000) * 86400000;
+    const ticks = [];
+    for (let time = Math.ceil(min / step) * step; time <= max; time += step) ticks.push(time);
+    return ticks.length ? ticks : [min];
+}

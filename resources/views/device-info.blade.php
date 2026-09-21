@@ -1,6 +1,24 @@
+@php
+    $usesVue = config('frontend.vue3.device_info');
+@endphp
 @extends('layouts.app')
 
 @section('content')
+@if ($usesVue)
+    @include('frontend.mount', ['page' => 'device-info', 'props' => [
+        'device' => ['alias' => $device->alias, 'serial' => $device->serial_no, 'details' => [
+            'Hardware' => $device->hardware->name, 'Alias' => $device->alias, 'SKU' => $device->sku,
+            'Serial No.' => $device->serial_no,
+            'Address' => implode(' ', array_filter([$device->address_1, $device->address_2, $device->city, $device->state, $device->zip_code])),
+        ]],
+        'status' => ['State' => $stateMessage, 'PS1' => $latestStatus->ps1, 'PS Average' => $latestStatus->ps_avg,
+            'Motor Speed' => $latestStatus->motor_speed, 'CTS' => $ctsValue,
+            'Updated' => $latestStatus->updated_at_pst ?: 'N/A', 'PS2' => $latestStatus->ps2,
+            'PDS' => $latestStatus->pds, 'Temperature (°C)' => $latestStatus->temp],
+        'remote' => $remoteControl, 'points' => $graph['points'], 'csrfToken' => csrf_token(),
+        'links' => ['dashboard' => route('dashboard'), 'remote' => route('update-solar-tracker')],
+    ]])
+@else
 <div class="container">
     <a href="{{ route('device-manager') }}" class="btn btn-secondary mb-3">Back</a>
 
@@ -94,4 +112,5 @@ SolarTrackerRemote.render(document.getElementById('solar-tracker-remote'), {
 });
 SolarTrackerGraph.render(document.getElementById('solar-tracker-graphs'), @json($graph['points']));
 </script>
+@endif
 @endsection
