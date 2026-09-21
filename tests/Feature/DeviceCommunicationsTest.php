@@ -92,8 +92,15 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertFalse(Route::has('subscription-manager'));
         $this->assertFalse(Route::has('purchase-checkout'));
         $this->assertFileDoesNotExist(base_path('app/Models/Order.php'));
-        $this->assertStringNotContainsString('AuthorizeNet', file_get_contents(base_path('app/Models/License.php')));
+        $this->assertFileDoesNotExist(base_path('app/Models/License.php'));
+        $this->assertFileDoesNotExist(base_path('app/Models/Product.php'));
         $this->assertFileDoesNotExist(base_path('app/Http/Middleware/BillingMiddleware.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2020_10_26_221110_create_software_table.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2020_10_27_051838_create_products_table.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2021_05_18_032407_create_orders_table.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2021_05_18_032408_create_licenses_table.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2021_05_18_033517_create_order_product_table.php'));
+        $this->assertFileDoesNotExist(base_path('database/migrations/2021_06_16_154641_create_connections_table.php'));
         $this->assertStringNotContainsString('authorizenet', file_get_contents(base_path('composer.json')));
     }
 
