@@ -28,15 +28,16 @@
             'from' => $devices->firstItem(),
             'to' => $devices->lastItem(),
             'sizes' => array_values(array_unique([(int) env('PAGINATION_SIZE', 10), 10, 20, 30, (int) $pagination_size])),
-            'links' => $devices->appends(['show' => $pagination_size])->linkCollection()->map(function ($link) {
+            'links' => $devices->appends(['show' => $pagination_size, 'search' => $search])->linkCollection()->map(function ($link) {
                 return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
             })->all(),
         ];
     @endphp
     @include('frontend.mount', ['page' => 'dashboard', 'props' => [
         'devices' => $dashboardDevices,
+        'search' => $search,
         'pagination' => $dashboardPagination,
-        'mapEndpoints' => ['all' => route('all-devices'), 'paginated' => route('paginated-devices')],
+        'mapEndpoints' => ['all' => route('all-devices', $search !== '' ? ['search' => $search] : []), 'paginated' => route('paginated-devices', $search !== '' ? ['search' => $search] : [])],
         'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'register' => route('device-register')],
         'success' => session('success'),
         'sessionError' => session('error'),
@@ -121,6 +122,18 @@
             <div class="card">
                 <div class="card-header">{{ __('Device Manager') }}</div>
                 <div class="card-body">
+                    <form action="{{ route('dashboard') }}" method="GET" class="mb-3" role="search">
+                        <label for="device-alias-search" class="form-label">Search device aliases</label>
+                        <div class="d-flex gap-2">
+                            <input id="device-alias-search" class="form-control" type="search" name="search" value="{{ $search }}" maxlength="255" placeholder="Search by alias">
+                            <input type="hidden" name="show" value="{{ $pagination_size }}">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                            @if ($search !== '')
+                                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['show' => $pagination_size]) }}">Clear</a>
+                            @endif
+                        </div>
+                        @error('search')<p class="text-danger mt-1" role="alert">{{ $message }}</p>@enderror
+                    </form>
                     <div class="row">
                         <div class="col-md-2"><strong>Hardware</strong></div>
                         <div class="col-md-2"><strong>Alias</strong></div>
@@ -141,21 +154,31 @@
 						@endif
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ route('device-info', $device->id) }}" class="text-primary">View</a>
-                            |
-                            <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
-                            |
-                            <a href="{{ route('deleteDevice', $device->id) }}"
-                                class="text-danger delete-link">Remove</a>
+                            <details>
+                                <summary aria-label="Actions for {{ $device->alias ?: 'device '.$device->id }}" class="btn btn-outline-secondary btn-sm">…</summary>
+                                <div class="d-flex flex-column align-items-start gap-2 p-2">
+                                    <a href="{{ route('device-info', $device->id) }}" class="text-primary">View</a>
+                                    <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
+                                    <a href="{{ route('deleteDevice', $device->id) }}"
+                                        class="text-danger delete-link">Delete</a>
+                                </div>
+                            </details>
                         </div>
                     </div>
                     @empty
-                    <p class="text-muted mt-3 mb-0">No devices registered yet. Use Register device to add your first device.</p>
+                    @if ($devices->total() > 0)
+                        <p class="text-muted mt-3 mb-0">No devices on this page. Choose another page to see matching devices.</p>
+                    @elseif ($search !== '')
+                        <p class="text-muted mt-3 mb-0">No devices match this alias search. Try another alias or clear the search.</p>
+                    @else
+                        <p class="text-muted mt-3 mb-0">No devices registered yet. Use Register device to add your first device.</p>
+                    @endif
                     @endforelse
                     <!-- Show Devices Features -->
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <form action="{{ route('dashboard') }}" method="GET">
+                                <input type="hidden" name="search" value="{{ $search }}">
                                 <select name="show" onchange="this.form.submit()">
                                     <option value="{{ env('PAGINATION_SIZE', 10) }}" {{
                                         $pagination_size==env('PAGINATION_SIZE', 10) ? ' selected' : '' }}>Show (Default
@@ -166,7 +189,7 @@
                                     <!-- Add more options as needed -->
                                 </select>
                             </form>
-                            {{ $devices->appends(['show' => $pagination_size])->links() }}
+                            {{ $devices->appends(['show' => $pagination_size, 'search' => $search])->links() }}
                         </div>
                     </div>
                 </div>
@@ -209,6 +232,7 @@
         function loadDevices(page = 1, showAll = false, pagination_size = 10) {
             var url = showAll ? '/all-devices' : '/paginated-devices';
             url += '?page=' + page + '&show=' + pagination_size;
+            url += '&search=' + encodeURIComponent(@json($search));
 
             fetch(url)
                 .then(response => {

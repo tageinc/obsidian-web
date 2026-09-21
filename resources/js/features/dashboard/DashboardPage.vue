@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import DeviceMap from './DeviceMap.vue';
+import DeviceActions from './DeviceActions.vue';
 import { statusColor } from './deviceMap.js';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 
@@ -11,18 +12,30 @@ const props = defineProps({
     links: { type: Object, required: true },
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
+    search: { type: String, default: '' },
 });
 const showAll = ref(false);
 const perPage = ref(props.pagination.perPage);
+const aliasSearch = ref(props.search);
+watch(
+    () => props.search,
+    (value) => {
+        aliasSearch.value = value;
+    },
+);
+const clearSearchUrl = computed(() => {
+    const url = new URL(props.links.dashboard, window.location.origin);
+    url.searchParams.delete('search');
+    url.searchParams.delete('page');
+    url.searchParams.set('show', String(perPage.value));
+    return url.pathname + url.search;
+});
 watch(
     () => props.pagination.perPage,
     (value) => {
         perPage.value = value;
     },
 );
-function confirmRemoval(event) {
-    if (!window.confirm('Are you sure you want to delete this device?')) event.preventDefault();
-}
 </script>
 
 <template>
@@ -53,17 +66,56 @@ function confirmRemoval(event) {
                         type="checkbox"
                         class="form-check-input"
                     />
-                    <label class="form-check-label" for="show-all-devices"
-                        >Show all devices on map</label
-                    >
+                    <label class="form-check-label" for="show-all-devices">{{
+                        search ? 'Show all matching devices on map' : 'Show all devices on map'
+                    }}</label>
                 </div>
                 <section class="card" aria-labelledby="device-manager-heading">
                     <div class="card-header">
                         <h2 id="device-manager-heading" class="h5 mb-0">Device Manager</h2>
                     </div>
                     <div class="card-body">
-                        <p v-if="devices.length === 0" class="text-muted mb-0">
-                            No devices registered yet. Use Register device to add your first device.
+                        <form
+                            :action="links.dashboard"
+                            method="GET"
+                            role="search"
+                            class="device-search mb-4"
+                        >
+                            <div class="device-search-field">
+                                <label for="device-alias-search" class="form-label"
+                                    >Search by device alias</label
+                                >
+                                <input
+                                    id="device-alias-search"
+                                    v-model="aliasSearch"
+                                    type="search"
+                                    name="search"
+                                    maxlength="255"
+                                    class="form-control"
+                                    placeholder="Enter device alias"
+                                />
+                            </div>
+                            <input type="hidden" name="show" :value="perPage" />
+                            <button type="submit" class="btn btn-primary">Search</button>
+                            <a
+                                v-if="search"
+                                :href="clearSearchUrl"
+                                class="btn btn-outline-secondary"
+                                >Clear search</a
+                            >
+                        </form>
+                        <p v-if="devices.length === 0" class="text-muted mb-0" role="status">
+                            <template v-if="pagination.total > 0"
+                                >No devices on this page. Choose another page below.</template
+                            >
+                            <template v-else-if="search"
+                                >No devices match “{{ search }}”. Try another alias or clear the
+                                search.</template
+                            >
+                            <template v-else
+                                >No devices registered yet. Use Register device to add your first
+                                device.</template
+                            >
                         </p>
                         <div v-else class="table-responsive">
                             <table class="table align-middle">
@@ -95,26 +147,7 @@ function confirmRemoval(event) {
                                             </p>
                                         </td>
                                         <td class="text-nowrap">
-                                            <a
-                                                :href="device.links.view"
-                                                :aria-label="`View ${device.alias}`"
-                                                >View</a
-                                            >
-                                            <span aria-hidden="true"> | </span>
-                                            <a
-                                                :href="device.links.edit"
-                                                :aria-label="`Edit ${device.alias}`"
-                                                >Edit</a
-                                            >
-                                            <span aria-hidden="true"> | </span>
-                                            <a
-                                                :href="device.links.remove"
-                                                class="text-danger"
-                                                data-document-action
-                                                :aria-label="`Remove ${device.alias}`"
-                                                @click="confirmRemoval"
-                                                >Remove</a
-                                            >
+                                            <DeviceActions :device="device" />
                                         </td>
                                     </tr>
                                 </tbody>
@@ -124,6 +157,7 @@ function confirmRemoval(event) {
                             class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4"
                         >
                             <form :action="links.dashboard" method="GET">
+                                <input v-if="search" type="hidden" name="search" :value="search" />
                                 <label for="devices-per-page" class="form-label me-2"
                                     >Devices per page</label
                                 >
@@ -180,6 +214,16 @@ function confirmRemoval(event) {
 </template>
 
 <style scoped>
+.device-search {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.device-search-field {
+    flex: 1 1 15rem;
+    min-width: 0;
+}
 .status-dot {
     height: 10px;
     width: 10px;

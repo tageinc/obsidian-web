@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\Hardware;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 
 
@@ -23,7 +24,7 @@ class DeviceManagerController extends Controller
 
     public function index(Request $request)
     {
-        $user_id = Auth::id();
+        $search = $this->aliasSearch($request);
         // Attempt to get the 'show' parameter from the request
         $pagination_size = $request->input('show');
 
@@ -33,10 +34,10 @@ class DeviceManagerController extends Controller
         }
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
-        $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
+        $devices = $this->ownedDevices($search)
         //->with('hardware', 'license') // Load the license relationship
         ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
-        ->paginate($pagination_size);
+        ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
 
         // //Log::info('Initial Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
@@ -79,7 +80,7 @@ class DeviceManagerController extends Controller
         //Log::info('controller Final Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
 
-        return view('device-manager', ['devices' => $devices, 'pagination_size' => $pagination_size]);
+        return view('device-manager', ['devices' => $devices, 'pagination_size' => $pagination_size, 'search' => $search]);
     }
 
 
@@ -87,8 +88,8 @@ class DeviceManagerController extends Controller
 
     public function allDevices(Request $request)
 {
-    $user_id = Auth::id();
-    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
+    $search = $this->aliasSearch($request);
+    $devices = $this->ownedDevices($search)
              ->with('hardware')  // This fetches hardware details
              ->get(['id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
@@ -126,13 +127,13 @@ $devicesJson = $devices->toJson();
     // import this class loads in the values for the map when show is NOT checked 
     public function paginatedDevices(Request $request)
 {
-    $user_id = Auth::id();
+    $search = $this->aliasSearch($request);
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
-    $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
+    $devices = $this->ownedDevices($search)
              ->with('hardware')  // Fetch hardware details
              ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
-             ->paginate($pagination_size);
+             ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
 
     foreach ($devices as $device) {
         
@@ -156,6 +157,25 @@ $devicesJson = $devices->toJson();
 
     return response()->json($devices);
 }
+
+    private function aliasSearch(Request $request): string
+    {
+        $validated = $request->validate(['search' => 'nullable|string|max:255']);
+
+        return trim($validated['search'] ?? '');
+    }
+
+    private function ownedDevices(string $search): Builder
+    {
+        $query = DeviceRegister::where('user_id', Auth::id())->where('hardware_id', 1);
+        if ($search !== '') {
+            // Bound parameters and an explicit escape character make %, _ and ! literal.
+            $literal = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
+            $query->whereRaw("LOWER(alias) LIKE LOWER(?) ESCAPE '!'", ['%'.$literal.'%']);
+        }
+
+        return $query->orderBy('id');
+    }
 
 
     public function delete($id)

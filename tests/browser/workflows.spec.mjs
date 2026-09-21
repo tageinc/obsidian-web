@@ -6,6 +6,20 @@ const axePath = require.resolve('axe-core/axe.min.js');
 const password = 'browser-test-password'; // Synthetic fixture credential, never a local user credential.
 
 test.beforeEach(async ({ context, page }) => {
+    page.on('requestfailed', (request) => {
+        const url = new URL(request.url());
+        if (url.pathname.startsWith('/build/')) {
+            console.error(
+                `Asset request failed: ${url.pathname} (${request.failure()?.errorText})`,
+            );
+        }
+    });
+    page.on('response', (response) => {
+        const url = new URL(response.url());
+        if (url.pathname.startsWith('/build/') && response.status() >= 400) {
+            console.error(`Asset response failed: ${url.pathname} (${response.status()})`);
+        }
+    });
     await context.route('**/*', async (route) => {
         const url = new URL(route.request().url());
         if (url.hostname.endsWith('.tile.openstreetmap.org')) {
@@ -19,6 +33,8 @@ test.beforeEach(async ({ context, page }) => {
     });
     // Fail closed even if a regression accidentally dispatches a motor command on mount.
     await page.route('**/update-solar-tracker', (route) => route.abort());
+    // Browser coverage cancels deletion; no regression may remove even a synthetic device.
+    await page.route('**/delete-device/*', (route) => route.abort());
 });
 
 async function login(page, role = 'owner') {
@@ -160,6 +176,148 @@ test('dashboard reports loading, failed map reads, retry and a genuinely empty a
     await expect(page.getByText('No devices available for this map.')).toBeVisible();
 });
 
+test('device actions stay usable and alias search keeps the table and map in sync', async ({
+    page,
+}) => {
+    const deletionRequests = [];
+    page.on('request', (request) => {
+        if (new URL(request.url()).pathname.startsWith('/delete-device/')) {
+            deletionRequests.push(request.url());
+        }
+    });
+    await login(page);
+    const actions = page.getByRole('button', {
+        name: 'Actions for Browser simulator',
+        exact: true,
+    });
+    await actions.scrollIntoViewIfNeeded();
+    await actions.focus();
+    await page.keyboard.press('Enter');
+    await expect(actions).toHaveAttribute('aria-expanded', 'true');
+    const menu = page.locator(`#${await actions.getAttribute('aria-controls')}`);
+    await expect(menu).toBeVisible();
+    await expect(
+        menu.getByRole('link', { name: 'View Browser simulator', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+        menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+        menu.getByRole('link', { name: 'Delete Browser simulator', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(menu).not.toBeVisible();
+    await expect(page.locator('#devices-per-page')).toBeFocused();
+    await actions.focus();
+    await page.keyboard.press('Enter');
+    await expect(
+        menu.getByRole('link', { name: 'View Browser simulator', exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(menu).not.toBeVisible();
+    await expect(actions).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(menu).toBeVisible();
+    const menuBounds = await menu.boundingBox();
+    expect(menuBounds).not.toBeNull();
+    expect(menuBounds.x).toBeGreaterThanOrEqual(0);
+    expect(menuBounds.y).toBeGreaterThanOrEqual(0);
+    expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(page.viewportSize().height);
+    for (const action of ['View', 'Edit', 'Delete']) {
+        const link = menu.getByRole('link', { name: `${action} Browser simulator`, exact: true });
+        await expect(link).toBeVisible();
+        expect(
+            await link.evaluate((element) => {
+                const bounds = element.getBoundingClientRect();
+                const hit = document.elementFromPoint(
+                    bounds.x + bounds.width / 2,
+                    bounds.y + bounds.height / 2,
+                );
+                return hit !== null && element.contains(hit);
+            }),
+        ).toBe(true);
+    }
+    await checkAccessibility(page);
+    await page.keyboard.press('Escape');
+    await expect(menu).not.toBeVisible();
+    await expect(actions).toBeFocused();
+    await actions.click();
+    await page.getByRole('heading', { name: 'Device Manager', exact: true }).click();
+    await expect(menu).not.toBeVisible();
+    await actions.click();
+    const canceled = page.waitForEvent('dialog').then(async (dialog) => {
+        expect(dialog.type()).toBe('confirm');
+        await dialog.dismiss();
+    });
+    await Promise.all([
+        canceled,
+        menu.getByRole('link', { name: 'Delete Browser simulator', exact: true }).click(),
+    ]);
+    expect(deletionRequests).toEqual([]);
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
+    ).toBeVisible();
+    if ((await actions.getAttribute('aria-expanded')) !== 'true') await actions.click();
+    await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
+    await expect(page).toHaveURL(/\/edit-device\/1$/);
+    await expect(page.getByRole('heading', { name: 'Edit device', exact: true })).toBeVisible();
+
+    await page.goto('/dashboard?show=20&page=2');
+    const search = page.getByLabel('Search by device alias', { exact: true });
+    await search.fill('simulator');
+    const matchingMapRequest = page.waitForRequest((request) => {
+        const url = new URL(request.url());
+        return (
+            url.pathname === '/paginated-devices' && url.searchParams.get('search') === 'simulator'
+        );
+    });
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await matchingMapRequest;
+    const matchingUrl = new URL(page.url());
+    expect(matchingUrl.searchParams.get('search')).toBe('simulator');
+    expect(matchingUrl.searchParams.get('show')).toBe('20');
+    expect(Number(matchingUrl.searchParams.get('page') ?? 1)).toBe(1);
+    await expect(search).toHaveValue('simulator');
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
+    const allMapRequest = page.waitForRequest((request) => {
+        const url = new URL(request.url());
+        return url.pathname === '/all-devices' && url.searchParams.get('search') === 'simulator';
+    });
+    await page.getByLabel('Show all matching devices on map').check();
+    await allMapRequest;
+    await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
+    await search.fill('no-matching-fixture');
+    await page.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(search).toHaveValue('no-matching-fixture');
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText('No devices available for this map.')).toBeVisible();
+    await expect(
+        page.getByText(
+            'No devices match “no-matching-fixture”. Try another alias or clear the search.',
+        ),
+    ).toBeVisible();
+    await expect(page.getByText('No devices registered yet.', { exact: false })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Clear search', exact: true }).click();
+    await expect(search).toHaveValue('');
+    expect(new URL(page.url()).searchParams.get('search')).toBeNull();
+    expect(new URL(page.url()).searchParams.get('show')).toBe('20');
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
+    await checkAccessibility(page);
+    expect(deletionRequests).toEqual([]);
+});
+
 test('profile and device forms retain one save action, server errors and entered nonsecret values', async ({
     page,
 }) => {
@@ -214,6 +372,7 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
         if (request.url().endsWith('/update-solar-tracker')) commands.push(request.method());
     });
     await login(page);
+    await page.getByRole('button', { name: 'Actions for Browser simulator', exact: true }).click();
     await page.getByRole('link', { name: 'View Browser simulator', exact: true }).click();
     await expect(page).toHaveURL(/\/device-info\/1$/);
     await expect(

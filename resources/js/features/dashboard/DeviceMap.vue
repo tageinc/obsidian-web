@@ -96,7 +96,16 @@ async function reload() {
 }
 
 onMounted(reload);
-watch(() => [props.page, props.perPage, props.showAll], reload);
+watch(
+    () => [
+        props.page,
+        props.perPage,
+        props.showAll,
+        props.endpoints.all,
+        props.endpoints.paginated,
+    ],
+    reload,
+);
 onBeforeUnmount(() => {
     destroyed = true;
     generation++;

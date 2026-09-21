@@ -69,6 +69,30 @@ describe('device map data', () => {
 });
 
 describe('map lifecycle', () => {
+    it('reloads when alias-filtered endpoints change and preserves the filter in both map modes', async () => {
+        requestJson.mockResolvedValue({ data: [] });
+        const wrapper = page();
+        await vi.dynamicImportSettled();
+        await flushPromises();
+        await wrapper.setProps({
+            endpoints: {
+                all: '/all-devices?search=Roof',
+                paginated: '/paginated-devices?search=Roof',
+            },
+        });
+        await flushPromises();
+        expect(requestJson).toHaveBeenLastCalledWith(
+            '/paginated-devices?search=Roof&page=2&show=20',
+            expect.any(Object),
+        );
+        requestJson.mockResolvedValue([]);
+        await wrapper.setProps({ showAll: true });
+        await flushPromises();
+        expect(requestJson).toHaveBeenLastCalledWith(
+            '/all-devices?search=Roof&page=2&show=20',
+            expect.any(Object),
+        );
+    });
     it('loads the current page, switches endpoint shapes, and destroys Leaflet on unmount', async () => {
         requestJson
             .mockResolvedValueOnce({

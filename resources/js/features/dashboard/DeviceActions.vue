@@ -1,0 +1,171 @@
+<script setup>
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+const props = defineProps({ device: { type: Object, required: true } });
+const open = ref(false);
+const trigger = ref(null);
+const menu = ref(null);
+const position = ref({ top: '0px', left: '0px' });
+const menuId = `device-actions-${props.device.id}`;
+function close(restoreFocus = false) {
+    open.value = false;
+    if (restoreFocus) trigger.value?.focus({ preventScroll: true });
+}
+function place() {
+    if (!open.value || !trigger.value || !menu.value) return;
+    const anchor = trigger.value.getBoundingClientRect();
+    const popup = menu.value.getBoundingClientRect();
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    const left = Math.max(8, Math.min(anchor.right - popup.width, width - popup.width - 8));
+    const top =
+        anchor.bottom + popup.height + 8 <= window.innerHeight
+            ? anchor.bottom + 4
+            : Math.max(8, anchor.top - popup.height - 4);
+    position.value = { top: `${top}px`, left: `${left}px` };
+}
+async function reveal(focusLast = null) {
+    open.value = true;
+    await nextTick();
+    place();
+    await nextTick();
+    if (!open.value || !menu.value) return;
+    if (focusLast !== null) {
+        const items = menu.value.querySelectorAll('a');
+        items[focusLast ? items.length - 1 : 0]?.focus();
+    }
+}
+function toggle() {
+    if (open.value) close();
+    else void reveal(false);
+}
+function contains(target) {
+    return trigger.value?.contains(target) || menu.value?.contains(target);
+}
+function dismiss(event) {
+    if (!contains(event.target)) close();
+}
+function leave(event) {
+    if (!contains(event.relatedTarget)) close();
+}
+function keydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
+        return;
+    }
+    const items = [...menu.value.querySelectorAll('a')];
+    const index = items.indexOf(event.target);
+    if (event.key === 'Tab') {
+        if (event.shiftKey && index === 0) {
+            event.preventDefault();
+            close(true);
+        } else if (!event.shiftKey && index === items.length - 1) {
+            // Return to the row before the browser advances to its next control.
+            close(true);
+        }
+        return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next =
+        event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? items.length - 1
+              : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus();
+}
+function confirmRemoval(event) {
+    const accepted = window.confirm('Are you sure you want to delete this device?');
+    if (!accepted) event.preventDefault();
+    close(!accepted);
+}
+onMounted(() => {
+    document.addEventListener('click', dismiss);
+    document.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+});
+onBeforeUnmount(() => {
+    document.removeEventListener('click', dismiss);
+    document.removeEventListener('scroll', place, true);
+    window.removeEventListener('resize', place);
+});
+</script>
+
+<template>
+    <button
+        ref="trigger"
+        type="button"
+        class="btn btn-outline-secondary device-action-trigger"
+        :aria-label="`Actions for ${device.alias}`"
+        :aria-controls="menuId"
+        :aria-expanded="open"
+        @click="toggle"
+        @keydown.down.prevent="reveal(false)"
+        @keydown.up.prevent="reveal(true)"
+        @keydown.esc.prevent="close(true)"
+        @focusout="leave"
+    >
+        <span aria-hidden="true">⋯</span>
+    </button>
+    <Teleport to="body">
+        <div
+            :id="menuId"
+            ref="menu"
+            v-show="open"
+            role="group"
+            :aria-label="`Actions for ${device.alias}`"
+            class="dropdown-menu show device-action-menu"
+            :style="position"
+            @keydown="keydown"
+            @focusout="leave"
+        >
+            <a
+                class="dropdown-item"
+                :href="device.links.view"
+                :aria-label="`View ${device.alias}`"
+                @click="close()"
+                >View</a
+            >
+            <a
+                class="dropdown-item"
+                :href="device.links.edit"
+                :aria-label="`Edit ${device.alias}`"
+                @click="close()"
+                >Edit</a
+            >
+            <hr class="dropdown-divider" />
+            <a
+                class="dropdown-item device-delete"
+                :href="device.links.remove"
+                :aria-label="`Delete ${device.alias}`"
+                data-document-action
+                @click="confirmRemoval"
+                >Delete</a
+            >
+        </div>
+    </Teleport>
+</template>
+
+<style scoped>
+.device-action-trigger {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    font-size: 1.5rem;
+    line-height: 1;
+}
+.device-action-menu {
+    position: fixed;
+    z-index: 1060;
+    width: 11rem;
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    box-shadow: 0 0.5rem 1.5rem #202e421f;
+}
+.device-action-menu .dropdown-item {
+    padding: 0.6rem 1rem;
+}
+.device-delete {
+    color: #b02a37;
+}
+</style>
