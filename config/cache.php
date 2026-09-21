@@ -77,6 +77,13 @@ return [
             'connection' => 'cache',
         ],
 
+        'redis-workloads' => [
+            'driver' => 'redis',
+            'connection' => 'workloads',
+            // The workload service adds an application/environment/schema prefix.
+            'prefix' => '',
+        ],
+
         'dynamodb' => [
             'driver' => 'dynamodb',
             'key' => env('AWS_ACCESS_KEY_ID'),

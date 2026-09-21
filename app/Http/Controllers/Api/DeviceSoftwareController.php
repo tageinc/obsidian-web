@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FirmwareVersions;
 use App\Models\ConfigVersions;
+use App\Services\RedisWorkloads;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,14 +23,18 @@ class DeviceSoftwareController extends Controller
 
     private function version($model, $kind, $prefix)
     {
-        $record = $prefix === null ? null : $model::where('prefix', $prefix)->orderBy('version', 'desc')->first();
-        if (!$record) {
+        $version = app(RedisWorkloads::class)->version($kind, $prefix, function () use ($model, $prefix) {
+            $record = $model::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+
+            return $record ? (string) $record->version : null;
+        });
+        if ($version === null) {
             $this->missing($kind, 'prefix', $prefix);
             // Keep the legacy string field, but never report a missing deployment as success.
             return response()->json(['version' => '0', 'error' => 'no_matching_version'], 404);
         }
 
-        return response()->json(['version' => (string) $record->version]);
+        return response()->json(['version' => $version]);
     }
 
     public function serveFirmwareByVersion($version = null)

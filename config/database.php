@@ -142,6 +142,18 @@ return [
             'database' => env('REDIS_CACHE_DB', '1'),
         ],
 
+        'workloads' => [
+            'host' => env('REDIS_WORKLOADS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_WORKLOADS_PASSWORD'),
+            'port' => env('REDIS_WORKLOADS_PORT', 6379),
+            'database' => env('REDIS_WORKLOADS_DB', 2),
+            'timeout' => 0.2,
+            'read_timeout' => 0.2,
+            'retry_interval' => 0,
+            'persistent' => false,
+            'options' => ['prefix' => ''],
+        ],
+
     ],
 
 ];
