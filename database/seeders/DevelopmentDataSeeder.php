@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 class DevelopmentDataSeeder extends Seeder
 {
     public const SERIAL = '202600000001';
+    public const LATITUDE = 34.0522;
+    public const LONGITUDE = -118.2437;
 
     public function run(): void
     {
@@ -29,14 +31,18 @@ class DevelopmentDataSeeder extends Seeder
         $this->call(HardwareSeeder::class);
         $hardwareId = HardwareSeeder::SOLAR_TRACKER_ID;
         $serial = self::SERIAL;
+        // Downtown Los Angeles; also repair the previously unlocated local fixture.
+        $coordinates = ['latitude' => self::LATITUDE, 'longitude' => self::LONGITUDE];
         if (! DB::table('device_registers')->where('serial_no', $serial)->exists()) {
-            DB::table('device_registers')->insert([
+            DB::table('device_registers')->insert($coordinates + [
                 'user_id' => $userId, 'hardware_id' => $hardwareId, 'serial_no' => $serial,
                 'sku' => 'SP1', 'alias' => 'Development Solar Tracker', 'order_no' => 'DEV-0001',
                 'address_1' => '1 Development Way', 'city' => 'Testville', 'state' => 'CA',
                 'country' => 'US', 'zip_code' => '90000', 'status_notification' => 0,
                 'sms_notification' => 0, 'created_at' => now(), 'updated_at' => now(),
             ]);
+        } else {
+            DB::table('device_registers')->where('serial_no', $serial)->update($coordinates);
         }
         $this->call(SolarTrackerLogSeeder::class);
     }

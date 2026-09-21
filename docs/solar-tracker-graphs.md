@@ -59,6 +59,9 @@ Pacific day/night sensor and temperature patterns plus varying motor speeds.
 These are synthetic readings for device `202600000001` only. Existing readings
 and account passwords are preserved; repeating the seed fills missing time slots.
 Both seeders are restricted to `local` and `testing` environments.
+The Development Solar Tracker is placed in central Los Angeles at latitude
+`34.0522`, longitude `-118.2437`. Repeating `DevelopmentDataSeeder` also updates
+those coordinates on the existing demo device.
 
 For the local Docker installation:
 
