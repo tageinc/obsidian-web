@@ -9,6 +9,15 @@ vi.mock('./DeviceMap.vue', () => ({
         template: '<div data-testid="map" />',
     },
 }));
+vi.mock('./DeviceDetailsModal.vue', () => ({
+    default: {
+        name: 'DeviceDetailsModal',
+        props: ['device', 'mode'],
+        emits: ['close', 'edit', 'saved'],
+        template:
+            '<div data-testid="device-modal"><button @click="$emit(\'close\')">Close device</button></div>',
+    },
+}));
 const mounted = [];
 const device = (id, overrides = {}) => ({
     id,
@@ -133,13 +142,13 @@ describe('dashboard workflow', () => {
         expect(trigger.attributes('aria-expanded')).toBe('false');
         await trigger.trigger('keydown', { key: 'ArrowDown' });
         await flushPromises();
-        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
-        expect(trigger.attributes('aria-expanded')).toBe('true');
-        expect(document.activeElement).toBe(view.element);
-        await view.trigger('keydown', { key: 'ArrowDown' });
         const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
+        expect(trigger.attributes('aria-expanded')).toBe('true');
         expect(document.activeElement).toBe(edit.element);
-        await edit.trigger('keydown', { key: 'Escape' });
+        await edit.trigger('keydown', { key: 'ArrowDown' });
+        const remove = wrapper.get('a[data-document-action]');
+        expect(document.activeElement).toBe(remove.element);
+        await remove.trigger('keydown', { key: 'Escape' });
         expect(trigger.attributes('aria-expanded')).toBe('false');
         expect(document.activeElement).toBe(trigger.element);
         await trigger.trigger('click');
@@ -152,9 +161,9 @@ describe('dashboard workflow', () => {
         const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
         await trigger.trigger('click');
         await flushPromises();
-        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
-        expect(document.activeElement).toBe(view.element);
-        await view.trigger('keydown', { key: 'Tab', shiftKey: true });
+        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
+        expect(document.activeElement).toBe(edit.element);
+        await edit.trigger('keydown', { key: 'Tab', shiftKey: true });
         expect(document.activeElement).toBe(trigger.element);
         expect(trigger.attributes('aria-expanded')).toBe('false');
         await trigger.trigger('keydown', { key: 'ArrowUp' });
@@ -241,9 +250,9 @@ describe('dashboard workflow', () => {
         await row.get('button[aria-controls="device-actions-1"]').trigger('click');
         await flushPromises();
         expect(toggle.attributes('aria-expanded')).toBe('false');
-        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
-        view.element.addEventListener('click', (event) => event.preventDefault());
-        await view.trigger('click');
+        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
+        edit.element.addEventListener('click', (event) => event.preventDefault());
+        await edit.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('false');
         await row.trigger('click');
         await alias.trigger('click');
@@ -266,6 +275,27 @@ describe('dashboard workflow', () => {
         expect(wrapper.get('a[href="/dashboard?show=20"]').text()).toBe('Clear search');
         await wrapper.setProps({ search: 'Different' });
         expect(wrapper.get('#device-alias-search').element.value).toBe('Different');
+    });
+    it('opens view from the alias and edit from the simplified menu, restoring the correct trigger', async () => {
+        const wrapper = page({ devices: [device(1)] });
+        const alias = wrapper.get('a.device-alias');
+        await alias.trigger('click');
+        let modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
+        expect(modal.props()).toMatchObject({ mode: 'view', device: { id: 1 } });
+        await modal.get('button').trigger('click');
+        await flushPromises();
+        expect(document.activeElement).toBe(alias.element);
+        const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
+        await trigger.trigger('click');
+        expect(wrapper.find('#device-actions-1 hr').exists()).toBe(false);
+        expect(wrapper.find('#device-actions-1 a[href="/device-info/1"]').exists()).toBe(false);
+        await wrapper.get('#device-actions-1 a[href="/edit-device/1"]').trigger('click');
+        modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
+        expect(modal.props('mode')).toBe('edit');
+        expect(trigger.attributes('aria-expanded')).toBe('false');
+        await modal.get('button').trigger('click');
+        await flushPromises();
+        expect(document.activeElement).toBe(trigger.element);
     });
     it('distinguishes no alias matches from an account with no devices', () => {
         const wrapper = page({

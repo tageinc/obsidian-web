@@ -7,6 +7,7 @@ const props = defineProps({
     description: { type: String, default: '' },
     closeLabel: { type: String, default: 'Close dialog' },
     pending: { type: Boolean, default: false },
+    wide: { type: Boolean, default: false },
 });
 const emit = defineEmits(['close']);
 const dialog = ref(null);
@@ -63,6 +64,7 @@ onBeforeUnmount(() => {
         :id="id"
         ref="dialog"
         class="form-modal"
+        :class="{ 'form-modal-wide': wide }"
         :aria-labelledby="`${id}-title`"
         :aria-describedby="description ? `${id}-description` : undefined"
         @cancel.prevent="close"
@@ -109,6 +111,9 @@ onBeforeUnmount(() => {
 .form-modal[open] {
     display: flex;
     flex-direction: column;
+}
+.form-modal-wide {
+    width: min(80rem, calc(100% - 2rem));
 }
 .form-modal::backdrop {
     background: rgb(17 24 39 / 50%);

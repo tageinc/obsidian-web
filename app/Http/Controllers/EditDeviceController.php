@@ -51,6 +51,14 @@ class EditDeviceController extends Controller
             }
         });
 
+        if ($request->wantsJson()) {
+            if ($request->header('X-Obsidian-Modal') === '1') {
+                $request->session()->flash('success', 'Device updated successfully.');
+            }
+
+            return response()->json(['message' => 'Device updated successfully.']);
+        }
+
         return redirect()->route('edit-device', ['id' => $id])
             ->with('success', 'Device updated successfully.');
     }

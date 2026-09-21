@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 const props = defineProps({ device: { type: Object, required: true } });
+const emit = defineEmits(['edit']);
 const open = ref(false);
 const trigger = ref(null);
 const menu = ref(null);
@@ -79,6 +80,10 @@ function confirmRemoval(event) {
     if (!accepted) event.preventDefault();
     close(!accepted);
 }
+function edit(event) {
+    emit('edit', event, trigger.value);
+    close();
+}
 onMounted(() => {
     document.addEventListener('click', dismiss);
     document.addEventListener('scroll', place, true);
@@ -121,19 +126,12 @@ onBeforeUnmount(() => {
         >
             <a
                 class="dropdown-item"
-                :href="device.links.view"
-                :aria-label="`View ${device.alias}`"
-                @click="close()"
-                >View</a
-            >
-            <a
-                class="dropdown-item"
                 :href="device.links.edit"
                 :aria-label="`Edit ${device.alias}`"
-                @click="close()"
+                aria-haspopup="dialog"
+                @click="edit"
                 >Edit</a
             >
-            <hr class="dropdown-divider" />
             <a
                 class="dropdown-item device-delete"
                 :href="device.links.remove"

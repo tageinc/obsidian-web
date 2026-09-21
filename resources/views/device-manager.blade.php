@@ -167,7 +167,7 @@
                     @forelse ($devices as $device)
                     <div class="row mt-2">
                         <div class="col-md-2">{{ $device->hardware->name }}</div>
-                        <div class="col-md-2">{{ $device->alias }}</div>
+                        <div class="col-md-2"><a href="{{ route('device-info', $device->id) }}">{{ $device->alias ?: $device->serial_no }}</a></div>
                         <div class="col-md-4">
 						@if($device->hardware_id == 1)
 						<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
@@ -181,7 +181,6 @@
                             <details>
                                 <summary aria-label="Actions for {{ $device->alias ?: 'device '.$device->id }}" class="btn btn-outline-secondary btn-sm">…</summary>
                                 <div class="d-flex flex-column align-items-start gap-2 p-2">
-                                    <a href="{{ route('device-info', $device->id) }}" class="text-primary">View</a>
                                     <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
                                     <a href="{{ route('deleteDevice', $device->id) }}"
                                         class="text-danger delete-link">Delete</a>

@@ -255,10 +255,8 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(details).toHaveAttribute('aria-expanded', 'false');
     const menu = page.locator(`#${await actions.getAttribute('aria-controls')}`);
     await expect(menu).toBeVisible();
-    await expect(
-        menu.getByRole('link', { name: 'View Browser simulator', exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press('Tab');
+    await expect(menu.getByRole('link')).toHaveCount(2);
+    await expect(menu.getByRole('separator')).toHaveCount(0);
     await expect(
         menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }),
     ).toBeFocused();
@@ -272,7 +270,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await actions.focus();
     await page.keyboard.press('Enter');
     await expect(
-        menu.getByRole('link', { name: 'View Browser simulator', exact: true }),
+        menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(menu).not.toBeVisible();
@@ -285,7 +283,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     expect(menuBounds.y).toBeGreaterThanOrEqual(0);
     expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
     expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(page.viewportSize().height);
-    for (const action of ['View', 'Edit', 'Delete']) {
+    for (const action of ['Edit', 'Delete']) {
         const link = menu.getByRole('link', { name: `${action} Browser simulator`, exact: true });
         await expect(link).toBeVisible();
         expect(
@@ -323,8 +321,15 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(details).toHaveAttribute('aria-expanded', 'false');
     if ((await actions.getAttribute('aria-expanded')) !== 'true') await actions.click();
     await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
-    await expect(page).toHaveURL(/\/edit-device\/1$/);
-    await expect(page.getByRole('heading', { name: 'Edit device', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    const editDialog = page.getByRole('dialog', { name: 'Edit device', exact: true });
+    await expect(editDialog).toBeVisible();
+    await expect(editDialog.getByLabel('Device name', { exact: true })).toHaveValue(
+        'Browser simulator',
+    );
+    await editDialog.getByRole('button', { name: 'Close device', exact: true }).click();
+    await expect(editDialog).not.toBeVisible();
+    await expect(actions).toBeFocused();
 
     await page.goto('/dashboard?show=20&page=2');
     const search = page.getByLabel('Search by device alias', { exact: true });
@@ -383,9 +388,228 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await alias.hover();
     await checkAccessibility(page);
     await alias.click();
-    await expect(page).toHaveURL(/\/device-info\/1$/);
+    await expect(page).toHaveURL(/\/dashboard(?:\?|$)/);
+    const viewDialog = page.getByRole('dialog', { name: 'View device', exact: true });
+    await expect(viewDialog).toBeVisible();
+    await expect(viewDialog.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
+    await expect(viewDialog.getByText('BROWSER-SIMULATOR-1', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(viewDialog).not.toBeVisible();
+    await expect(alias).toBeFocused();
+});
+
+test('device view modal includes history and control without issuing commands and switches directly to edit', async ({
+    page,
+}) => {
+    const commands = [];
+    const modalReads = [];
+    page.on('request', (request) => {
+        const url = new URL(request.url());
+        if (url.pathname === '/update-solar-tracker') commands.push(request.method());
+        if (request.method() === 'GET' && /^\/(?:device-info|edit-device)\/1$/.test(url.pathname)) {
+            modalReads.push({
+                path: url.pathname,
+                modal: request.headers()['x-obsidian-modal'],
+            });
+        }
+    });
+    await login(page);
+    await page.goto('/dashboard?show=20&search=simulator');
+    const dashboardUrl = page.url();
+    const alias = page
+        .getByRole('rowheader', { name: 'Browser simulator', exact: true })
+        .getByRole('link');
+    await alias.click();
+    const view = page.getByRole('dialog', { name: 'View device', exact: true });
+    await expect(view.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
+    await expect(page).toHaveURL(dashboardUrl);
+    await expect(page.locator('dialog[open]')).toHaveCount(1);
+    await checkModalKeyboardAndViewport(page, view);
+    await view.getByRole('button', { name: /^Explore history/ }).click();
+    await expect(view.getByRole('tab', { name: 'History', exact: true })).toHaveAttribute(
+        'aria-selected',
+        'true',
+    );
+    await expect(view.getByText('6 raw readings', { exact: true })).toBeVisible();
+    await expect(view.getByRole('img', { name: /Temperature.*Pacific Time/ })).toHaveAttribute(
+        'aria-label',
+        /(?:AM|PM)/,
+    );
+    await view.getByRole('button', { name: '1 hour', exact: true }).click();
+    await expect(view.getByText('2 raw readings', { exact: true })).toBeVisible();
+    await view.getByLabel('Measurement', { exact: true }).selectOption('panels');
+    await expect(view.getByRole('img', { name: /Panel sensors.*Pacific Time/ })).toBeVisible();
+    await view.getByRole('tab', { name: 'Control', exact: true }).click();
+    await expect(view.getByRole('switch', { name: 'Remote control mode' })).not.toBeChecked();
+    await expect(view.getByRole('button', { name: 'Up', exact: true })).toBeDisabled();
+    await checkAccessibility(page);
+    expect(commands).toEqual([]);
+    await view.getByRole('button', { name: 'Edit device', exact: true }).click();
+    const edit = page.getByRole('dialog', { name: 'Edit device', exact: true });
+    await expect(edit.getByLabel('Device name', { exact: true })).toHaveValue('Browser simulator');
+    await expect(view).not.toBeVisible();
+    await expect(page.locator('dialog[open]')).toHaveCount(1);
+    await expect(page).toHaveURL(dashboardUrl);
     await expect(
-        page.getByRole('heading', { name: 'Browser simulator', exact: true }),
+        edit.locator('[name="serial_no"], [name="hardware_id"], [name="status_notification"]'),
+    ).toHaveCount(0);
+    await checkModalKeyboardAndViewport(page, edit);
+    await page.keyboard.press('Escape');
+    await expect(edit).not.toBeVisible();
+    await expect(alias).toBeFocused();
+    expect(modalReads).toEqual([
+        { path: '/device-info/1', modal: '1' },
+        { path: '/edit-device/1', modal: '1' },
+    ]);
+    expect(commands).toEqual([]);
+});
+
+test('device modal shows loading and recoverable errors without navigating away', async ({
+    page,
+}) => {
+    await login(page);
+    const reads = [];
+    let release;
+    const waiting = new Promise((resolve) => {
+        release = resolve;
+    });
+    await page.route('**/device-info/1', async (route) => {
+        reads.push(route.request().headers()['x-obsidian-modal']);
+        if (reads.length === 1) {
+            await waiting;
+            await route.fulfill({
+                status: 503,
+                contentType: 'application/json',
+                body: '{"message":"Synthetic temporary failure"}',
+            });
+        } else {
+            await route.continue();
+        }
+    });
+    const alias = page
+        .getByRole('rowheader', { name: 'Browser simulator', exact: true })
+        .getByRole('link');
+    await alias.click();
+    const dialog = page.getByRole('dialog', { name: 'View device', exact: true });
+    await expect(dialog.getByRole('status')).toHaveText('Loading device…');
+    await expect(page).toHaveURL(/\/dashboard$/);
+    release();
+    await expect(dialog.getByRole('alert')).toBeFocused();
+    await expect(dialog.getByRole('button', { name: 'Try again', exact: true })).toBeVisible();
+    await checkModalKeyboardAndViewport(page, dialog);
+    await dialog.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(dialog.getByRole('tab', { name: 'Overview', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    expect(reads).toEqual(['1', '1']);
+    await dialog.getByRole('button', { name: 'Close device', exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(alias).toBeFocused();
+});
+
+test('device edit modal retains server validation, guards pending and reloads the same dashboard after saving', async ({
+    page,
+    isMobile,
+}) => {
+    await login(page);
+    await page.goto('/dashboard?show=20&search=simulator');
+    const dashboardUrl = page.url();
+    const actions = page.getByRole('button', {
+        name: 'Actions for Browser simulator',
+        exact: true,
+    });
+    await actions.click();
+    const menu = page.locator('#' + (await actions.getAttribute('aria-controls')));
+    await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
+    const edit = page.getByRole('dialog', { name: 'Edit device', exact: true });
+    await expect(edit.getByLabel('Device name', { exact: true })).toHaveValue('Browser simulator');
+    await expect(page).toHaveURL(dashboardUrl);
+    await checkModalKeyboardAndViewport(page, edit);
+    const originalCity = await edit.getByLabel('City', { exact: true }).inputValue();
+    const originalAddress2 = await edit
+        .getByLabel('Address line 2 (optional)', { exact: true })
+        .inputValue();
+    const changedAddress2 = 'Synthetic modal save ' + (isMobile ? 'mobile' : 'desktop');
+    await edit.getByLabel('Address line 2 (optional)', { exact: true }).fill(changedAddress2);
+    await edit.getByLabel('City', { exact: true }).fill('');
+    // Exercise the real Laravel 422 response rather than stopping at native required validation.
+    await edit.locator('form').evaluate((form) => {
+        form.noValidate = true;
+    });
+    let release;
+    let held = false;
+    const hold = new Promise((resolve) => {
+        release = resolve;
+    });
+    await page.route('**/edit-device/1', async (route) => {
+        if (route.request().method() === 'PUT' && !held) {
+            held = true;
+            await hold;
+        }
+        await route.continue();
+    });
+    const rejected = page.waitForResponse(
+        (response) =>
+            new URL(response.url()).pathname === '/edit-device/1' &&
+            response.request().method() === 'PUT',
+    );
+    const submitted = page.waitForRequest(
+        (request) =>
+            new URL(request.url()).pathname === '/edit-device/1' && request.method() === 'PUT',
+    );
+    await edit.getByRole('button', { name: 'Update device', exact: true }).click();
+    const request = await submitted;
+    expect(request.headers()['content-type']).toContain('application/json');
+    expect(request.headers()['x-csrf-token']).toBeTruthy();
+    expect(request.headers()['x-obsidian-modal']).toBe('1');
+    expect(request.postDataJSON()).toMatchObject({ city: '', address_2: changedAddress2 });
+    await expect(edit.locator('button[type="submit"]')).toBeDisabled();
+    await expect(edit.getByRole('button', { name: 'Close device', exact: true })).toBeDisabled();
+    await expect(edit.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(edit).toBeVisible();
+    release();
+    expect((await rejected).status()).toBe(422);
+    await expect(edit.getByLabel('City', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await expect(edit.getByLabel('Address line 2 (optional)', { exact: true })).toHaveValue(
+        changedAddress2,
+    );
+    await expect(edit.getByRole('alert')).toBeFocused();
+    await expect(edit.getByRole('button', { name: 'Update device', exact: true })).toBeEnabled();
+    await expect(page).toHaveURL(dashboardUrl);
+    await checkAccessibility(page);
+    await edit.getByLabel('City', { exact: true }).fill(originalCity);
+    const saved = page.waitForResponse(
+        (response) =>
+            new URL(response.url()).pathname === '/edit-device/1' &&
+            response.request().method() === 'PUT',
+    );
+    const reloaded = page.waitForEvent('framenavigated', (frame) => frame === page.mainFrame());
+    await edit.getByRole('button', { name: 'Update device', exact: true }).click();
+    expect((await saved).status()).toBe(200);
+    await reloaded;
+    await expect(page).toHaveURL(dashboardUrl);
+    await expect(edit).not.toBeVisible();
+    await expect(page.getByText('Device updated successfully.', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Search by device alias', { exact: true })).toHaveValue(
+        'simulator',
+    );
+    await actions.click();
+    await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
+    await expect(edit.getByLabel('Address line 2 (optional)', { exact: true })).toHaveValue(
+        changedAddress2,
+    );
+    // Restore the isolated fixture so later desktop/mobile cases see the same baseline.
+    await edit.getByLabel('Address line 2 (optional)', { exact: true }).fill(originalAddress2);
+    const restored = page.waitForEvent('framenavigated', (frame) => frame === page.mainFrame());
+    await edit.getByRole('button', { name: 'Update device', exact: true }).click();
+    await restored;
+    await expect(page).toHaveURL(dashboardUrl);
+    await expect(edit).not.toBeVisible();
+    await expect(
+        page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();
 });
 
@@ -515,18 +739,7 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
         if (request.url().endsWith('/update-solar-tracker')) commands.push(request.method());
     });
     await login(page);
-    const actions = page.getByRole('button', {
-        name: 'Actions for Browser simulator',
-        exact: true,
-    });
-    await actions.click();
-    await expect(
-        page.getByRole('button', { name: 'Show details for Browser simulator', exact: true }),
-    ).toHaveAttribute('aria-expanded', 'false');
-    await page
-        .locator(`#${await actions.getAttribute('aria-controls')}`)
-        .getByRole('link', { name: 'View Browser simulator', exact: true })
-        .click();
+    await page.goto('/device-info/1');
     await expect(page).toHaveURL(/\/device-info\/1$/);
     await expect(
         page.getByRole('heading', { name: 'Browser simulator', exact: true }),

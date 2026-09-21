@@ -1,9 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import DeviceFields from '../../shared/components/DeviceFields.vue';
 import FormField from '../../shared/components/FormField.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 import { useNativeForm } from '../../shared/composables/useNativeForm.js';
+import { requestJson } from '../../shared/api/client.js';
 
 const props = defineProps({
     registering: { type: Boolean, default: false },
@@ -14,10 +15,11 @@ const props = defineProps({
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
     registrationModal: { type: Boolean, default: false },
+    asyncSubmit: { type: Boolean, default: false },
     hardwareOptions: { type: Array, default: () => [] },
     fixedIdentity: { type: Object, default: () => ({}) },
 });
-const emit = defineEmits(['pending-change']);
+const emit = defineEmits(['pending-change', 'saved']);
 const fields = [
     'alias',
     'address_1',
@@ -33,6 +35,41 @@ if (props.registering) fields.push('hardware_id', 'serial_no', 'sku', 'order_no'
 const form = ref(Object.fromEntries(fields.map((field) => [field, props.values[field] ?? ''])));
 const { pending, submit } = useNativeForm();
 watch(pending, (value) => emit('pending-change', value), { immediate: true, flush: 'sync' });
+const feedback = ref(null);
+const submitted = ref(false);
+const clientErrors = ref({});
+const clientError = ref(null);
+const errors = computed(() => (submitted.value ? clientErrors.value : props.errors));
+const sessionError = computed(() => (submitted.value ? clientError.value : props.sessionError));
+async function save(event) {
+    if (!props.asyncSubmit) return submit(event);
+    event.preventDefault();
+    if (pending.value) return;
+    pending.value = true;
+    submitted.value = true;
+    clientErrors.value = {};
+    clientError.value = null;
+    try {
+        const result = await requestJson(props.action, {
+            method: 'PUT',
+            data: { ...form.value },
+            csrfToken: props.csrfToken,
+            headers: { 'X-Obsidian-Modal': '1' },
+        });
+        emit('saved', result);
+    } catch (error) {
+        clientErrors.value = error.fieldErrors || {};
+        if (!Object.keys(clientErrors.value).length) {
+            clientError.value = error.message || 'The device could not be saved. Please try again.';
+        }
+        await nextTick();
+        const alert = feedback.value?.querySelector('[role="alert"]');
+        alert?.setAttribute('tabindex', '-1');
+        alert?.focus();
+    } finally {
+        pending.value = false;
+    }
+}
 const identityFields = [
     { name: 'serial_no', label: 'Serial number' },
     { name: 'sku', label: 'SKU' },
@@ -41,7 +78,13 @@ const identityFields = [
 </script>
 
 <template>
-    <FormFeedback :errors="errors" :success="success" :session-error="sessionError" />
+    <div ref="feedback">
+        <FormFeedback
+            :errors="errors"
+            :success="submitted ? null : success"
+            :session-error="sessionError"
+        />
+    </div>
     <template v-if="!registering">
         <h2 class="h5 mb-3">Registered device</h2>
         <dl class="row">
@@ -59,7 +102,7 @@ const identityFields = [
             </dd>
         </dl>
     </template>
-    <form id="device-form" method="POST" :action="action" :aria-busy="pending" @submit="submit">
+    <form id="device-form" method="POST" :action="action" :aria-busy="pending" @submit="save">
         <input type="hidden" name="_token" :value="csrfToken" />
         <input v-if="registrationModal" type="hidden" name="_registration_modal" value="1" />
         <input v-if="!registering" type="hidden" name="_method" value="PUT" />

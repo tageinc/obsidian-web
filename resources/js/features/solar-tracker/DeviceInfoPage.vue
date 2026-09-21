@@ -9,7 +9,9 @@ const props = defineProps({
     points: { type: Array, default: () => [] },
     links: { type: Object, required: true },
     csrfToken: { type: String, required: true },
+    embedded: { type: Boolean, default: false },
 });
+const emit = defineEmits(['edit']);
 const activeSection = ref('overview');
 const historyPanel = ref(null);
 const mode = ref(props.remote.mode);
@@ -41,17 +43,25 @@ function navigateSection(event, index) {
 }
 </script>
 <template>
-    <div class="container device-page">
-        <a :href="links.dashboard" class="device-back">← Devices</a>
+    <div class="device-page" :class="{ container: !embedded, 'device-page-embedded': embedded }">
+        <a v-if="!embedded" :href="links.dashboard" class="device-back">← Devices</a>
         <header class="device-heading">
             <div>
                 <p class="device-eyebrow">{{ device.details.Hardware || 'Solar tracker' }}</p>
-                <h1>{{ device.alias || 'Device information' }}</h1>
+                <h1 v-if="!embedded">{{ device.alias || 'Device information' }}</h1>
                 <p class="device-identity">
                     Serial <span>{{ device.serial }}</span>
                 </p>
             </div>
-            <a v-if="links.edit" :href="links.edit" class="btn btn-outline-secondary"
+            <button
+                v-if="links.edit && embedded"
+                type="button"
+                class="btn btn-outline-secondary"
+                @click="emit('edit')"
+            >
+                Edit device
+            </button>
+            <a v-else-if="links.edit" :href="links.edit" class="btn btn-outline-secondary"
                 >Edit device</a
             >
         </header>
@@ -81,7 +91,7 @@ function navigateSection(event, index) {
         >
             <div class="section-heading">
                 <div>
-                    <h2>At a glance</h2>
+                    <component :is="embedded ? 'h3' : 'h2'">At a glance</component>
                     <p>The latest reported readings from this device.</p>
                 </div>
                 <p class="reading-time">
@@ -112,7 +122,9 @@ function navigateSection(event, index) {
             </dl>
             <div class="device-overview-grid">
                 <section class="device-surface" aria-labelledby="sensors-title">
-                    <h2 id="sensors-title">Sensor readings</h2>
+                    <component :is="embedded ? 'h3' : 'h2'" id="sensors-title">
+                        Sensor readings
+                    </component>
                     <p class="section-description">Values from the same reported reading.</p>
                     <dl class="device-sensors">
                         <div v-for="sensor in sensors" :key="sensor">
@@ -125,7 +137,9 @@ function navigateSection(event, index) {
                     </button>
                 </section>
                 <section class="device-surface" aria-labelledby="details-title">
-                    <h2 id="details-title">Device details</h2>
+                    <component :is="embedded ? 'h3' : 'h2'" id="details-title">
+                        Device details
+                    </component>
                     <dl class="device-details">
                         <div>
                             <dt>Hardware</dt>
@@ -164,7 +178,7 @@ function navigateSection(event, index) {
         >
             <div class="section-heading">
                 <div>
-                    <h2>Device control</h2>
+                    <component :is="embedded ? 'h3' : 'h2'">Device control</component>
                     <p>Choose automatic tracking or send a manual motor command.</p>
                 </div>
             </div>
@@ -179,7 +193,9 @@ function navigateSection(event, index) {
                     @change="mode = $event.mode"
                 />
                 <aside class="control-guide" aria-labelledby="control-guide-title">
-                    <h3 id="control-guide-title">How control works</h3>
+                    <component :is="embedded ? 'h4' : 'h3'" id="control-guide-title">
+                        How control works
+                    </component>
                     <dl>
                         <dt>Automatic</dt>
                         <dd>
@@ -205,6 +221,12 @@ function navigateSection(event, index) {
     --device-border: #e0e6ee;
     color: #202e42;
     padding-bottom: 2rem;
+}
+.device-page-embedded {
+    padding-bottom: 0;
+}
+.device-page-embedded .device-eyebrow {
+    margin-bottom: 0.4rem;
 }
 .device-back {
     display: inline-block;
@@ -276,7 +298,9 @@ function navigateSection(event, index) {
     margin-bottom: 1.25rem;
 }
 .section-heading h2,
-.device-surface h2 {
+.section-heading h3,
+.device-surface h2,
+.device-surface h3 {
     font-size: 1.05rem;
     font-weight: 650;
     margin: 0 0 0.45rem;
@@ -378,7 +402,8 @@ function navigateSection(event, index) {
     color: var(--device-muted);
     font-size: 0.9rem;
 }
-.control-guide h3 {
+.control-guide h3,
+.control-guide h4 {
     font-size: 0.9rem;
     color: #202e42;
     font-weight: 650;

@@ -20,15 +20,20 @@ class FrontendPageResponse
         // The normal controller and every authorization middleware run before a DTO exists.
         $response = $next($request);
 
-        if ($response->isSuccessful() && $request->header('X-Obsidian-Page') === '1' && $request->wantsJson()) {
+        $modalRequested = $request->header('X-Obsidian-Modal') === '1';
+        if ($response->isSuccessful() && $request->wantsJson()
+            && ($modalRequested || $request->header('X-Obsidian-Page') === '1')) {
             $payload = $capture->envelope($request->getRequestUri());
-            $response = FrontendPagePayload::workspaceEnabled() && FrontendPagePayload::supportsPath($request->getPathInfo()) && $payload !== null
+            $enabled = $modalRequested
+                ? FrontendPagePayload::modalEnabled($routeName, $request->getPathInfo())
+                : FrontendPagePayload::workspaceEnabled() && FrontendPagePayload::supportsPath($request->getPathInfo());
+            $response = $enabled && $payload !== null
                 ? response()->json($payload)
                 : response()->json(['message' => 'This page requires document navigation.'], 409);
         }
 
         $response->headers->set('Cache-Control', 'private, no-store');
-        $response->setVary(['Accept', 'X-Obsidian-Page'], false);
+        $response->setVary(['Accept', 'X-Obsidian-Page', 'X-Obsidian-Modal'], false);
 
         return $response;
     }

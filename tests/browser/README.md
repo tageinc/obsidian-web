@@ -15,7 +15,8 @@ empty file. It never runs the development or production database seeders.
 Accounts and the one device are synthetic. Mail uses Laravel's array transport,
 logs are disabled, Redis workloads are disabled, and external browser requests
 are blocked (map tiles use a static fixture). Motor-command requests are blocked
-and asserted absent. Tests perform rejected form submissions only. Screenshots,
+and asserted absent. Forms exercise rejected submissions; the device modal also
+saves and restores an address line on the synthetic fixture only. Screenshots,
 video, traces, stored login state and artifact uploads are disabled. Any failure
 context contains synthetic fixtures only. Temporary files are cleaned up on
 normal server exit; forced OS termination can leave a disposable fixture

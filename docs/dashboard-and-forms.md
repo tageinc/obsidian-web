@@ -20,7 +20,29 @@ Successful registration redirects to the dashboard with the existing success
 message. `/device-register` remains available for direct links and rollback; when
 Vue registration is disabled, Create + links to that page.
 
-The Device Manager table has a three-dot action menu for View, Edit, and Delete.
+The Device Manager table has a three-dot action menu with Edit and Delete, with
+no separator. The device alias opens the View device modal. Its Overview,
+History and Control sections reuse the existing device screen, including raw
+timestamp graphs; opening or switching sections does not issue a control command.
+Edit opens from the menu or inside the View modal. Both dialogs stay on the
+dashboard, keep focus inside, and restore focus to their originating alias or
+action button when closed. On small screens their content scrolls beneath a
+fixed header.
+
+Modal details load from the existing authorized device URLs using
+`X-Obsidian-Modal: 1` and JSON content negotiation. They reuse the exact Blade
+mount props, have loading/error/retry states, and abort discarded requests.
+Modal payloads require the relevant Vue page flag but do not require workspace
+navigation; a disabled page falls back to document navigation. Responses remain
+private and non-cacheable. The existing `/device-info/{id}` and
+`/edit-device/{id}` pages still support direct links and rollback.
+
+Modal editing uses the same `PUT /edit-device/{id}` with JSON validation. Invalid
+fields retain entered values and focus the error summary; close/cancel and
+repeat submissions are disabled while saving. A successful save reloads the
+current dashboard URL, preserving search and pagination and updating both the
+table and map. Native standalone editing retains its existing redirect.
+
 Delete retains the existing confirmation and server ownership check. The Vue
 menu supports keyboard navigation, Escape, and outside-click dismissal; it is
 rendered outside the table so its links remain accessible on mobile.

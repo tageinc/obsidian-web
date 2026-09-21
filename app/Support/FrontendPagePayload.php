@@ -42,6 +42,13 @@ class FrontendPagePayload
         return (bool) preg_match('#^/(?:dashboard|profile|device-register|(?:edit-device|device-info)/[1-9][0-9]*)$#D', $path);
     }
 
+    public static function modalEnabled(string $routeName, string $path): bool
+    {
+        return in_array($routeName, ['device-register', 'edit-device', 'device-info'], true)
+            && config('frontend.vue3.'.self::ROUTES[$routeName]['flag'])
+            && self::supportsPath($path);
+    }
+
     public static function record(string $page, array $props): bool
     {
         $capture = request()->attributes->get(self::class);

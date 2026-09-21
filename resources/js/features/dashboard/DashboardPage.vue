@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import DeviceMap from './DeviceMap.vue';
 import DeviceActions from './DeviceActions.vue';
 import DeviceRegistrationModal from './DeviceRegistrationModal.vue';
+import DeviceDetailsModal from './DeviceDetailsModal.vue';
 import { statusColor } from './deviceMap.js';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 
@@ -18,6 +19,26 @@ const props = defineProps({
 });
 const registeringDevice = ref(props.registration?.initiallyOpen ?? false);
 const createButton = ref(null);
+const selectedDevice = ref(null);
+const deviceMode = ref('view');
+let deviceTrigger;
+function openDevice(event, device, mode, trigger = event.currentTarget) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+    event.preventDefault();
+    deviceTrigger = trigger;
+    deviceMode.value = mode;
+    selectedDevice.value = device;
+}
+async function closeDevice() {
+    selectedDevice.value = null;
+    await nextTick();
+    deviceTrigger?.focus({ preventScroll: true });
+}
+function deviceSaved() {
+    // Reload the current filter/page so the table and map share fresh server data.
+    window.location.reload();
+}
 async function closeRegistration() {
     registeringDevice.value = false;
     await nextTick();
@@ -212,9 +233,13 @@ watch(
                                         <span class="device-field-label" aria-hidden="true"
                                             >Device</span
                                         >
-                                        <a class="device-alias" :href="device.links.view">{{
-                                            device.alias
-                                        }}</a>
+                                        <a
+                                            class="device-alias"
+                                            :href="device.links.view"
+                                            aria-haspopup="dialog"
+                                            @click="openDevice($event, device, 'view')"
+                                            >{{ device.alias }}</a
+                                        >
                                     </th>
                                     <td>
                                         <span class="device-field-label" aria-hidden="true"
@@ -244,7 +269,13 @@ watch(
                                         <span class="device-field-label" aria-hidden="true"
                                             >Actions</span
                                         >
-                                        <DeviceActions :device="device" />
+                                        <DeviceActions
+                                            :device="device"
+                                            @edit="
+                                                (event, trigger) =>
+                                                    openDevice(event, device, 'edit', trigger)
+                                            "
+                                        />
                                     </td>
                                 </tr>
                                 <tr
@@ -320,6 +351,14 @@ watch(
             v-if="registration && registeringDevice"
             :registration="registration"
             @close="closeRegistration"
+        />
+        <DeviceDetailsModal
+            v-if="selectedDevice"
+            :device="selectedDevice"
+            :mode="deviceMode"
+            @close="closeDevice"
+            @edit="deviceMode = 'edit'"
+            @saved="deviceSaved"
         />
     </div>
 </template>
