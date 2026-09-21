@@ -6,11 +6,19 @@
 @section('content')
 @if ($usesVue)
     @php
-        $dashboardDevices = $devices->getCollection()->map(function ($device) {
+        $dashboardText = fn ($value) => is_string($value) && trim($value) !== '' ? trim($value) : null;
+        $dashboardDevices = $devices->getCollection()->map(function ($device) use ($dashboardText) {
+            $serial = $dashboardText($device->serial_no);
+            $address = implode(', ', array_filter([
+                $dashboardText($device->address_1), $dashboardText($device->address_2),
+            ], fn ($line) => $line !== null));
             return [
                 'id' => $device->id,
                 'hardwareName' => optional($device->hardware)->name ?? 'Unknown',
-                'alias' => $device->alias,
+                'alias' => $dashboardText($device->alias) ?? $serial ?? 'Device '.$device->id,
+                'serial' => $serial,
+                'sku' => $dashboardText($device->sku),
+                'address' => $address !== '' ? $address : null,
                 'state' => $device->state,
                 'lastUpdated' => $device->last_updated,
                 'links' => [

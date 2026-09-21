@@ -125,7 +125,7 @@ class VueWorkflowPagesTest extends TestCase
     public function test_dashboard_payload_paginates_own_devices_and_preserves_query_and_flash_contracts(): void
     {
         $this->device($this->owner, 'OWNED-1');
-        $this->device($this->owner, 'OWNED-2');
+        $this->device($this->owner, 'OWNED-2', ['sku' => '  <SKU>  ', 'address_1' => '  1 Device Street  ', 'address_2' => ' Suite 2 ']);
         $this->device($this->other, 'OTHER-PRIVATE');
         $response = $this->actingAs($this->owner)->withSession(['success' => 'Saved device'])->get('/dashboard?show=1&page=2');
         $props = $this->props($response, 'dashboard');
@@ -137,7 +137,11 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame('Saved device', $props['success']);
         $this->assertSame(route('all-devices'), $props['mapEndpoints']['all']);
         $this->assertSame(route('paginated-devices'), $props['mapEndpoints']['paginated']);
-        $this->assertSame(['id', 'hardwareName', 'alias', 'state', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
+        $this->assertSame(['id', 'hardwareName', 'alias', 'serial', 'sku', 'address', 'state', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
+        $this->assertSame('OWNED-2', $props['devices'][0]['serial']);
+        $this->assertSame('<SKU>', $props['devices'][0]['sku']);
+        $this->assertSame('1 Device Street, Suite 2', $props['devices'][0]['address']);
+        $response->assertDontSee('<SKU>', false);
         foreach ($props['pagination']['links'] as $link) {
             if ($link['url']) $this->assertStringContainsString('show=1', $link['url']);
             $this->assertStringNotContainsString('<', $link['label']);
@@ -146,6 +150,38 @@ class VueWorkflowPagesTest extends TestCase
         $this->get('/device-manager?show=20&page=2')->assertRedirect('/dashboard?show=20&page=2');
         $this->getJson('/all-devices')->assertOk()->assertJsonCount(2)->assertJsonMissing(['serial_no' => 'OTHER-PRIVATE']);
         $this->getJson('/paginated-devices?show=1&page=2')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('total', 2);
+    }
+
+    public function test_dashboard_detail_fields_use_null_for_missing_text_and_preserve_zero_values(): void
+    {
+        $this->device($this->owner, 'MISSING', ['sku' => null, 'address_1' => null, 'address_2' => '   ']);
+        $this->device($this->owner, '0', ['sku' => '0', 'address_1' => '', 'address_2' => '0']);
+        $props = $this->props($this->actingAs($this->owner)->get('/dashboard'), 'dashboard');
+        $this->assertSame('MISSING', $props['devices'][0]['serial']);
+        $this->assertNull($props['devices'][0]['sku']);
+        $this->assertNull($props['devices'][0]['address']);
+        $this->assertSame('0', $props['devices'][1]['serial']);
+        $this->assertSame('0', $props['devices'][1]['sku']);
+        $this->assertSame('0', $props['devices'][1]['address']);
+    }
+
+    public function test_dashboard_alias_labels_use_trimmed_alias_serial_or_device_id_with_safe_json(): void
+    {
+        $this->device($this->owner, 'NAMED', ['alias' => '  Front yard  ']);
+        $this->device($this->owner, '  SERIAL-ONLY  ', ['alias' => null]);
+        $sensitiveSerial = '</script><img src=x onerror=alert(1)>';
+        $this->device($this->owner, ' '.$sensitiveSerial.' ', ['alias' => " \t "]);
+        $unnamed = $this->device($this->owner, '   ', ['alias' => '']);
+        $this->device($this->owner, '0', ['alias' => null]);
+
+        $response = $this->actingAs($this->owner)->get('/dashboard');
+        $props = $this->props($response, 'dashboard');
+        $this->assertSame([
+            'Front yard', 'SERIAL-ONLY', $sensitiveSerial, 'Device '.$unnamed->id, '0',
+        ], array_column($props['devices'], 'alias'));
+        $this->assertSame($sensitiveSerial, $props['devices'][2]['serial']);
+        $this->assertNull($props['devices'][3]['serial']);
+        $response->assertDontSee($sensitiveSerial, false);
     }
 
     public function test_developer_payload_requires_server_developer_and_never_serializes_storage_paths(): void

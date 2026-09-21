@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
     <button
         ref="trigger"
         type="button"
-        class="btn btn-outline-secondary device-action-trigger"
+        class="device-action-trigger"
         :aria-label="`Actions for ${device.alias}`"
         :aria-controls="menuId"
         :aria-expanded="open"
@@ -151,8 +151,22 @@ onBeforeUnmount(() => {
     width: 2.5rem;
     height: 2.5rem;
     padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7280;
     font-size: 1.5rem;
     line-height: 1;
+}
+.device-action-trigger:hover,
+.device-action-trigger[aria-expanded='true'] {
+    background: #e5e7eb;
+    color: #111827;
+}
+.device-action-trigger:focus-visible,
+.device-action-menu a:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
 }
 .device-action-menu {
     position: fixed;
@@ -160,10 +174,20 @@ onBeforeUnmount(() => {
     width: 11rem;
     min-width: 0;
     max-width: calc(100vw - 16px);
-    box-shadow: 0 0.5rem 1.5rem #202e421f;
+    padding: 0.35rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
 }
 .device-action-menu .dropdown-item {
-    padding: 0.6rem 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.device-action-menu .dropdown-item:hover,
+.device-action-menu .dropdown-item:focus {
+    background: #f3f4f6;
 }
 .device-delete {
     color: #b02a37;

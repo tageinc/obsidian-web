@@ -8,7 +8,18 @@ preserving query parameters. Authentication and email verification remain requir
 The Device Manager table has a three-dot action menu for View, Edit, and Delete.
 Delete retains the existing confirmation and server ownership check. The Vue
 menu supports keyboard navigation, Escape, and outside-click dismissal; it is
-rendered outside the scrollable table so its links remain accessible on mobile.
+rendered outside the table so its links remain accessible on mobile.
+
+The Vue table follows TAGCSOFT's `ProjectsTable`/`DataTable` presentation: compact
+uppercase headers, a linked device alias, subtle row hover, a search toolbar, and
+page-size/pagination controls alongside the result count. Click the row or use
+its labeled chevron button to expand serial number, SKU, and location details;
+multiple rows can stay expanded. Links and action buttons operate independently
+of expansion. Missing details have explicit fallback text; a blank alias uses
+the serial number (or device ID) as its display name. At widths of 768px or less,
+rows become labeled cards without horizontal scrolling, retaining accessible
+column headings. The retained
+Blade fallback keeps its previous presentation as the frontend rollback path.
 
 The alias search above the table uses `GET /dashboard?search=...&show=...` and
 starts on page one. It matches a case-insensitive literal substring across all

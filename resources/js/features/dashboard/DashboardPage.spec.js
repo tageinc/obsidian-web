@@ -10,25 +10,28 @@ vi.mock('./DeviceMap.vue', () => ({
     },
 }));
 const mounted = [];
+const device = (id, overrides = {}) => ({
+    id,
+    hardwareName: 'Solar tracker',
+    alias: `Tracker ${id}`,
+    serial: `SERIAL-${id}`,
+    sku: `SKU-${id}`,
+    address: `${id} Device Street`,
+    state: 'online',
+    lastUpdated: '1 minute ago',
+    links: {
+        view: `/device-info/${id}`,
+        edit: `/edit-device/${id}`,
+        remove: `/delete-device/${id}`,
+    },
+    ...overrides,
+});
 function page(overrides = {}) {
     const wrapper = mount(DashboardPage, {
         attachTo: document.body,
         global: { stubs: { teleport: true } },
         props: {
-            devices: [
-                {
-                    id: 1,
-                    hardwareName: 'Solar tracker',
-                    alias: '<img src=x onerror=alert(1)>',
-                    state: 'online',
-                    lastUpdated: '1 minute ago',
-                    links: {
-                        view: '/device-info/1',
-                        edit: '/edit-device/1',
-                        remove: '/delete-device/1',
-                    },
-                },
-            ],
+            devices: [device(1, { alias: '<img src=x onerror=alert(1)>' })],
             pagination: {
                 currentPage: 2,
                 perPage: 20,
@@ -130,11 +133,11 @@ describe('dashboard workflow', () => {
         expect(trigger.attributes('aria-expanded')).toBe('false');
         await trigger.trigger('keydown', { key: 'ArrowDown' });
         await flushPromises();
-        const view = wrapper.get('a[href="/device-info/1"]');
+        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
         expect(trigger.attributes('aria-expanded')).toBe('true');
         expect(document.activeElement).toBe(view.element);
         await view.trigger('keydown', { key: 'ArrowDown' });
-        const edit = wrapper.get('a[href="/edit-device/1"]');
+        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
         expect(document.activeElement).toBe(edit.element);
         await edit.trigger('keydown', { key: 'Escape' });
         expect(trigger.attributes('aria-expanded')).toBe('false');
@@ -149,7 +152,7 @@ describe('dashboard workflow', () => {
         const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
         await trigger.trigger('click');
         await flushPromises();
-        const view = wrapper.get('a[href="/device-info/1"]');
+        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
         expect(document.activeElement).toBe(view.element);
         await view.trigger('keydown', { key: 'Tab', shiftKey: true });
         expect(document.activeElement).toBe(trigger.element);
@@ -161,6 +164,90 @@ describe('dashboard workflow', () => {
         await remove.trigger('keydown', { key: 'Tab' });
         expect(trigger.attributes('aria-expanded')).toBe('false');
         expect(document.activeElement).toBe(trigger.element);
+    });
+    it('opens details from a row and collapses them with the labeled disclosure button', async () => {
+        const wrapper = page({ devices: [device(1)] });
+        const row = wrapper.get('.device-table-row');
+        const toggle = row.get('button[aria-controls="device-details-1"]');
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        expect(toggle.attributes('aria-label')).toBe('Show details for Tracker 1');
+        expect(wrapper.get('#device-details-1').isVisible()).toBe(false);
+        await row.trigger('click');
+        expect(toggle.attributes('aria-expanded')).toBe('true');
+        expect(toggle.attributes('aria-label')).toBe('Hide details for Tracker 1');
+        const details = wrapper.get('#device-details-1');
+        expect(details.isVisible()).toBe(true);
+        expect(details.classes()).toContain('device-details-row');
+        expect(details.text()).toContain('SERIAL-1');
+        expect(details.text()).toContain('SKU-1');
+        expect(details.text()).toContain('1 Device Street');
+        await toggle.trigger('click');
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        expect(wrapper.get('#device-details-1').isVisible()).toBe(false);
+    });
+    it('keeps expanded details independent across multiple device rows', async () => {
+        const wrapper = page({ devices: [device(1), device(2)] });
+        const first = wrapper.get('button[aria-controls="device-details-1"]');
+        const second = wrapper.get('button[aria-controls="device-details-2"]');
+        await first.trigger('click');
+        await second.trigger('click');
+        expect(wrapper.get('#device-details-1').isVisible()).toBe(true);
+        expect(wrapper.get('#device-details-2').isVisible()).toBe(true);
+        expect(wrapper.get('#device-details-1').text()).toContain('SERIAL-1');
+        expect(wrapper.get('#device-details-2').text()).toContain('SERIAL-2');
+        await first.trigger('click');
+        expect(first.attributes('aria-expanded')).toBe('false');
+        expect(second.attributes('aria-expanded')).toBe('true');
+        expect(wrapper.get('#device-details-1').isVisible()).toBe(false);
+        expect(wrapper.get('#device-details-2').isVisible()).toBe(true);
+        expect(wrapper.get('#device-details-2').text()).toContain('SERIAL-2');
+    });
+    it('shows clear fallbacks for missing detail fields while preserving zero-valued text', async () => {
+        const wrapper = page({
+            devices: [
+                device(1, { serial: null, sku: '', address: undefined }),
+                device(2, { serial: '0', sku: '0', address: '0' }),
+            ],
+        });
+        await wrapper.get('button[aria-controls="device-details-1"]').trigger('click');
+        await wrapper.get('button[aria-controls="device-details-2"]').trigger('click');
+        expect(
+            wrapper
+                .get('#device-details-1')
+                .findAll('dt')
+                .map((term) => term.text()),
+        ).toEqual(['Serial number', 'SKU', 'Location']);
+        expect(
+            wrapper
+                .get('#device-details-1')
+                .findAll('dd')
+                .map((value) => value.text()),
+        ).toEqual(['—', '—', 'No address provided']);
+        expect(
+            wrapper
+                .get('#device-details-2')
+                .findAll('dd')
+                .map((value) => value.text()),
+        ).toEqual(['0', '0', '0']);
+    });
+    it('does not toggle details when activating the alias or action menu links', async () => {
+        const wrapper = page({ devices: [device(1)] });
+        const row = wrapper.get('.device-table-row');
+        const toggle = row.get('button[aria-controls="device-details-1"]');
+        const alias = row.get('a[href="/device-info/1"]');
+        alias.element.addEventListener('click', (event) => event.preventDefault());
+        await alias.trigger('click');
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        await row.get('button[aria-controls="device-actions-1"]').trigger('click');
+        await flushPromises();
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        const view = wrapper.get('#device-actions-1 a[href="/device-info/1"]');
+        view.element.addEventListener('click', (event) => event.preventDefault());
+        await view.trigger('click');
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        await row.trigger('click');
+        await alias.trigger('click');
+        expect(toggle.attributes('aria-expanded')).toBe('true');
     });
     it('submits alias search from the first page, keeps the applied filter on size changes, and clears it explicitly', async () => {
         const wrapper = page({ search: 'Roof' });

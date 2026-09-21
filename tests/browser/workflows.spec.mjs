@@ -178,6 +178,7 @@ test('dashboard reports loading, failed map reads, retry and a genuinely empty a
 
 test('device actions stay usable and alias search keeps the table and map in sync', async ({
     page,
+    isMobile,
 }) => {
     const deletionRequests = [];
     page.on('request', (request) => {
@@ -186,6 +187,44 @@ test('device actions stay usable and alias search keeps the table and map in syn
         }
     });
     await login(page);
+    const details = page.getByRole('button', {
+        name: /^(Show|Hide) details for Browser simulator$/,
+    });
+    const detailRow = page.locator(`#${await details.getAttribute('aria-controls')}`);
+    const serial = page.getByText('BROWSER-SIMULATOR-1', { exact: true });
+    await expect(details).toHaveAttribute('aria-expanded', 'false');
+    await expect(detailRow).not.toBeVisible();
+    await expect(serial).not.toBeVisible();
+    if (isMobile) {
+        await expect(page.getByRole('table')).toHaveCount(1);
+        for (const heading of ['Hardware', 'Last updated', 'Status']) {
+            await expect(
+                page.getByRole('columnheader', { name: heading, exact: true }),
+            ).toHaveCount(1);
+        }
+        const row = page.locator('.device-table-row');
+        await expect(row).toHaveCSS('display', 'block');
+        for (const label of ['Device', 'Hardware', 'Last updated', 'Status', 'Actions']) {
+            await expect(
+                row.locator('.device-field-label').filter({ hasText: new RegExp(`^${label}$`) }),
+            ).toBeVisible();
+        }
+        const rowBounds = await row.boundingBox();
+        expect(rowBounds.x).toBeGreaterThanOrEqual(0);
+        expect(rowBounds.x + rowBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    }
+    await details.focus();
+    await page.keyboard.press('Enter');
+    await expect(details).toHaveAccessibleName('Hide details for Browser simulator');
+    await expect(details).toHaveAttribute('aria-expanded', 'true');
+    await expect(detailRow).toBeVisible();
+    await expect(serial).toBeVisible();
+    await expect(page.getByText('FIXTURE', { exact: true })).toBeVisible();
+    await expect(detailRow.getByText('1 Fixture Street', { exact: true })).toBeVisible();
+    await checkAccessibility(page);
+    await details.click();
+    await expect(details).toHaveAttribute('aria-expanded', 'false');
+    await expect(serial).not.toBeVisible();
     const actions = page.getByRole('button', {
         name: 'Actions for Browser simulator',
         exact: true,
@@ -194,6 +233,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await actions.focus();
     await page.keyboard.press('Enter');
     await expect(actions).toHaveAttribute('aria-expanded', 'true');
+    await expect(details).toHaveAttribute('aria-expanded', 'false');
     const menu = page.locator(`#${await actions.getAttribute('aria-controls')}`);
     await expect(menu).toBeVisible();
     await expect(
@@ -261,6 +301,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(
         page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();
+    await expect(details).toHaveAttribute('aria-expanded', 'false');
     if ((await actions.getAttribute('aria-expanded')) !== 'true') await actions.click();
     await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
     await expect(page).toHaveURL(/\/edit-device\/1$/);
@@ -316,6 +357,17 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
     await checkAccessibility(page);
     expect(deletionRequests).toEqual([]);
+    const alias = page
+        .getByRole('rowheader', { name: 'Browser simulator', exact: true })
+        .getByRole('link');
+    await expect(alias).toHaveAttribute('href', /\/device-info\/1$/);
+    await alias.hover();
+    await checkAccessibility(page);
+    await alias.click();
+    await expect(page).toHaveURL(/\/device-info\/1$/);
+    await expect(
+        page.getByRole('heading', { name: 'Browser simulator', exact: true }),
+    ).toBeVisible();
 });
 
 test('profile and device forms retain one save action, server errors and entered nonsecret values', async ({
@@ -372,8 +424,18 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
         if (request.url().endsWith('/update-solar-tracker')) commands.push(request.method());
     });
     await login(page);
-    await page.getByRole('button', { name: 'Actions for Browser simulator', exact: true }).click();
-    await page.getByRole('link', { name: 'View Browser simulator', exact: true }).click();
+    const actions = page.getByRole('button', {
+        name: 'Actions for Browser simulator',
+        exact: true,
+    });
+    await actions.click();
+    await expect(
+        page.getByRole('button', { name: 'Show details for Browser simulator', exact: true }),
+    ).toHaveAttribute('aria-expanded', 'false');
+    await page
+        .locator(`#${await actions.getAttribute('aria-controls')}`)
+        .getByRole('link', { name: 'View Browser simulator', exact: true })
+        .click();
     await expect(page).toHaveURL(/\/device-info\/1$/);
     await expect(
         page.getByRole('heading', { name: 'Browser simulator', exact: true }),
