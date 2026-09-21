@@ -1,0 +1,6 @@
+{
+    "resources/js/entries/app.js": {
+        "file": "assets/test-entry.js",
+        "css": ["assets/test-entry.css"]
+    }
+}

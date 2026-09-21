@@ -13,6 +13,9 @@
     <!-- this is the title name of the app -->
     <title>{{ config('app.name', 'Laravel') }}</title>
 
+    @if ($usesVue ?? false)
+        {{ \App\Support\FrontendAssets::tags() }}
+    @else
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -36,10 +39,24 @@
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    @endif
 </head>
 
 <body>
     <div id="app">
+        @if ($usesVue ?? false)
+            @include('frontend.mount', ['page' => 'navigation', 'props' => [
+                'name' => config('app.name'), 'logo' => asset('img/logo.png'),
+                'user' => Auth::check() ? ['name' => Auth::user()->name] : null,
+                'csrfToken' => csrf_token(),
+                'links' => [
+                    'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
+                    'registerDevice' => route('device-register'), 'login' => route('login'),
+                    'register' => route('register'), 'logout' => route('logout'),
+                    'admin' => Auth::check() && Auth::user()->isAdministrator() ? route('admin-control-center') : null,
+                ],
+            ]])
+        @else
         <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
             <div class="container">
                 <a class="navbar-brand" href="{{ url('/') }}">
@@ -119,14 +136,17 @@
                 @endauth
             </div>
         </nav>
-        <main class="py-4">
+        @endif
+        <main class="py-4" id="main-content">
             @yield('content')
         </main>
     </div>
+    @unless ($usesVue ?? false)
     <!-- Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
         crossorigin="anonymous"></script>
+    @endunless
 	
 	</body>
 	

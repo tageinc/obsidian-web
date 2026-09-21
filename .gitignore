@@ -3,3 +3,8 @@
 !.env.example
 !.env.docker.example
 .phpunit.result.cache
+node_modules/
+vendor/
+public/build/
+playwright-report/
+test-results/
