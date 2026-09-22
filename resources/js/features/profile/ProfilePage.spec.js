@@ -46,7 +46,10 @@ describe('profile workflow', () => {
             expect.arrayContaining(['address_1', 'address_2', 'state', 'country', 'phone_number']),
         );
         expect(wrapper.get('#address_1').attributes('required')).toBeUndefined();
-        expect(wrapper.get('a').attributes('href')).toBe('/dashboard');
+        expect(wrapper.get('nav[aria-label="Breadcrumb"]').text()).toContain('Dashboard');
+        expect(wrapper.get('[aria-current="page"]').text()).toBe('Profile');
+        expect(wrapper.get('nav a').attributes('href')).toBe('/dashboard');
+        expect(wrapper.find('nav button').exists()).toBe(false);
     });
 
     it('never preloads passwords, tokens, or identity from submitted value objects and keeps state local', async () => {

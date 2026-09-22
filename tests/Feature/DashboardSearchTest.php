@@ -48,6 +48,27 @@ class DashboardSearchTest extends TestCase
         return json_decode($matches[1], true, 512, JSON_THROW_ON_ERROR);
     }
 
+    public function test_status_filter_uses_latest_status_before_pagination_and_matches_map(): void
+    {
+        $sleep = $this->device('Roof sleeper');
+        $online = $this->device('Roof online');
+        $foreign = $this->device('Other owner', $this->other);
+        foreach ([[$sleep, 'online', now()->subMinute()], [$sleep, 'sleep', now()], [$online, 'online', now()], [$foreign, 'private-status', now()]] as [$device, $status, $time]) {
+            DB::table('geocode')->insert(['serial_no' => $device->serial_no, 'status' => $status, 'updated_at' => $time]);
+        }
+        $props = $this->dashboard('search=Roof&status=sleep&show=1');
+        $this->assertSame(1, $props['pagination']['total']);
+        $this->assertSame($sleep->id, $props['devices'][0]['id']);
+        $this->assertSame(['sleep'], $props['statusFilter']);
+        $this->assertSame(['online', 'sleep'], $props['statusOptions']);
+        $this->assertStringContainsString('sleep', $props['mapEndpoints']['paginated']);
+        $this->get($props['mapEndpoints']['paginated'])->assertOk()->assertJsonPath('data.0.id', $sleep->id)->assertJsonPath('total', 1);
+        $this->get('/all-devices?status=online')->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $online->id);
+        $this->assertSame(2, $this->dashboard('status=')['pagination']['total']);
+        $this->getJson('/paginated-devices?status[]=sleep&status[]=online')->assertOk()->assertJsonPath('total', 2);
+        $this->getJson('/paginated-devices?status[][]=sleep')->assertStatus(422);
+    }
+
     public function test_alias_search_filters_before_pagination_and_keeps_owned_maps_aligned(): void
     {
         for ($index = 1; $index <= 12; $index++) {
@@ -135,10 +156,10 @@ class DashboardSearchTest extends TestCase
         $response = $this->get('/dashboard?search=roof&show=20')->assertOk()
             ->assertSee('name="search" value="roof"', false)->assertSee('maxlength="255"', false)
             ->assertSee('aria-label="Actions for Legacy roof"', false)->assertSee('<details>', false)
-            ->assertSee(route('device-info', $device->id), false)
+            ->assertSee(route('devices.show', $device->id), false)
             ->assertSee(route('edit-device', $device->id), false)
-            ->assertSee(route('deleteDevice', $device->id), false)
-            ->assertSee('class="text-danger delete-link">Delete', false);
+            ->assertSee(route('archiveDevice', $device->id), false)
+            ->assertSee('class="text-danger archive-link">Archive', false);
         $this->assertStringContainsString("encodeURIComponent(\"roof\")", $response->getContent());
         $this->get('/dashboard?search=no-match')->assertOk()->assertSee('No devices match this alias search.')->assertDontSee('No devices registered yet.');
         $this->actingAs($this->other)->get('/dashboard')->assertOk()->assertSee('No devices registered yet.')->assertDontSee('No devices match this alias search.');

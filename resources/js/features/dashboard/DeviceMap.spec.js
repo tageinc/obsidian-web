@@ -96,7 +96,9 @@ describe('map lifecycle', () => {
     it('loads the current page, switches endpoint shapes, and destroys Leaflet on unmount', async () => {
         requestJson
             .mockResolvedValueOnce({
-                data: [{ alias: 'Zero', latitude: 0, longitude: 0, state: 'online' }],
+                data: [
+                    { alias: 'Zero', latitude: 0, longitude: 0, state: 'active', status: 'online' },
+                ],
             })
             .mockResolvedValueOnce([]);
         const wrapper = page();
@@ -111,7 +113,7 @@ describe('map lifecycle', () => {
             expect.objectContaining({ keyboard: true, title: 'Zero' }),
         );
         expect(leaflet.markerObject.bindPopup.mock.calls[0][0]).toBeInstanceOf(HTMLElement);
-        expect(wrapper.text()).toContain('Showing 1 of 1 device locations.');
+        expect(wrapper.text()).not.toContain('Showing 1 of 1 device locations.');
         await wrapper.setProps({ showAll: true });
         await flushPromises();
         expect(requestJson).toHaveBeenLastCalledWith(

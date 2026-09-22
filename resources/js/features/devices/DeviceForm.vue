@@ -24,7 +24,7 @@ const fields = [
     'address_1',
     'address_2',
     'city',
-    'state',
+    'address_state',
     'zip_code',
     'country',
     'latitude',

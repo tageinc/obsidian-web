@@ -34,8 +34,8 @@ class DeviceManagerController extends Controller
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
         $devices = $this->ownedDevices($search)
-        ->select('id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
-        ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
+        ->select('id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
+        ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
 
         // //Log::info('Initial Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
@@ -44,17 +44,17 @@ class DeviceManagerController extends Controller
             //Log::info('controller Looking for GeoCode entry for serial number:', ['serial_no' => $device->serial_no]); //ADDED NEW
 
             // Fetch the latest 'updated_at' from the GeoCode table for each device
-            $geoCodeEntry = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->first();
+            $geoCodeEntry = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->orderByDesc('id')->first();
 
 
             //Log::info('controller GeoCode entry found:', ['geoCodeEntry' => $geoCodeEntry]); // NEWLY ADDED
 
             // Check if there is a GeoCode entry and get its status and updated_at timestamp
             if ($geoCodeEntry) {
-                $device->state = $geoCodeEntry->status;
+                $device->status = $geoCodeEntry->status ?? 'no geo data';
                 $lastUpdated = Carbon::parse($geoCodeEntry->updated_at);
             } else {
-                $device->state = 'no geo data';
+                $device->status = 'no geo data';
                 // If there is no GeoCode entry, you might want to use the Device's updated_at or set a default value
                 $lastUpdated = Carbon::parse($device->updated_at); // or use Carbon::now() for a default value
             }
@@ -78,11 +78,13 @@ class DeviceManagerController extends Controller
         //Log::info('controller Final Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
 
-        $creationEnabled = config('frontend.vue3.dashboard') && config('frontend.vue3.create_device');
+        $creationEnabled = true;
 
         return view('device-manager', [
             'devices' => $devices, 'pagination_size' => $pagination_size, 'search' => $search,
             'creationEnabled' => $creationEnabled,
+            'statusFilter' => $this->statusFilter(),
+            'statusOptions' => $this->ownedDevices('', false)->selectRaw($this->statusExpression().' AS operating_status')->get()->pluck('operating_status')->unique()->sort()->values()->all(),
         ]);
     }
 
@@ -93,16 +95,16 @@ class DeviceManagerController extends Controller
 {
     $search = $this->aliasSearch($request);
     $devices = $this->ownedDevices($search)
-             ->get(['id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
+             ->get(['id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
     foreach ($devices as $device) {
             // Fetching the geo status as before
             $geo_status = GeoCode::where('serial_no', $device->serial_no)
-                ->latest('updated_at')
+                ->latest('updated_at')->orderByDesc('id')
                 ->first();
 
             // Setting the state from the GeoCode status or defaulting to 'no geo data'
-            $device->state = $geo_status ? $geo_status->status : 'no geo data';
+            $device->status = $geo_status->status ?? 'no geo data';
 
             // If a matching GeoCode entry is found, use its updated_at for last_updated
             if ($geo_status) {
@@ -132,15 +134,15 @@ $devicesJson = $devices->toJson();
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
     $devices = $this->ownedDevices($search)
-             ->select('id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
-             ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
+             ->select('id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
+             ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
 
     foreach ($devices as $device) {
 
-            $geo_status = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->first(['status', 'updated_at']);
+            $geo_status = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->orderByDesc('id')->first(['status', 'updated_at']);
 
             // Set the device state from the GeoCode entry or use a default value
-            $device->state = $geo_status ? $geo_status->status : 'no geo data';
+            $device->status = $geo_status->status ?? 'no geo data';
 
             // Use the GeoCode updated_at timestamp for last_updated, if available
             if ($geo_status && $geo_status->updated_at) {
@@ -165,9 +167,27 @@ $devicesJson = $devices->toJson();
         return trim($validated['search'] ?? '');
     }
 
-    private function ownedDevices(string $search): Builder
+    private function statusFilter(): array
     {
-        $query = Device::where('user_id', Auth::id());
+        $value = request()->input('status', []) ?? [];
+        if (is_string($value)) $value = $value === '' ? [] : [$value];
+        $validated = validator(['status' => $value], [
+            'status' => 'array|max:50', 'status.*' => 'string|max:255',
+        ])->validate();
+        return array_values(array_unique(array_filter(array_map('trim', $validated['status']))));
+    }
+
+    private function statusExpression(): string
+    {
+        return "COALESCE((SELECT status FROM geocode WHERE geocode.serial_no = devices.serial_no ORDER BY updated_at DESC, id DESC LIMIT 1), 'no geo data')";
+    }
+
+    private function ownedDevices(string $search, bool $filterStatus = true): Builder
+    {
+        $query = Device::where('state', 'active')->where('user_id', Auth::id());
+        if ($filterStatus && $this->statusFilter() !== []) {
+            $query->whereIn(\Illuminate\Support\Facades\DB::raw($this->statusExpression()), $this->statusFilter());
+        }
         if ($search !== '') {
             // Bound parameters and an explicit escape character make %, _ and ! literal.
             $literal = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
@@ -178,31 +198,17 @@ $devicesJson = $devices->toJson();
     }
 
 
-    public function delete($id)
+    public function archive(Request $request, $id)
     {
-        // Find the device by ID
-        $device = Device::find($id);
+        $device = Device::findOrFail($id);
+        abort_unless((int) $device->user_id === (int) $request->user()->id, 403);
+        $device->state = 'archived';
+        $device->save();
 
-        // Check if the device exists
-        if (!$device) {
-            return redirect()->route('device-manager')->with('error', 'Device not found');
+        if ($request->is('api/*') || $request->wantsJson()) {
+            return response()->json(['message' => 'Device archived successfully.', 'state' => $device->state]);
         }
-
-        // Check if the currently authenticated user is the owner of the device
-        if (Auth::id() !== $device->user_id) {
-            return redirect()->route('device-manager')->with('error', 'You do not have permission to delete this device');
-        }
-
-        // Delete the device from the device register
-        $device->delete();
-
-        // Delete the device from geocode
-        $geocodeEntry = Geocode::where('serial_no', $device->serial_no)->first();
-        if ($geocodeEntry) {
-            $geocodeEntry->delete();
-        }
-
-        return redirect()->route('device-manager')->with('success', 'Device deleted successfully');
+        return redirect()->route('dashboard')->with('success', 'Device archived successfully.');
     }
 
     public function allDevicesAPI(Request $request)
@@ -214,18 +220,18 @@ $devicesJson = $devices->toJson();
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
 
-            $devices = Device::where('user_id', $user_id)
+            $devices = Device::where('state', 'active')->where('user_id', $user_id)
                 ->get([
-                    'id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude',
+                    'id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude',
                     'address_1', 'address_2', 'updated_at', 'status_notification', 'zip_code'
                 ]);
 
             foreach ($devices as $device) {
                 $geo_status = GeoCode::where('serial_no', $device->serial_no)
-                    ->latest('updated_at')
+                    ->latest('updated_at')->orderByDesc('id')
                     ->first();
 
-                $device->state = $geo_status ? $geo_status->status : 'no geo data';
+                $device->status = $geo_status->status ?? 'no geo data';
 
                 if ($geo_status) {
                     $lastUpdated = Carbon::parse($geo_status->updated_at);
@@ -243,33 +249,6 @@ $devicesJson = $devices->toJson();
             Log::error('device.list_failed');
             return response()->json(['error' => 'An error occurred while fetching devices'], 500);
         }
-    }
-
-    public function deleteAPI($id)
-    {
-        // Find the device by ID
-        $device = Device::find($id);
-
-        // Check if the device exists
-        if (!$device) {
-            return response()->json(['error' => 'Device not found'], 404);
-        }
-
-        // Check if the currently authenticated user is the owner of the device
-        if (Auth::id() !== $device->user_id) {
-            return response()->json(['error' => 'You do not have permission to delete this device'], 403);
-        }
-
-        // Delete the device from the device register
-        $device->delete();
-
-        // Delete the device from geocode
-        $geocodeEntry = GeoCode::where('serial_no', $device->serial_no)->first();
-        if ($geocodeEntry) {
-            $geocodeEntry->delete();
-        }
-
-        return response()->json(['success' => 'Device deleted successfully'], 200);
     }
 
 }

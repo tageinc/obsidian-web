@@ -34,7 +34,7 @@ test.beforeEach(async ({ context, page }) => {
     // Fail closed even if a regression accidentally dispatches a motor command on mount.
     await page.route('**/update-solar-tracker', (route) => route.abort());
     // Browser coverage cancels deletion; no regression may remove even a synthetic device.
-    await page.route('**/delete-device/*', (route) => route.abort());
+    await page.route('**/archive-device/*', (route) => route.abort());
 });
 
 async function login(page, role = 'owner') {
@@ -201,7 +201,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
 }) => {
     const deletionRequests = [];
     page.on('request', (request) => {
-        if (new URL(request.url()).pathname.startsWith('/delete-device/')) {
+        if (new URL(request.url()).pathname.startsWith('/archive-device/')) {
             deletionRequests.push(request.url());
         }
     });
@@ -262,7 +262,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
-        menu.getByRole('link', { name: 'Delete Browser simulator', exact: true }),
+        menu.getByRole('link', { name: 'Archive Browser simulator', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(menu).not.toBeVisible();
@@ -305,14 +305,12 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await page.getByRole('heading', { name: 'Device Manager', exact: true }).click();
     await expect(menu).not.toBeVisible();
     await actions.click();
-    const canceled = page.waitForEvent('dialog').then(async (dialog) => {
-        expect(dialog.type()).toBe('confirm');
-        await dialog.dismiss();
-    });
-    await Promise.all([
-        canceled,
-        menu.getByRole('link', { name: 'Delete Browser simulator', exact: true }).click(),
-    ]);
+    await menu.getByRole('link', { name: 'Archive Browser simulator', exact: true }).click();
+    const deleteDialog = page.getByRole('dialog', { name: 'Archive device?', exact: true });
+    await checkModalKeyboardAndViewport(page, deleteDialog);
+    await deleteDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(deleteDialog).not.toBeVisible();
+    await expect(actions).toBeFocused();
     expect(deletionRequests).toEqual([]);
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(
@@ -384,7 +382,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     const alias = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');
-    await expect(alias).toHaveAttribute('href', /\/device-info\/1$/);
+    await expect(alias).toHaveAttribute('href', /\/devices\/1$/);
     await alias.hover();
     await checkAccessibility(page);
     await alias.click();
@@ -406,7 +404,7 @@ test('device view modal includes history and control without issuing commands an
     page.on('request', (request) => {
         const url = new URL(request.url());
         if (url.pathname === '/update-solar-tracker') commands.push(request.method());
-        if (request.method() === 'GET' && /^\/(?:device-info|edit-device)\/1$/.test(url.pathname)) {
+        if (request.method() === 'GET' && /^\/(?:view-device|edit-device)\/1$/.test(url.pathname)) {
             modalReads.push({
                 path: url.pathname,
                 modal: request.headers()['x-obsidian-modal'],
@@ -461,7 +459,7 @@ test('device view modal includes history and control without issuing commands an
     await expect(edit).not.toBeVisible();
     await expect(alias).toBeFocused();
     expect(modalReads).toEqual([
-        { path: '/device-info/1', modal: '1' },
+        { path: '/devices/1', modal: '1' },
         { path: '/edit-device/1', modal: '1' },
     ]);
     expect(commands).toEqual([]);
@@ -476,7 +474,7 @@ test('device modal shows loading and recoverable errors without navigating away'
     const waiting = new Promise((resolve) => {
         release = resolve;
     });
-    await page.route('**/device-info/1', async (route) => {
+    await page.route('**/devices/1', async (route) => {
         reads.push(route.request().headers()['x-obsidian-modal']);
         if (reads.length === 1) {
             await waiting;
@@ -739,8 +737,8 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
         if (request.url().endsWith('/update-solar-tracker')) commands.push(request.method());
     });
     await login(page);
-    await page.goto('/device-info/1');
-    await expect(page).toHaveURL(/\/device-info\/1$/);
+    await page.goto('/devices/1');
+    await expect(page).toHaveURL(/\/devices\/1$/);
     await expect(
         page.getByRole('heading', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();
@@ -869,7 +867,7 @@ test('remote motor speed previews then saves the chosen range value and restores
         return route.fulfill({ json: { success: true, ...simulated } });
     });
     // Replay only the mocked confirmed state when reopening the read-only device modal.
-    await page.route('**/device-info/1', async (route) => {
+    await page.route('**/devices/1', async (route) => {
         if (route.request().headers()['x-obsidian-modal'] !== '1') return route.continue();
         const response = await route.fetch();
         const payload = await response.json();

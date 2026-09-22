@@ -9,9 +9,9 @@ The pre-deactivation source is recoverable from commit `63c6d35`:
 
 - `app/Models/Api/EnergyMonitorLog.php`
 - `app/Models/Api/EnergyMonitorInfo.php`
-- `app/Console/Commands/GenerateDeviceInfo.php`
-- Energy Monitor branches formerly in `DeviceInfoController`, `DeviceLogController`,
-  `DeviceCommunicationStatus`, `device-info.blade.php`, and `DeviceCommunicationsTest`
+- `app/Console/Commands/GenerateViewDevice.php`
+- Energy Monitor branches formerly in `ViewDeviceController`, `DeviceLogController`,
+  `DeviceCommunicationStatus`, `view-device.blade.php`, and `DeviceCommunicationsTest`
 
 Historical `energy_monitor_logs` and Energy Monitor info records are retained in
 the deployed database. This change does not delete, rename, migrate, truncate,

@@ -81,12 +81,15 @@ to run the Laravel test suite. `composer check` runs both checks in order.
 
 ## Restored device workflows
 
-Device creation uses `/create-device` (GET and POST) and `/api/create-device`
-(POST). Run `php artisan migrate` to rename the legacy device table to `devices`
+Device creation uses the dashboard modal and `POST /create-device`, plus `POST /api/create-device`.
+The retired `GET /create-device` page redirects to `/dashboard?create=1` to open
+the modal. Validation errors reopen the modal with the entered values. The modal
+also remains available when the legacy dashboard renderer is selected.
+Run `php artisan migrate` to rename the legacy device table to `devices`
 and remove hardware assignments while retaining device records.
 
 In local/testing environments, `php artisan db:seed --class=DevelopmentDataSeeder`
-creates or refreshes 15 devices for `developer@example.test`, with random names,
+creates or refreshes 15 devices for `andre.troncoso@tezca.net`, with random names,
 worldwide coordinates, and matching statuses. `FirmwareAndConfigurationSeeder`
 creates downloadable SP1 development fixtures; its firmware is not flashable.
 `SolarTrackerLogSeeder` remains available for seven days of sample graph history

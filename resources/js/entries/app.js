@@ -8,15 +8,23 @@ const modules = import.meta.glob('../features/**/*Page.vue');
 const pages = {
     navigation: '../features/navigation/NavigationPage.vue',
     profile: '../features/profile/ProfilePage.vue',
-    'create-device': '../features/devices/DeviceFormPage.vue',
+    'create-device-launcher': '../features/dashboard/CreateDeviceLauncherPage.vue',
     'edit-device': '../features/devices/DeviceFormPage.vue',
     dashboard: '../features/dashboard/DashboardPage.vue',
-    'device-info': '../features/solar-tracker/DeviceInfoPage.vue',
+    'view-device': '../features/solar-tracker/ViewDevicePage.vue',
     auth: '../features/auth/AuthPage.vue',
     admin: '../features/admin/AdminPage.vue',
     public: '../features/public/PublicPage.vue',
 };
 const pinia = createPinia();
+
+if (document.querySelector('[data-status-filter-root]')) {
+    import('../features/dashboard/StatusFilter.vue').then(({ default: StatusFilter }) => {
+        document.querySelectorAll('[data-status-filter-root]').forEach((root) => {
+            createApp(StatusFilter, JSON.parse(root.dataset.props)).mount(root);
+        });
+    });
+}
 
 for (const root of document.querySelectorAll('[data-vue-page]')) {
     const source = document.getElementById(root.dataset.propsId);

@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\DeviceRemoteController;
 use App\Http\Controllers\Api\DeviceLogController;
 use App\Http\Controllers\Api\DeviceSoftwareController;
 use App\Http\Controllers\DeviceManagerController;
-use App\Http\Controllers\DeviceInfoController;
+use App\Http\Controllers\ViewDeviceController;
 use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CreateDeviceController;
@@ -53,11 +53,12 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
     Route::post('/profile/update-password', [ProfileController::class, 'updatePasswordApi'])->name('profile.update-password');
 
     // Device Routes
+    Route::get('/devices/{id}', [ViewDeviceController::class, 'apiShow'])->middleware('browser.device')->name('api.devices.show');
     Route::get('all-devices-api', [DeviceManagerController::class, 'allDevicesAPI'])->name('device.all-devices-api');
-    Route::post('/update-solar-tracker', [DeviceInfoController::class, 'updateSolarTracker'])->name('device.update-solar-tracker');
-    Route::get('/get-solar-tracker-status', [DeviceInfoController::class, 'getSolarTrackerStatus'])->name('device.get-solar-tracker-status');
-    Route::get('/device/{id}/data', [DeviceInfoController::class, 'getDeviceData'])->name('device.get-device-data');
-    Route::get('/solar-tracker/{serial_no}', [DeviceInfoController::class, 'getLatestStatusJson'])->name('device.get-latest-status-json');
+    Route::post('/update-solar-tracker', [ViewDeviceController::class, 'updateSolarTracker'])->name('device.update-solar-tracker');
+    Route::get('/get-solar-tracker-status', [ViewDeviceController::class, 'getSolarTrackerStatus'])->name('device.get-solar-tracker-status');
+    Route::get('/device/{id}/data', [ViewDeviceController::class, 'getDeviceData'])->name('device.get-device-data');
+    Route::get('/solar-tracker/{serial_no}', [ViewDeviceController::class, 'getLatestStatusJson'])->name('device.get-latest-status-json');
 
 
 
@@ -70,6 +71,6 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
         Route::put('{id}/zipcode', [EditDeviceController::class, 'apiUpdateZipCode'])->name('device.api-update-zipcode');
         Route::put('{id}/statecity', [EditDeviceController::class, 'apiUpdateStateCity'])->name('device.api-update-statecity');
         Route::put('{id}/statusnotification', [EditDeviceController::class, 'apiUpdateStatusNotification'])->name('device.api-update-status-notification');
-        Route::delete('{id}', [DeviceManagerController::class, 'deleteAPI'])->name('device.delete-api');
+        Route::post('{id}/archive', [DeviceManagerController::class, 'archive'])->name('device.archive-api');
     });
 });

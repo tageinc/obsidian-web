@@ -14,7 +14,7 @@ The baseline contains 32 Blade templates, 15 reachable browser screens, one unus
 | `profile.blade.php` | GET/PUT `/profile`; one save, contact/address/optional password | Migrated: `ProfilePage`, flag `profile`; native atomic validation and blank-password behavior |
 | `device-register.blade.php` | GET `/device-register`, POST `/dataInsert`; profile defaults, one save, no opt-in | Migrated: `DeviceFormPage`, flag `device_register`; native validation/transaction |
 | `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/developer checks | Migrated: `DeviceFormPage`, flag `device_edit`; immutable identity and paired coordinates |
-| `device-info.blade.php` | `/device-info/{id}`; status, raw charts, remote mode/speed | Migrated: `DeviceInfoPage`/`HistoryCharts`/`RemoteControl`, flag `device_info`; server owner/developer checks on both frontends |
+| `view-device.blade.php` | `/devices/{id}`; status, raw charts, remote mode/speed | Migrated: `ViewDevicePage`/`HistoryCharts`/`RemoteControl`, flag `view_device`; server owner/developer checks on both frontends |
 | `admin-control-center.blade.php` | `/developer-workspace`; firmware/config uploads and downloads; old URL redirects | Migrated: `AdminPage`/`UploadSection`, flag `admin`; server developer restriction on both frontends, internal names retained for compatibility |
 | `auth/login.blade.php` | GET/POST `/login`, remember me, verification resend, reset links | Migrated: `AuthPage`, flag `auth`; cookie authentication and native redirects |
 | `auth/register.blade.php` | GET/POST `/register`; account/contact/address/password | Migrated: `AuthPage`, flag `auth`; server validation and one native submission |
@@ -64,7 +64,7 @@ New entries are `resources/js/entries/app.js`, `vite.config.mjs` and `resources/
 
 Legacy inline code remains only in its owner's flag-off branch:
 layout navbar/logout and CDN imports; dashboard Leaflet/popup/fetch/history;
-device-info chart/control bootstrap; auth/register obsolete listener; delta
+view-device chart/control bootstrap; auth/register obsolete listener; delta
 Raphael/JustGage; contact/thank-you nested documents; legacy web layout inline
 styles/analytics/Livewire. No frontend dependency should remain an unpinned CDN
 runtime on a Vue document. Delta remains a documented legacy exception. No parallel Vue 2 dependency installation or active Mix toolchain remains.
@@ -102,7 +102,7 @@ runtime on a Vue document. Delta remains a documented legacy exception. No paral
 4. Baseline `VerifyCsrfToken` logged tokens; API login logged credentials and
    serialized a User model lacking hidden password fields. `LogRequests` logged
    full URLs. Dashboard printed payloads and interpolated unescaped popup HTML. Server redaction/allowlisting is implemented; legacy browser logs/popups were also repaired so frontend-flag rollback does not restore those exposures.
-5. Baseline `DeviceInfoController` checked device existence/hardware without
+5. Baseline `ViewDeviceController` checked device existence/hardware without
    ownership enforcement; admin routes lacked a server admin check. The existing
    web `EditDeviceController` already checked owner/configured admin. Approved server middleware now enforces the owner/admin browser policy on both frontend paths.
 6. Baseline custom verification ignored the URL hash, lacked enforcement

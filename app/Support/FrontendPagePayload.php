@@ -8,9 +8,8 @@ class FrontendPagePayload
     public const ROUTES = [
         'dashboard' => ['page' => 'dashboard', 'flag' => 'dashboard'],
         'profile' => ['page' => 'profile', 'flag' => 'profile'],
-        'create-device' => ['page' => 'create-device', 'flag' => 'create_device'],
         'edit-device' => ['page' => 'edit-device', 'flag' => 'device_edit'],
-        'device-info' => ['page' => 'device-info', 'flag' => 'device_info'],
+        'devices.show' => ['page' => 'view-device', 'flag' => 'view_device'],
     ];
 
     private string $page;
@@ -39,12 +38,12 @@ class FrontendPagePayload
     {
         // Laravel also accepts aliases such as trailing slashes or zero-padded IDs.
         // Keep those URLs as document islands rather than mounting an unmatched router.
-        return (bool) preg_match('#^/(?:dashboard|profile|create-device|(?:edit-device|device-info)/[1-9][0-9]*)$#D', $path);
+        return (bool) preg_match('#^/(?:dashboard|profile|(?:edit-device|devices)/[1-9][0-9]*)$#D', $path);
     }
 
     public static function modalEnabled(string $routeName, string $path): bool
     {
-        return in_array($routeName, ['create-device', 'edit-device', 'device-info'], true)
+        return in_array($routeName, ['edit-device', 'devices.show'], true)
             && config('frontend.vue3.'.self::ROUTES[$routeName]['flag'])
             && self::supportsPath($path);
     }

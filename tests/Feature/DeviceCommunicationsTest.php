@@ -27,6 +27,7 @@ class DeviceCommunicationsTest extends TestCase
 
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
+            $table->string('state')->default('active');
             $table->string('serial_no');
             $table->integer('user_id')->nullable();
             $table->boolean('status_notification')->default(false);
@@ -216,14 +217,14 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertStringNotContainsString('TWILIO_', file_get_contents(base_path('.env.example')));
     }
 
-    public function test_energy_monitor_is_archived_and_not_an_active_status_or_device_info_path(): void
+    public function test_energy_monitor_is_archived_and_not_an_active_status_or_view_device_path(): void
     {
         $this->assertFileDoesNotExist(app_path('Models/Api/EnergyMonitorLog.php'));
         $this->assertFileExists(base_path('docs/archive/energy-monitor.md'));
         DB::table('devices')->insert(['id' => 2, 'serial_no' => 'retired']);
         DB::table('geocode')->insert(['serial_no' => 'retired', 'status' => 'archived']);
 
-        $response = app(\App\Http\Controllers\DeviceInfoController::class)->getLatestStatusJson('retired');
+        $response = app(\App\Http\Controllers\ViewDeviceController::class)->getLatestStatusJson('retired');
         $this->assertSame(200, $response->getStatusCode());
         $this->artisan('device:check-status')->assertExitCode(0);
         $this->assertDatabaseHas('geocode', ['serial_no' => 'retired', 'status' => 'offline']);

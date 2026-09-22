@@ -26,7 +26,7 @@ class EditDeviceController extends Controller
             'address_1' => 'required|string|max:255',
             'address_2' => 'nullable|string|max:255',
             'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
+            'address_state' => 'required|string|max:255',
             'zip_code' => 'required|string|max:255',
             'country' => 'required|string|max:255',
             'latitude' => 'nullable|required_with:longitude|numeric|between:-90,90',
@@ -151,12 +151,12 @@ class EditDeviceController extends Controller
         // Validate the request for state and city if needed
 
         // Get the new values from the request
-        $state = $request->input('state');
+        $state = $request->input('address_state');
         $city = $request->input('city');
 
         // Update the database with the new values
         $device->update([
-            'state' => $state,
+            'address_state' => $state,
             'city' => $city
         ]);
 
@@ -223,11 +223,11 @@ class EditDeviceController extends Controller
 
     public function apiUpdateStateCity(Request $request, $id)
     {
-        $state = $request->input('state');
+        $state = $request->input('address_state');
         $city = $request->input('city');
 
         Device::where('id', $id)->update([
-            'state' => $state,
+            'address_state' => $state,
             'city' => $city,
         ]);
 

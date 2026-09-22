@@ -28,7 +28,7 @@ class DeviceCreationLoggingTest extends TestCase
             'user_id' => $user->id, 'alias' => 'sentinel-private-alias',
             'serial_no' => 'sentinel-private-serial', 'sku' => 'SP1', 'order_no' => '1234',
             'address_1' => 'sentinel-private-address', 'address_2' => 'sentinel-private-unit',
-            'city' => 'sentinel-private-city', 'state' => 'CA', 'zip_code' => '99999',
+            'city' => 'sentinel-private-city', 'address_state' => 'CA', 'zip_code' => '99999',
             'latitude' => '12.345678', 'longitude' => '-98.765432', 'status_notification' => false,
         ];
     }

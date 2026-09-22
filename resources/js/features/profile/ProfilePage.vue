@@ -52,10 +52,16 @@ const addressFields = [
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
-                    <h1 class="h3 mb-0">Profile</h1>
-                    <a :href="links.dashboard">Back to dashboard</a>
-                </div>
+                <nav aria-label="Breadcrumb" class="mb-2">
+                    <ol class="list-unstyled d-flex flex-wrap small text-muted mb-0">
+                        <li>
+                            <a :href="links.dashboard" class="text-muted text-nowrap">Dashboard</a
+                            ><span class="mx-2" aria-hidden="true">›</span>
+                        </li>
+                        <li aria-current="page">Profile</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-3">Profile</h1>
                 <FormFeedback
                     :errors="errors"
                     :success="success"

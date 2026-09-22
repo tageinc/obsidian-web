@@ -23,7 +23,7 @@ class DashboardTest extends TestCase
         $this->actingAs($owner)->get('/dashboard')
             ->assertOk()->assertViewIs('device-manager')
             ->assertSee('My solar tracker')->assertDontSee('Other private tracker')
-            ->assertSee('Create +')->assertDontSee('Edit profile')
+            ->assertSee('frontend-create-device-launcher')->assertDontSee('Edit profile')
             ->assertSee(route('profile'))
             ->assertSee('id="map"', false);
     }
@@ -54,11 +54,10 @@ class DashboardTest extends TestCase
         $this->actingAs($user)->get('/dashboard')->assertRedirect(route('verification.notice'));
     }
 
-    public function test_legacy_redirect_preserves_device_feedback(): void
+    public function test_missing_device_returns_not_found(): void
     {
         $this->actingAs($this->user('owner@example.test'));
-        $this->followingRedirects()->get('/device-info/99999')
-            ->assertOk()->assertSee('Device not found')->assertViewIs('device-manager');
+        $this->get('/devices/99999')->assertNotFound();
     }
 
     private function user(string $email): User

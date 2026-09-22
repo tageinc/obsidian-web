@@ -36,7 +36,7 @@ Modal details load from the existing authorized device URLs using
 mount props, have loading/error/retry states, and abort discarded requests.
 Modal payloads require the relevant Vue page flag but do not require workspace
 navigation; a disabled page falls back to document navigation. Responses remain
-private and non-cacheable. The existing `/device-info/{id}` and
+private and non-cacheable. The existing `/devices/{id}` and
 `/edit-device/{id}` pages still support direct links and rollback.
 
 Modal editing uses the same `PUT /edit-device/{id}` with JSON validation. Invalid
@@ -85,3 +85,5 @@ Register and Edit device no longer show notification opt-in controls. New web
 registrations have email/SMS notifications off; editing preserves existing
 notification preferences. The old per-field API routes remain available for
 existing clients.
+
+Device viewing uses `GET /devices/{id}` (`devices.show`) for the View Device modal and direct browser navigation. Authenticated API clients use `GET /api/devices/{id}` (`api.devices.show`). Both enforce owner/developer access and return 404 for missing devices. The former device-info route has been removed.

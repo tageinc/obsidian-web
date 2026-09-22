@@ -18,9 +18,17 @@ defineProps({
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-9">
-                <a :href="links.dashboard" class="btn btn-outline-secondary mb-3"
-                    >Back to dashboard</a
-                >
+                <nav aria-label="Breadcrumb" class="mb-2">
+                    <ol class="list-unstyled d-flex flex-wrap small text-muted mb-0">
+                        <li>
+                            <a :href="links.dashboard" class="text-muted text-nowrap">Dashboard</a
+                            ><span class="mx-2" aria-hidden="true">›</span>
+                        </li>
+                        <li aria-current="page">
+                            {{ creating ? 'Create Device' : 'Edit device' }}
+                        </li>
+                    </ol>
+                </nav>
                 <h1 class="h3 mb-3">{{ creating ? 'Create Device' : 'Edit device' }}</h1>
                 <p class="text-muted">
                     {{

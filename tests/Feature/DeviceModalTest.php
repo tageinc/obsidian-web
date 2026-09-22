@@ -27,7 +27,7 @@ class DeviceModalTest extends TestCase
             'frontend.vue3.workspace' => false,
             'frontend.vue3.create_device' => true,
             'frontend.vue3.device_edit' => true,
-            'frontend.vue3.device_info' => true,
+            'frontend.vue3.view_device' => true,
         ]);
         $this->owner = User::create([
             'name' => 'Modal owner', 'email' => 'device-modal-owner@example.test',
@@ -45,7 +45,7 @@ class DeviceModalTest extends TestCase
     {
         return array_merge([
             'alias' => 'Garden tracker', 'address_1' => '20 Garden Street', 'address_2' => 'Rear garden',
-            'city' => 'Los Angeles', 'state' => 'CA', 'zip_code' => '90012', 'country' => 'US',
+            'city' => 'Los Angeles', 'address_state' => 'CA', 'zip_code' => '90012', 'country' => 'US',
             'latitude' => '34.0522', 'longitude' => '-118.2437',
         ], $overrides);
     }
@@ -58,9 +58,8 @@ class DeviceModalTest extends TestCase
     private function modalPaths(): array
     {
         return [
-            '/create-device' => 'create-device',
             '/edit-device/'.$this->device->id => 'edit-device',
-            '/device-info/'.$this->device->id => 'device-info',
+            '/devices/'.$this->device->id => 'view-device',
         ];
     }
 
@@ -86,9 +85,9 @@ class DeviceModalTest extends TestCase
         }
 
         $edit = $this->modal('/edit-device/'.$this->device->id)->json('props');
-        $this->assertSame(['alias', 'address_1', 'address_2', 'city', 'state', 'zip_code', 'country', 'latitude', 'longitude'], array_keys($edit['values']));
+        $this->assertSame(['alias', 'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country', 'latitude', 'longitude'], array_keys($edit['values']));
         $this->assertSame(['serialNo', 'sku', 'orderNo'], array_keys($edit['fixedIdentity']));
-        $info = $this->modal('/device-info/'.$this->device->id)->json('props');
+        $info = $this->modal('/devices/'.$this->device->id)->json('props');
         $this->assertSame(['device', 'status', 'remote', 'points', 'csrfToken', 'links'], array_keys($info));
         $this->assertSame(['alias', 'serial', 'details'], array_keys($info['device']));
         $this->assertArrayNotHasKey('user_id', $info['device']);
@@ -103,13 +102,13 @@ class DeviceModalTest extends TestCase
             ->assertOk()->assertSee('data-vue-page="edit-device"', false);
         // Workspace navigation retains its separate, stronger rollout requirements.
         $this->getJson($path, ['X-Obsidian-Page' => '1'])->assertStatus(409);
-        config(['frontend.vue3.device_info' => false]);
+        config(['frontend.vue3.view_device' => false]);
         $this->modal($path)->assertOk();
-        $this->modal('/device-info/'.$this->device->id)->assertStatus(409);
+        $this->modal('/devices/'.$this->device->id)->assertStatus(409);
         config(['frontend.vue3.device_edit' => false]);
         $this->modal($path)->assertStatus(409);
         config(['frontend.vue3.create_device' => false]);
-        $this->modal('/create-device')->assertStatus(409);
+        $this->modal('/create-device')->assertRedirect('/dashboard?create=1');
         $this->get($path)->assertOk()->assertSee('id="device-form"', false);
     }
 
@@ -117,10 +116,9 @@ class DeviceModalTest extends TestCase
     {
         $this->actingAs($this->owner);
         foreach ([
-            'http://localhost/create-device/?source=compatibility',
             '/edit-device/0'.$this->device->id,
-            '/device-info/0'.$this->device->id,
-            'http://localhost/device-info/'.$this->device->id.'/?source=compatibility',
+            '/devices/0'.$this->device->id,
+            'http://localhost/devices/'.$this->device->id.'/?source=compatibility',
             '/dashboard', '/profile',
         ] as $url) {
             $this->get($url)->assertOk();
@@ -142,8 +140,8 @@ class DeviceModalTest extends TestCase
             $this->modal($path)->assertForbidden();
         }
         $other->update(['email_verified_at' => now()]);
-        $this->modal('/create-device')->assertOk();
-        foreach (['/edit-device/', '/device-info/'] as $prefix) {
+        $this->modal('/create-device')->assertRedirect('/dashboard?create=1');
+        foreach (['/edit-device/', '/devices/'] as $prefix) {
             $this->modal($prefix.$this->device->id)->assertForbidden();
         }
         config(['app.developer_email' => $other->email]);
@@ -156,8 +154,8 @@ class DeviceModalTest extends TestCase
     {
         $this->actingAs($this->owner);
         $this->modal('/edit-device/999999')->assertNotFound();
-        $this->modal('/device-info/999999')->assertRedirect('/device-manager');
-        $this->modal('/device-info/'.$this->device->id)->assertOk();
+        $this->modal('/devices/999999')->assertNotFound();
+        $this->modal('/devices/'.$this->device->id)->assertOk();
     }
 
     public function test_json_updates_save_all_editable_fields_and_geocode_without_changing_identity(): void

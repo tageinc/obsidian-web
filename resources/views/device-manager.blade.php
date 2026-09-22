@@ -4,6 +4,22 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+        $creation = null;
+        if ($creationEnabled) {
+            $modalSubmission = old('_creation_modal') === '1';
+            $creationErrors = $modalSubmission ? \App\Support\DeviceCreationData::errors($errors->messages()) : [];
+            $creationError = $modalSubmission ? session('error') : null;
+            $creation = [
+                'csrfToken' => csrf_token(),
+                'action' => route('create-device.store'),
+                'values' => \App\Support\DeviceCreationData::values(Auth::user(), $modalSubmission),
+                'errors' => $creationErrors,
+                'sessionError' => $creationError,
+                'initiallyOpen' => request()->boolean('create') || ($modalSubmission && (!empty($creationErrors) || !empty($creationError))),
+            ];
+        }
+@endphp
 @if ($usesVue)
     @php
         $dashboardText = fn ($value) => is_string($value) && trim($value) !== '' ? trim($value) : null;
@@ -19,11 +35,12 @@
                 'sku' => $dashboardText($device->sku),
                 'address' => $address !== '' ? $address : null,
                 'state' => $device->state,
+                'status' => $device->status,
                 'lastUpdated' => $device->last_updated,
                 'links' => [
-                    'view' => route('device-info', $device->id),
+                    'view' => route('devices.show', $device->id),
                     'edit' => route('edit-device', $device->id),
-                    'remove' => route('deleteDevice', $device->id),
+                    'archive' => route('archiveDevice', $device->id),
                 ],
             ];
         })->values()->all();
@@ -35,36 +52,26 @@
             'from' => $devices->firstItem(),
             'to' => $devices->lastItem(),
             'sizes' => array_values(array_unique([(int) env('PAGINATION_SIZE', 10), 10, 20, 30, (int) $pagination_size])),
-            'links' => $devices->appends(['show' => $pagination_size, 'search' => $search])->linkCollection()->map(function ($link) {
+            'links' => $devices->appends(['show' => $pagination_size, 'search' => $search, 'status' => $statusFilter])->linkCollection()->map(function ($link) {
                 return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
             })->all(),
         ];
-        $creation = null;
-        if ($creationEnabled) {
-            $modalSubmission = old('_creation_modal') === '1';
-            $creationErrors = $modalSubmission ? \App\Support\DeviceCreationData::errors($errors->messages()) : [];
-            $creationError = $modalSubmission ? session('error') : null;
-            $creation = [
-                'csrfToken' => csrf_token(),
-                'action' => route('create-device.store'),
-                'values' => \App\Support\DeviceCreationData::values(Auth::user(), $modalSubmission),
-                'errors' => $creationErrors,
-                'sessionError' => $creationError,
-                'initiallyOpen' => $modalSubmission && (!empty($creationErrors) || !empty($creationError)),
-            ];
-        }
     @endphp
     @include('frontend.mount', ['page' => 'dashboard', 'props' => [
+        'csrfToken' => csrf_token(),
         'devices' => $dashboardDevices,
         'creation' => $creation,
         'search' => $search,
+        'statusFilter' => $statusFilter,
+        'statusOptions' => $statusOptions,
         'pagination' => $dashboardPagination,
-        'mapEndpoints' => ['all' => route('all-devices', $search !== '' ? ['search' => $search] : []), 'paginated' => route('paginated-devices', $search !== '' ? ['search' => $search] : [])],
+        'mapEndpoints' => ['all' => route('all-devices', array_filter(['search' => $search, 'status' => $statusFilter], fn ($value) => $value !== '')), 'paginated' => route('paginated-devices', array_filter(['search' => $search, 'status' => $statusFilter], fn ($value) => $value !== ''))],
         'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'create' => route('create-device')],
         'success' => session('success'),
         'sessionError' => $creation && $creation['initiallyOpen'] ? null : session('error'),
     ]])
 @else
+{{ \App\Support\FrontendAssets::tags() }}
 <style>
     .status-dot {
         height: 10px;
@@ -134,20 +141,21 @@
     <div class="row justify-content-center">
         <div class="col-md-10">
             <div id="map" style="height: 400px;"></div>
-            <div class="d-flex justify-content-end my-3">
-                <a class="btn btn-primary" href="{{ route('create-device') }}">Create +</a>
-            </div>
-            <div class="card">
+            <div class="card mt-3">
                 <div class="card-header">{{ __('Device Manager') }}</div>
                 <div class="card-body">
                     <form action="{{ route('dashboard') }}" method="GET" class="mb-3" role="search">
                         <label for="device-alias-search" class="form-label">Search device aliases</label>
                         <div class="d-flex gap-2">
                             <input id="device-alias-search" class="form-control" type="search" name="search" value="{{ $search }}" maxlength="255" placeholder="Search by alias">
+                            <div class="order-last d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                                <div data-status-filter-root data-props="{{ json_encode(['value' => $statusFilter, 'options' => $statusOptions]) }}"></div>
+                                @include('frontend.mount', ['page' => 'create-device-launcher', 'props' => ['creation' => $creation]])
+                            </div>
                             <input type="hidden" name="show" value="{{ $pagination_size }}">
                             <button class="btn btn-primary" type="submit">Search</button>
                             @if ($search !== '')
-                                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['show' => $pagination_size]) }}">Clear</a>
+                                <a class="btn btn-outline-secondary" href="{{ route('dashboard', ['show' => $pagination_size, 'status' => $statusFilter]) }}">Clear</a>
                             @endif
                         </div>
                         @error('search')<p class="text-danger mt-1" role="alert">{{ $message }}</p>@enderror
@@ -155,23 +163,25 @@
                     <div class="row">
                         <div class="col-md-2"><strong>Alias</strong></div>
                         <div class="col-md-4"><strong>Status</strong></div>
+                        <div class="col-md-3"><strong>Last updated</strong></div>
                         <div class="col-md-3"><strong>Actions</strong></div>
                     </div>
                     @forelse ($devices as $device)
                     <div class="row mt-2">
-                        <div class="col-md-2"><a href="{{ route('device-info', $device->id) }}">{{ $device->alias ?: $device->serial_no }}</a></div>
+                        <div class="col-md-2"><a href="{{ route('devices.show', $device->id) }}">{{ $device->alias ?: $device->serial_no }}</a></div>
                         <div class="col-md-4">
 
-						<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
+						<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->status)) }}"></span>{{ $device->status }}
 						<p>Last updated at: {{ $device->last_updated }}</p>
                         </div>
+                        <div class="col-md-3">{{ $device->last_updated }}</div>
                         <div class="col-md-3">
                             <details>
                                 <summary aria-label="Actions for {{ $device->alias ?: 'device '.$device->id }}" class="btn btn-outline-secondary btn-sm">…</summary>
                                 <div class="d-flex flex-column align-items-start gap-2 p-2">
                                     <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
-                                    <a href="{{ route('deleteDevice', $device->id) }}"
-                                        class="text-danger delete-link">Delete</a>
+                                    <a href="{{ route('archiveDevice', $device->id) }}"
+                                        class="text-danger archive-link">Archive</a>
                                 </div>
                             </details>
                         </div>
@@ -190,6 +200,7 @@
                         <div class="col-md-12">
                             <form action="{{ route('dashboard') }}" method="GET">
                                 <input type="hidden" name="search" value="{{ $search }}">
+                                @foreach ($statusFilter as $status)<input type="hidden" name="status[]" value="{{ $status }}">@endforeach
                                 <select name="show" onchange="this.form.submit()">
                                     <option value="{{ env('PAGINATION_SIZE', 10) }}" {{
                                         $pagination_size==env('PAGINATION_SIZE', 10) ? ' selected' : '' }}>Show (Default
@@ -200,7 +211,7 @@
                                     <!-- Add more options as needed -->
                                 </select>
                             </form>
-                            {{ $devices->appends(['show' => $pagination_size, 'search' => $search])->links() }}
+                            {{ $devices->appends(['show' => $pagination_size, 'search' => $search, 'status' => $statusFilter])->links() }}
                         </div>
                     </div>
                 </div>
@@ -244,6 +255,7 @@
             var url = '/paginated-devices';
             url += '?page=' + page + '&show=' + pagination_size;
             url += '&search=' + encodeURIComponent(@json($search));
+            @json($statusFilter).forEach(status => { url += '&status[]=' + encodeURIComponent(status); });
 
             fetch(url)
                 .then(response => {
@@ -263,7 +275,7 @@
 
                     let devices = data.data; // This line might need adjustment based on the actual data structure
                     devices.forEach(function (device) {
-                        var state = device.state ? device.state.toLowerCase().replace(' ', '-') : 'unknown';
+                        var state = device.status ? device.status.toLowerCase().replace(' ', '-') : 'unknown';
                         var color = stateColors[state] || '#808080'; // Default to grey if no match found
 
                         var svgIcon = L.divIcon({
@@ -324,20 +336,35 @@
     });
 </script>
 
+<dialog id="archive-device-confirmation" aria-labelledby="archive-device-title" aria-describedby="archive-device-description" style="width:min(32rem,calc(100% - 2rem));border:1px solid #e5e7eb;border-radius:12px;padding:1.5rem;">
+    <h2 id="archive-device-title" class="h4">Archive device?</h2>
+    <p id="archive-device-description">Are you sure you want to archive this device? Its details and sensor history will be preserved.</p>
+    <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary" id="cancel-device-archiving" autofocus>Cancel</button>
+        <form id="confirm-device-archiving" method="POST" data-document-action>
+            @csrf
+            <button class="btn btn-primary" type="submit">Archive device</button>
+        </form>
+    </div>
+</dialog>
+<style>#archive-device-confirmation::backdrop { background: rgb(17 24 39 / 50%); }</style>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Attach click event listener to all delete links
-        document.querySelectorAll(".delete-link").forEach(function (link) {
-            link.addEventListener("click", function (event) {
-                // Prevent the default action
+        const dialog = document.getElementById('archive-device-confirmation');
+        const confirmLink = document.getElementById('confirm-device-archiving');
+        let trigger;
+        document.querySelectorAll('.archive-link').forEach(function (link) {
+            link.addEventListener('click', function (event) {
                 event.preventDefault();
-                // Show confirmation dialog
-                if (confirm("Are you sure you want to delete this device?")) {
-                    // If confirmed, proceed with the deletion
-                    window.location.href = this.href;
-                }
-                // Else, do nothing
+                trigger = link;
+                confirmLink.action = link.href;
+                dialog.showModal();
             });
+        });
+        document.getElementById('cancel-device-archiving').addEventListener('click', () => dialog.close());
+        dialog.addEventListener('close', () => {
+            confirmLink.removeAttribute('action');
+            trigger?.focus();
         });
     });
 </script>

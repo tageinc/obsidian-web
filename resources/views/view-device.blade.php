@@ -1,15 +1,15 @@
 @php
-    $usesVue = config('frontend.vue3.device_info');
+    $usesVue = config('frontend.vue3.view_device');
 @endphp
 @extends('layouts.app')
 
 @section('content')
 @if ($usesVue)
-    @include('frontend.mount', ['page' => 'device-info', 'props' => [
+    @include('frontend.mount', ['page' => 'view-device', 'props' => [
         'device' => ['alias' => $device->alias, 'serial' => $device->serial_no, 'details' => [
             'Alias' => $device->alias, 'SKU' => $device->sku,
             'Serial No.' => $device->serial_no,
-            'Address' => implode(' ', array_filter([$device->address_1, $device->address_2, $device->city, $device->state, $device->zip_code])),
+            'Address' => implode(' ', array_filter([$device->address_1, $device->address_2, $device->city, $device->address_state, $device->zip_code])),
         ]],
         'status' => ['State' => $stateMessage, 'PS1' => $latestStatus->ps1, 'PS Average' => $latestStatus->ps_avg,
             'Motor Speed' => $latestStatus->motor_speed, 'CTS' => $ctsValue,
@@ -25,12 +25,12 @@
     <div class="row">
         <div class="col-md-4">
             <div class="card mb-3">
-                <div class="card-header">Device Info</div>
+                <div class="card-header">View Device</div>
                 <div class="card-body">
                     <p><strong>Alias:</strong> {{ $device->alias }}</p>
                     <p><strong>SKU:</strong> {{ $device->sku }}</p>
                     <p><strong>Serial No.:</strong> {{ $device->serial_no }}</p>
-                    <p><strong>Address:</strong><br>{{ $device->address_1 }} {{ $device->address_2 }}<br>{{ $device->city }}, {{ $device->state }} {{ $device->zip_code }}</p>
+                    <p><strong>Address:</strong><br>{{ $device->address_1 }} {{ $device->address_2 }}<br>{{ $device->city }}, {{ $device->address_state }} {{ $device->zip_code }}</p>
                 </div>
             </div>
         </div>

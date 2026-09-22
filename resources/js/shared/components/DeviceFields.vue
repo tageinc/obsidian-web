@@ -17,7 +17,7 @@ const addressFields = [
     },
     { name: 'city', label: 'City', autocomplete: 'address-level2', column: 'col-md-6' },
     {
-        name: 'state',
+        name: 'address_state',
         label: 'State / province / region',
         autocomplete: 'address-level1',
         column: 'col-md-6',

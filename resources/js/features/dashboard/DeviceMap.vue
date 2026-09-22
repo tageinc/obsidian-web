@@ -74,7 +74,7 @@ async function reload() {
                     alt: String(device.alias ?? 'Device'),
                     keyboard: true,
                     icon: leaflet.divIcon({
-                        html: markerIcon(device.state),
+                        html: markerIcon(device.status),
                         className: 'device-map-marker',
                         iconSize: [30, 42],
                         iconAnchor: [15, 42],
@@ -128,9 +128,6 @@ onBeforeUnmount(() => {
         </p>
         <p v-else-if="located === 0" role="status" class="text-muted">
             None of these devices have valid coordinates.
-        </p>
-        <p v-else role="status" class="text-muted small">
-            Showing {{ located }} of {{ total }} device locations.
         </p>
         <p v-if="tileWarning" role="status" class="text-muted small">
             The map background is unavailable. Device details remain available in the list.

@@ -16,13 +16,14 @@ class CreateDeviceController extends Controller
 {
     public function index()
     {
-        return view('create-device');
+        return redirect()->route('dashboard', ['create' => 1]);
 
     }
 
     public function createDevice(Request $request)
     {
-        $validated = $request->validate([
+        $request->merge(['_creation_modal' => '1']);
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'alias' => 'required|string|max:255',
             'serial_no' => 'required|string|max:255|unique:devices,serial_no',
             'sku' => 'required|string|max:255',
@@ -30,12 +31,17 @@ class CreateDeviceController extends Controller
             'address_1' => 'required|string|max:255',
             'address_2' => 'nullable|string|max:255',
             'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
+            'address_state' => 'required|string|max:255',
             'zip_code' => 'required|string|max:255',
             'country' => 'required|string|max:255',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
         ]);
+
+        if ($validator->fails()) {
+            throw (new \Illuminate\Validation\ValidationException($validator))->redirectTo(route('dashboard'));
+        }
+        $validated = $validator->validated();
 
         DB::transaction(function () use ($request, $validated) {
             $device = Device::create(array_merge($validated, [
@@ -63,7 +69,7 @@ class CreateDeviceController extends Controller
             'address_1' => 'required',
             'address_2' => 'nullable',
             'city' => 'required',
-            'state' => 'required',
+            'address_state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
             'alias' => 'required|string|max:255',
             'serial_no' => 'required',
@@ -84,7 +90,7 @@ class CreateDeviceController extends Controller
             'address_1' => $validatedData['address_1'],
             'address_2' => $validatedData['address_2'] ?? null,
             'city' => $validatedData['city'],
-            'state' => $validatedData['state'],
+            'address_state' => $validatedData['address_state'],
             'country' => 'US',
             'zip_code' => $validatedData['zip_code'],
             'alias' => $validatedData['alias'],

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
+import StatusFilter from './StatusFilter.vue';
 import DeviceMap from './DeviceMap.vue';
 import DeviceActions from './DeviceActions.vue';
 import CreateDeviceModal from './CreateDeviceModal.vue';
@@ -8,16 +9,25 @@ import { statusColor } from './deviceMap.js';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 
 const props = defineProps({
+    csrfToken: { type: String, required: true },
     devices: { type: Array, default: () => [] },
     pagination: { type: Object, required: true },
     mapEndpoints: { type: Object, required: true },
     links: { type: Object, required: true },
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
+    statusFilter: { type: Array, default: () => [] },
+    statusOptions: { type: Array, default: () => [] },
     search: { type: String, default: '' },
     creation: { type: Object, default: null },
 });
 const creatingDevice = ref(props.creation?.initiallyOpen ?? false);
+watch(
+    () => props.creation,
+    (creation) => {
+        if (creation?.initiallyOpen) creatingDevice.value = true;
+    },
+);
 const createButton = ref(null);
 const selectedDevice = ref(null);
 const deviceMode = ref('view');
@@ -73,6 +83,7 @@ watch(
 const clearSearchUrl = computed(() => {
     const url = new URL(props.links.dashboard, window.location.origin);
     url.searchParams.delete('search');
+    props.statusFilter.forEach((status) => url.searchParams.append('status[]', status));
     url.searchParams.delete('page');
     url.searchParams.set('show', String(perPage.value));
     return url.pathname + url.search;
@@ -101,19 +112,6 @@ watch(
                     :page="pagination.currentPage"
                     :per-page="pagination.perPage"
                 />
-                <div class="device-create-toolbar">
-                    <button
-                        v-if="creation"
-                        ref="createButton"
-                        type="button"
-                        class="btn btn-primary"
-                        aria-haspopup="dialog"
-                        @click="creatingDevice = true"
-                    >
-                        Create +
-                    </button>
-                    <a v-else class="btn btn-primary" :href="links.create">Create +</a>
-                </div>
                 <section class="device-manager" aria-labelledby="device-manager-heading">
                     <h2 id="device-manager-heading" class="h5 mb-3">Device Manager</h2>
                     <form
@@ -154,6 +152,20 @@ watch(
                         <a v-if="search" :href="clearSearchUrl" class="device-clear-search"
                             >Clear search</a
                         >
+                        <div class="device-create-toolbar">
+                            <StatusFilter :value="statusFilter" :options="statusOptions" />
+                            <button
+                                v-if="creation"
+                                ref="createButton"
+                                type="button"
+                                class="btn btn-primary"
+                                aria-haspopup="dialog"
+                                @click="creatingDevice = true"
+                            >
+                                Create +
+                            </button>
+                            <a v-else class="btn btn-primary" :href="links.create">Create +</a>
+                        </div>
                     </form>
                     <p v-if="devices.length === 0" class="device-empty" role="status">
                         <template v-if="pagination.total > 0"
@@ -178,8 +190,8 @@ watch(
                                     <span class="visually-hidden">Details</span>
                                 </th>
                                 <th scope="col">Device</th>
-                                <th scope="col">Last updated</th>
                                 <th scope="col">Status</th>
+                                <th scope="col">Last updated</th>
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
@@ -224,11 +236,6 @@ watch(
                                             >{{ device.alias }}</a
                                         >
                                     </th>
-                                    <td class="device-updated">
-                                        <span class="device-field-label" aria-hidden="true"
-                                            >Last updated</span
-                                        >{{ device.lastUpdated }}
-                                    </td>
                                     <td>
                                         <span class="device-field-label" aria-hidden="true"
                                             >Status</span
@@ -237,17 +244,23 @@ watch(
                                             <span
                                                 class="status-dot"
                                                 :style="{
-                                                    backgroundColor: statusColor(device.state),
+                                                    backgroundColor: statusColor(device.status),
                                                 }"
                                                 aria-hidden="true"
-                                            />{{ device.state }}
+                                            />{{ device.status }}
                                         </span>
+                                    </td>
+                                    <td class="device-updated">
+                                        <span class="device-field-label" aria-hidden="true"
+                                            >Last updated</span
+                                        >{{ device.lastUpdated }}
                                     </td>
                                     <td class="device-actions-cell">
                                         <span class="device-field-label" aria-hidden="true"
                                             >Actions</span
                                         >
                                         <DeviceActions
+                                            :csrf-token="csrfToken"
                                             :device="device"
                                             @edit="
                                                 (event, trigger) =>
@@ -286,6 +299,13 @@ watch(
                     <div class="device-table-footer">
                         <form :action="links.dashboard" method="GET" class="device-page-size">
                             <input v-if="search" type="hidden" name="search" :value="search" />
+                            <input
+                                v-for="status in statusFilter"
+                                :key="status"
+                                type="hidden"
+                                name="status[]"
+                                :value="status"
+                            />
                             <label for="devices-per-page"
                                 >Show<span class="visually-hidden"> devices per page</span>:</label
                             >
@@ -344,8 +364,11 @@ watch(
 <style scoped>
 .device-create-toolbar {
     display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
     justify-content: flex-end;
-    margin-top: 1rem;
+    margin-left: auto;
 }
 .device-manager {
     margin-top: 1rem;
@@ -360,7 +383,8 @@ watch(
 }
 .device-search-field {
     position: relative;
-    width: min(40vw, 100%);
+    flex: 1 1 12rem;
+    width: auto;
     min-width: 0;
 }
 .device-search-input {

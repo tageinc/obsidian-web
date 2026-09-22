@@ -11,7 +11,7 @@
         'address_1' => ['Address line 1', 'address-line1', 'col-12'],
         'address_2' => ['Address line 2 (optional)', 'address-line2', 'col-12'],
         'city' => ['City', 'address-level2', 'col-md-6'],
-        'state' => ['State / province / region', 'address-level1', 'col-md-6'],
+        'address_state' => ['State / province / region', 'address-level1', 'col-md-6'],
         'zip_code' => ['Postal code', 'postal-code', 'col-md-6'],
         'country' => ['Country', 'country-name', 'col-md-6'],
     ] as $field => [$label, $autocomplete, $column])

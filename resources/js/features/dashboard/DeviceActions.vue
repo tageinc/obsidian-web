@@ -1,8 +1,13 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-const props = defineProps({ device: { type: Object, required: true } });
+import FormModal from '../../shared/components/FormModal.vue';
+const props = defineProps({
+    device: { type: Object, required: true },
+    csrfToken: { type: String, required: true },
+});
 const emit = defineEmits(['edit']);
 const open = ref(false);
+const confirmingArchive = ref(false);
 const trigger = ref(null);
 const menu = ref(null);
 const position = ref({ top: '0px', left: '0px' });
@@ -75,10 +80,15 @@ function keydown(event) {
               : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next]?.focus();
 }
-function confirmRemoval(event) {
-    const accepted = window.confirm('Are you sure you want to delete this device?');
-    if (!accepted) event.preventDefault();
-    close(!accepted);
+function confirmArchive(event) {
+    event.preventDefault();
+    close();
+    confirmingArchive.value = true;
+}
+async function cancelArchive() {
+    confirmingArchive.value = false;
+    await nextTick();
+    trigger.value?.focus({ preventScroll: true });
 }
 function edit(event) {
     emit('edit', event, trigger.value);
@@ -133,14 +143,40 @@ onBeforeUnmount(() => {
                 >Edit</a
             >
             <a
-                class="dropdown-item device-delete"
-                :href="device.links.remove"
-                :aria-label="`Delete ${device.alias}`"
+                class="dropdown-item device-archive"
+                :href="device.links.archive"
+                :aria-label="`Archive ${device.alias}`"
                 data-document-action
-                @click="confirmRemoval"
-                >Delete</a
+                aria-haspopup="dialog"
+                @click="confirmArchive"
+                >Archive</a
             >
         </div>
+    </Teleport>
+    <Teleport to="body">
+        <FormModal
+            v-if="confirmingArchive"
+            :id="`archive-device-${device.id}`"
+            title="Archive device?"
+            :description="`Are you sure you want to archive ${device.alias || device.serial}?`"
+            @close="cancelArchive"
+        >
+            <template #default="{ close: closeDialog }">
+                <p>
+                    The device will leave the active dashboard and map. Its details and sensor
+                    history will be preserved.
+                </p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @click="closeDialog">
+                        Cancel
+                    </button>
+                    <form :action="device.links.archive" method="POST" data-document-action>
+                        <input type="hidden" name="_token" :value="csrfToken" />
+                        <button type="submit" class="btn btn-primary">Archive device</button>
+                    </form>
+                </div>
+            </template>
+        </FormModal>
     </Teleport>
 </template>
 
@@ -187,7 +223,7 @@ onBeforeUnmount(() => {
 .device-action-menu .dropdown-item:focus {
     background: #f3f4f6;
 }
-.device-delete {
+.device-archive {
     color: #b02a37;
 }
 </style>

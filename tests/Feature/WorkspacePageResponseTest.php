@@ -47,8 +47,8 @@ class WorkspacePageResponseTest extends TestCase
         $this->actingAs($this->owner);
         $paths = [
             '/dashboard?show=20&page=1' => 'dashboard', '/profile' => 'profile',
-            '/create-device' => 'create-device', '/edit-device/'.$this->device->id => 'edit-device',
-            '/device-info/'.$this->device->id => 'device-info',
+            '/edit-device/'.$this->device->id => 'edit-device',
+            '/devices/'.$this->device->id => 'view-device',
         ];
         foreach ($paths as $url => $page) {
             $html = $this->get($url)->assertOk()->assertSee('data-workspace="1"', false);
@@ -76,7 +76,7 @@ class WorkspacePageResponseTest extends TestCase
         config(['frontend.vue3.workspace' => false]);
         $this->page('/profile')->assertStatus(409);
         $this->get('/profile')->assertOk()->assertDontSee('data-workspace="1"', false);
-        config(['frontend.vue3.workspace' => true, 'frontend.vue3.device_info' => false]);
+        config(['frontend.vue3.workspace' => true, 'frontend.vue3.view_device' => false]);
         $this->page('/profile')->assertStatus(409);
         $this->get('/profile')->assertOk()->assertDontSee('data-workspace="1"', false);
     }
@@ -89,11 +89,11 @@ class WorkspacePageResponseTest extends TestCase
         $this->page('/profile')->assertForbidden();
         $other->email_verified_at = now();
         $other->save();
-        foreach (['/edit-device/', '/device-info/'] as $prefix) {
+        foreach (['/edit-device/', '/devices/'] as $prefix) {
             $this->page($prefix.$this->device->id)->assertForbidden();
         }
         config(['app.developer_email' => $other->email]);
-        $this->page('/device-info/'.$this->device->id)->assertOk()->assertJsonPath('page', 'device-info');
+        $this->page('/devices/'.$this->device->id)->assertOk()->assertJsonPath('page', 'view-device');
         $this->page('/edit-device/'.$this->device->id)->assertOk()->assertJsonPath('page', 'edit-device');
     }
 
@@ -101,7 +101,7 @@ class WorkspacePageResponseTest extends TestCase
     {
         $this->actingAs($this->owner);
         // A full URL with a query prevents the test URL helper from trimming the slash.
-        foreach (['http://localhost/profile/?source=compatibility' => 'profile', '/edit-device/0'.$this->device->id => 'edit-device', '/device-info/0'.$this->device->id => 'device-info'] as $url => $page) {
+        foreach (['http://localhost/profile/?source=compatibility' => 'profile', '/edit-device/0'.$this->device->id => 'edit-device', '/devices/0'.$this->device->id => 'view-device'] as $url => $page) {
             $this->get($url)->assertOk()->assertSee('data-vue-page="'.$page.'"', false)
                 ->assertDontSee('data-workspace="1"', false);
             $this->page($url)->assertStatus(409);
@@ -111,7 +111,7 @@ class WorkspacePageResponseTest extends TestCase
     public function test_nonworkspace_routes_and_missing_device_redirects_retain_existing_contracts(): void
     {
         $this->actingAs($this->owner);
-        $this->page('/device-info/999999')->assertRedirect('/device-manager');
+        $this->page('/devices/999999')->assertNotFound();
         $this->page('/device-manager?show=20')->assertRedirect('/dashboard?show=20');
         $this->page('/all-devices')->assertOk()->assertJsonPath('0.id', $this->device->id);
         $contact = $this->page('/contact-us')->assertOk()->assertSee('Contact Us');

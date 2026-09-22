@@ -126,7 +126,7 @@ Committed defaults remain off; production enablement needs separate approval.
 ## Routing and server contracts
 
 The bounded workspace consists of `/dashboard`, `/profile`, `/device-register`,
-`/edit-device/:id` and `/device-info/:id`. Initially each mounts independently
+`/edit-device/:id` and `/devices/:id`. Initially each mounts independently
 with normal document links. Enable client routing only once all destination
 pages are migrated, authorized and regression-tested. Auth/password/verification,
 admin, contact, thank-you, delta, downloads and external links use document

@@ -48,7 +48,7 @@ function navigateSection(event, index) {
         <header class="device-heading">
             <div>
                 <p class="device-eyebrow">Solar tracker</p>
-                <h1 v-if="!embedded">{{ device.alias || 'Device information' }}</h1>
+                <h1 v-if="!embedded">{{ device.alias || 'View Device' }}</h1>
                 <p class="device-identity">
                     Serial <span>{{ device.serial }}</span>
                 </p>

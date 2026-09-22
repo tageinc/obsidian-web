@@ -20,13 +20,6 @@ const destinations = [
         component: () => import('../features/profile/ProfilePage.vue'),
     },
     {
-        path: '/create-device',
-        page: 'create-device',
-        title: 'Create Device',
-        match: /^\/create-device$/,
-        component: () => import('../features/devices/DeviceFormPage.vue'),
-    },
-    {
         path: '/edit-device/:id([1-9]\\d*)',
         page: 'edit-device',
         title: 'Edit device',
@@ -34,11 +27,11 @@ const destinations = [
         component: () => import('../features/devices/DeviceFormPage.vue'),
     },
     {
-        path: '/device-info/:id([1-9]\\d*)',
-        page: 'device-info',
-        title: 'Device info',
-        match: /^\/device-info\/[1-9]\d*$/,
-        component: () => import('../features/solar-tracker/DeviceInfoPage.vue'),
+        path: '/devices/:id([1-9]\\d*)',
+        page: 'view-device',
+        title: 'View Device',
+        match: /^\/devices\/[1-9]\d*$/,
+        component: () => import('../features/solar-tracker/ViewDevicePage.vue'),
     },
 ];
 

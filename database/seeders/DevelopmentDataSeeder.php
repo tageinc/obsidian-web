@@ -22,9 +22,9 @@ class DevelopmentDataSeeder extends Seeder
         }
 
         DB::transaction(function () {
-            $user = User::firstOrCreate(['email' => 'developer@example.test'], [
-                'name' => 'Obsidian Development User',
-                'email' => 'developer@example.test',
+            $user = User::firstOrCreate(['email' => 'andre.troncoso@tezca.net'], [
+                'name' => 'Andre Troncoso',
+                'email' => 'andre.troncoso@tezca.net',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
                 'created_at' => now(),
@@ -43,7 +43,7 @@ class DevelopmentDataSeeder extends Seeder
                     'user_id' => $user->id,
                     'latitude' => $latitude, 'longitude' => $longitude,
                     'sku' => 'SP1', 'alias' => $alias, 'order_no' => sprintf('DEV-%04d', $index),
-                    'address_1' => '1 Development Way', 'city' => 'Testville', 'state' => 'CA',
+                    'address_1' => '1 Development Way', 'city' => 'Testville', 'address_state' => 'CA',
                     'country' => 'US', 'zip_code' => '90000', 'status_notification' => 0,
                     'sms_notification' => 0, 'created_at' => now(), 'updated_at' => now(),
                 ]);

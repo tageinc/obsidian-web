@@ -14,7 +14,7 @@ import FormFeedback from '../shared/components/FormFeedback.vue';
 const fixtures = [];
 const Page = { props: ['label'], template: '<div><h1>{{ label }}</h1><p>Page content</p></div>' };
 const components = Object.fromEntries(
-    ['dashboard', 'profile', 'create-device', 'edit-device', 'device-info'].map((page) => [
+    ['dashboard', 'profile', 'edit-device', 'view-device'].map((page) => [
         page,
         Page,
     ]),
@@ -64,7 +64,7 @@ describe('bounded workspace navigation', () => {
     it('only recognizes the five same-origin workspace URLs and no aliases or destructive/download paths', () => {
         expect(workspaceDestination('/dashboard?show=20&page=2').page).toBe('dashboard');
         expect(workspaceDestination('/edit-device/12').page).toBe('edit-device');
-        expect(workspaceDestination('/device-info/12').page).toBe('device-info');
+        expect(workspaceDestination('/devices/12').page).toBe('view-device');
         for (const path of [
             '/',
             '/device-manager',
@@ -75,7 +75,7 @@ describe('bounded workspace navigation', () => {
             '/login',
             '/admin-control-center',
             '/profile/extra',
-            '/device-info/not-an-id',
+            '/devices/not-an-id',
             'https://elsewhere.example/profile',
             'javascript:alert(1)',
         ]) {
@@ -174,13 +174,13 @@ describe('bounded workspace navigation', () => {
                         finishSlow = resolve;
                     }),
             )
-            .mockResolvedValueOnce(envelope('create-device', '/create-device', 'New page'));
+            .mockResolvedValueOnce(envelope('view-device', '/devices/1', 'New page'));
         const item = await fixture(request);
         const slow = item.router.push('/profile');
         await flushPromises();
         expect(item.wrapper.text()).toContain('Loading page');
         const signal = request.mock.calls[0][1].signal;
-        await item.router.push('/create-device');
+        await item.router.push('/devices/1');
         expect(signal.aborted).toBe(true);
         finishSlow(envelope('profile', '/profile', 'Stale page'));
         await slow;
@@ -194,7 +194,7 @@ describe('bounded workspace navigation', () => {
             .fn()
             .mockResolvedValue(envelope('dashboard', '/dashboard', 'Device not found'));
         const item = await fixture(request);
-        await item.router.push('/device-info/999999');
+        await item.router.push('/devices/999999');
         await flushPromises();
         expect(item.router.currentRoute.value.fullPath).toBe('/dashboard');
         expect(item.state.loading).toBe(false);
@@ -248,7 +248,7 @@ describe('bounded workspace navigation', () => {
         await item.router.push('/profile');
         expect(item.navigateDocument).toHaveBeenCalledWith('/profile');
         expect(item.session.clear).not.toHaveBeenCalled();
-        await item.router.push('/create-device');
+        await item.router.push('/devices/1');
         expect(item.state.error.message).toContain('could not be loaded');
         expect(item.state.props).toBeNull();
     });
@@ -298,7 +298,7 @@ describe('bounded workspace navigation', () => {
         const item = await fixture(
             vi.fn((url) =>
                 Promise.resolve(
-                    envelope(url === '/profile' ? 'profile' : 'create-device', url, 'Current page'),
+                    envelope(url === '/profile' ? 'profile' : 'view-device', url, 'Current page'),
                 ),
             ),
             {
@@ -313,11 +313,11 @@ describe('bounded workspace navigation', () => {
         );
         const slow = item.router.push('/profile').catch(() => {});
         await flushPromises();
-        await item.router.push('/create-device');
+        await item.router.push('/devices/1');
         failChunk(new Error('outdated chunk'));
         await slow;
         expect(item.state.error).toBeNull();
-        expect(item.state.page).toBe('create-device');
+        expect(item.state.page).toBe('view-device');
         expect(item.wrapper.text()).toContain('Current page');
     });
 });

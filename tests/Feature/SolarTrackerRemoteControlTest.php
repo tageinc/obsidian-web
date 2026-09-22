@@ -31,7 +31,7 @@ class SolarTrackerRemoteControlTest extends TestCase
 
     public function test_missing_control_defaults_to_automatic_without_writing_a_command(): void
     {
-        $this->get('/device-info/'.$this->device->id)
+        $this->get('/devices/'.$this->device->id)
             ->assertOk()
             ->assertViewHas('remoteControl', ['mode' => 0, 'motor_speed' => 0])
             ->assertSee('Remote control mode');
@@ -46,7 +46,7 @@ class SolarTrackerRemoteControlTest extends TestCase
         $this->assertDatabaseHas('solar_tracker_remote_controls', [
             'serial_no' => $this->device->serial_no, 'mode' => 1, 'motor_speed' => 0,
         ]);
-        $this->get('/device-info/'.$this->device->id)->assertOk()
+        $this->get('/devices/'.$this->device->id)->assertOk()
             ->assertViewHas('remoteControl', fn ($control) => $control['mode'] === 1);
         $this->get('/api/remote-control/'.$this->device->serial_no)
             ->assertOk()->assertJsonPath('mode', 1)->assertJsonPath('motor_speed', 0);
@@ -58,7 +58,7 @@ class SolarTrackerRemoteControlTest extends TestCase
         $this->assertDatabaseHas('solar_tracker_remote_controls', [
             'serial_no' => $this->device->serial_no, 'mode' => 0, 'motor_speed' => 0,
         ]);
-        $this->get('/device-info/'.$this->device->id)->assertOk()
+        $this->get('/devices/'.$this->device->id)->assertOk()
             ->assertViewHas('remoteControl', fn ($control) => $control['mode'] === 0);
         $this->get('/api/remote-control/'.$this->device->serial_no)
             ->assertOk()->assertJsonPath('mode', 0)->assertJsonPath('motor_speed', 0);
@@ -75,7 +75,7 @@ class SolarTrackerRemoteControlTest extends TestCase
             ]);
             $this->get('/api/remote-control/'.$this->device->serial_no)
                 ->assertOk()->assertJsonPath('mode', 1)->assertJsonPath('motor_speed', $speed);
-            $this->get('/device-info/'.$this->device->id)->assertOk()
+            $this->get('/devices/'.$this->device->id)->assertOk()
                 ->assertViewHas('remoteControl', fn ($control) => $control['mode'] === 1 && $control['motor_speed'] === (float) $speed);
         }
         $this->assertSame(1, SolarTrackerRemoteControl::count());

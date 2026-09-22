@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import DeviceForm from '../devices/DeviceForm.vue';
-import DeviceInfoPage from '../solar-tracker/DeviceInfoPage.vue';
+import ViewDevicePage from '../solar-tracker/ViewDevicePage.vue';
 import FormModal from '../../shared/components/FormModal.vue';
 import { requestJson } from '../../shared/api/client.js';
 
@@ -25,7 +25,7 @@ async function load() {
     controller = new AbortController();
     const { signal } = controller;
     const url = editing.value ? props.device.links.edit : props.device.links.view;
-    const page = editing.value ? 'edit-device' : 'device-info';
+    const page = editing.value ? 'edit-device' : 'view-device';
     payload.value = null;
     error.value = '';
     loading.value = true;
@@ -106,7 +106,7 @@ onBeforeUnmount(() => {
                         </button>
                     </template>
                 </DeviceForm>
-                <DeviceInfoPage
+                <ViewDevicePage
                     v-else-if="payload"
                     v-bind="payload"
                     embedded

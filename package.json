@@ -26,6 +26,7 @@
     "chart.js": "^4.5.1",
     "leaflet": "1.9.4",
     "pinia": "^3.0.4",
+    "tom-select": "^2.6.2",
     "vue": "3.5.43",
     "vue-router": "^4.6.3"
   },

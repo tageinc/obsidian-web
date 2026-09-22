@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\SolarTrackerGraphData;
-use App\Http\Controllers\DeviceInfoController;
+use App\Http\Controllers\ViewDeviceController;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -88,7 +88,7 @@ class SolarTrackerGraphDataTest extends TestCase
         DB::table('solar_tracker_logs')->insert([
             'serial_no' => 'SP1', 'temp' => 12.5, 'updated_at' => '2026-09-21 01:00:00',
         ]);
-        $response = app(DeviceInfoController::class)->getDeviceData(1);
+        $response = app(ViewDeviceController::class)->getDeviceData(1);
         $data = $response->getData(true);
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(['graph'], array_keys($data));

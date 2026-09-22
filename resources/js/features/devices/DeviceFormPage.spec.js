@@ -18,7 +18,7 @@ function page(overrides = {}) {
                 order_no: 'ORD-1',
                 address_1: '1 Example Street',
                 city: 'Toronto',
-                state: 'ON',
+                address_state: 'ON',
                 country: 'CA',
                 zip_code: 'M5V 1A1',
                 latitude: 0,
@@ -41,7 +41,9 @@ describe('device forms', () => {
         });
         expect(wrapper.findAll('button[type="submit"]')).toHaveLength(1);
         expect(wrapper.get('h1').text()).toBe('Create Device');
-        expect(wrapper.get('a[href="/dashboard"]').text()).toBe('Back to dashboard');
+        expect(wrapper.get('nav[aria-label="Breadcrumb"]').text()).toContain('Dashboard');
+        expect(wrapper.get('nav a').attributes('href')).toBe('/dashboard');
+        expect(wrapper.find('nav button').exists()).toBe(false);
         expect(wrapper.find('[name="_creation_modal"]').exists()).toBe(false);
         expect(wrapper.find('[name="_method"]').exists()).toBe(false);
         expect(wrapper.find('[name="status_notification"]').exists()).toBe(false);

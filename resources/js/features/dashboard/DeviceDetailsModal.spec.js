@@ -5,7 +5,7 @@ import { requestJson } from '../../shared/api/client.js';
 
 vi.mock('../../shared/api/client.js', () => ({ requestJson: vi.fn() }));
 const mounted = [];
-const info = { page: 'device-info', props: { device: { alias: 'Tracker' } } };
+const info = { page: 'view-device', props: { device: { alias: 'Tracker' } } };
 const edit = { page: 'edit-device', props: { values: { alias: 'Tracker' } } };
 function modal(mode = 'view') {
     const wrapper = mount(DeviceDetailsModal, {
@@ -15,7 +15,7 @@ function modal(mode = 'view') {
             device: {
                 id: 1,
                 alias: 'Tracker',
-                links: { view: '/device-info/1', edit: '/edit-device/1' },
+                links: { view: '/devices/1', edit: '/edit-device/1' },
             },
         },
         global: {
@@ -31,8 +31,8 @@ function modal(mode = 'view') {
                     emits: ['saved', 'pending-change'],
                     template: '<div>Device form</div>',
                 },
-                DeviceInfoPage: {
-                    name: 'DeviceInfoPage',
+                ViewDevicePage: {
+                    name: 'ViewDevicePage',
                     props: { device: Object, embedded: Boolean },
                     emits: ['edit'],
                     template: '<div>Device details</div>',
@@ -56,18 +56,18 @@ describe('device view and edit modal loading', () => {
         expect(wrapper.get('[role="status"]').text()).toBe('Loading device…');
         await flushPromises();
         expect(requestJson).toHaveBeenCalledWith(
-            '/device-info/1',
+            '/devices/1',
             expect.objectContaining({
                 headers: { 'X-Obsidian-Modal': '1' },
             }),
         );
-        const view = wrapper.getComponent({ name: 'DeviceInfoPage' });
+        const view = wrapper.getComponent({ name: 'ViewDevicePage' });
         expect(view.props('embedded')).toBe(true);
         view.vm.$emit('edit');
         expect(wrapper.emitted('edit')).toHaveLength(1);
         await wrapper.setProps({ mode: 'edit' });
         await flushPromises();
-        expect(wrapper.findComponent({ name: 'DeviceInfoPage' }).exists()).toBe(false);
+        expect(wrapper.findComponent({ name: 'ViewDevicePage' }).exists()).toBe(false);
         const form = wrapper.getComponent({ name: 'DeviceForm' });
         expect(form.props()).toMatchObject({ asyncSubmit: true, values: { alias: 'Tracker' } });
         form.vm.$emit('pending-change', true);
@@ -89,7 +89,7 @@ describe('device view and edit modal loading', () => {
         await alert.get('button').trigger('click');
         await flushPromises();
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
-        expect(wrapper.findComponent({ name: 'DeviceInfoPage' }).exists()).toBe(true);
+        expect(wrapper.findComponent({ name: 'ViewDevicePage' }).exists()).toBe(true);
     });
 
     it('aborts closing or superseded requests and ignores their late responses', async () => {
@@ -123,6 +123,6 @@ describe('device view and edit modal loading', () => {
         const wrapper = modal();
         await flushPromises();
         expect(wrapper.get('[role="alert"]').text()).toContain('This device could not be loaded.');
-        expect(wrapper.findComponent({ name: 'DeviceInfoPage' }).exists()).toBe(false);
+        expect(wrapper.findComponent({ name: 'ViewDevicePage' }).exists()).toBe(false);
     });
 });

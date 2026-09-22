@@ -33,7 +33,7 @@ class DeviceFormsTest extends TestCase
             'alias' => 'Garden tracker', 'serial_no' => 'SP1-forms-test',
             'sku' => 'SP1', 'order_no' => 'ORD-1024',
             'address_1' => '200 Garden Street', 'address_2' => 'Rear garden',
-            'city' => 'Vancouver', 'state' => 'BC', 'zip_code' => 'V6B 1A1',
+            'city' => 'Vancouver', 'address_state' => 'BC', 'zip_code' => 'V6B 1A1',
             'country' => 'CA', 'latitude' => '49.2827', 'longitude' => '-123.1207',
         ], $overrides);
     }
@@ -48,13 +48,7 @@ class DeviceFormsTest extends TestCase
 
     public function test_forms_use_one_save_button_without_notification_controls_and_creation_uses_profile_address(): void
     {
-        $register = $this->get('/create-device')->assertOk()
-            ->assertSee('value="100 Main Street"', false)
-            ->assertSee('value="V6B 1A1"', false)
-            ->assertDontSee('name="status_notification"', false)
-            ->assertDontSee('name="sms_notification"', false);
-        preg_match('/<form id="device-form".*?<\/form>/s', $register->getContent(), $registerForm);
-        $this->assertSame(1, substr_count($registerForm[0], 'type="submit"'));
+        $this->get('/create-device')->assertRedirect('/dashboard?create=1');
 
         $device = $this->device();
         $edit = $this->get('/edit-device/'.$device->id)->assertOk()
@@ -86,7 +80,7 @@ class DeviceFormsTest extends TestCase
     {
         $this->from('/create-device')->post('/create-device', $this->fields([
             'city' => '', 'latitude' => 91, 'longitude' => -181,
-        ]))->assertRedirect('/create-device')
+        ]))->assertRedirect('/dashboard')
             ->assertSessionHasErrors(['city', 'latitude', 'longitude'])
             ->assertSessionHasInput('alias', 'Garden tracker');
 
@@ -112,7 +106,7 @@ class DeviceFormsTest extends TestCase
         ]);
         $changes = [
             'alias' => 'Roof tracker', 'address_1' => '300 Roof Avenue', 'address_2' => null,
-            'city' => 'Montréal', 'state' => 'Québec', 'zip_code' => 'H2Y 1C6', 'country' => 'CA',
+            'city' => 'Montréal', 'address_state' => 'Québec', 'zip_code' => 'H2Y 1C6', 'country' => 'CA',
             'latitude' => 45.5019, 'longitude' => -73.5674,
         ];
 
@@ -140,7 +134,7 @@ class DeviceFormsTest extends TestCase
         $this->from('/edit-device/'.$device->id)->put('/edit-device/'.$device->id, [
             'alias' => 'Changed name', 'latitude' => 49,
         ])->assertRedirect('/edit-device/'.$device->id)
-            ->assertSessionHasErrors(['address_1', 'city', 'state', 'country', 'zip_code', 'longitude'])
+            ->assertSessionHasErrors(['address_1', 'city', 'address_state', 'country', 'zip_code', 'longitude'])
             ->assertSessionHasInput('alias', 'Changed name');
         $this->assertSame($original, $device->fresh()->getAttributes());
         $this->assertSame(0, GeoCode::count());

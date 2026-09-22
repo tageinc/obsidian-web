@@ -9,25 +9,34 @@ use App\Services\SolarTrackerGraphData;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-class DeviceInfoController extends Controller
+class ViewDeviceController extends Controller
 {
-    public function index($id)
+    public function show($id)
     {
-        $device = Device::find($id);
-
-        if (!$device) {
-            return redirect()->route('device-manager')->with('error', 'Device not found');
-        }
+        $device = Device::findOrFail($id);
 
         $remoteControl = SolarTrackerRemoteControl::where('serial_no', $device->serial_no)->first();
 
-        return view('device-info', array_merge([
+        return view('view-device', array_merge([
             'device' => $device,
             'remoteControl' => [
                 'mode' => $remoteControl ? (int) $remoteControl->mode : 0,
                 'motor_speed' => $remoteControl ? (float) $remoteControl->motor_speed : 0,
             ],
         ], $this->statusPayload($device->serial_no)));
+    }
+
+    public function apiShow($id)
+    {
+        $device = Device::findOrFail($id);
+        $status = \App\Models\GeoCode::where('serial_no', $device->serial_no)
+            ->latest('updated_at')->orderByDesc('id')->value('status');
+
+        return response()->json(['data' => array_merge($device->only([
+            'id', 'serial_no', 'alias', 'sku', 'order_no', 'state',
+            'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country',
+            'latitude', 'longitude', 'created_at', 'updated_at',
+        ]), ['status' => $status ?? 'no geo data'])]);
     }
 
     public function getLatestStatusJson($serialNo)

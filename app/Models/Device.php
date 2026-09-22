@@ -9,6 +9,21 @@ class Device extends Model
 {
     use HasFactory;
 
+    protected $attributes = ['state' => 'active'];
+
+    protected static function booted()
+    {
+        static::deleting(function () {
+            throw new \LogicException('Devices cannot be deleted. Archive them instead.');
+        });
+        static::saving(function (Device $device) {
+            if (! in_array($device->state, ['active', 'archived'], true)) {
+                throw new \InvalidArgumentException('Device state must be active or archived.');
+            }
+        });
+    }
+
+
 	protected $guarded = [];
 	
 	public function user()

@@ -26,12 +26,13 @@ const device = (id, overrides = {}) => ({
     serial: `SERIAL-${id}`,
     sku: `SKU-${id}`,
     address: `${id} Device Street`,
-    state: 'online',
+    state: 'active',
+    status: 'online',
     lastUpdated: '1 minute ago',
     links: {
-        view: `/device-info/${id}`,
+        view: `/devices/${id}`,
         edit: `/edit-device/${id}`,
-        remove: `/delete-device/${id}`,
+        archive: `/archive-device/${id}`,
     },
     ...overrides,
 });
@@ -40,6 +41,7 @@ function page(overrides = {}) {
         attachTo: document.body,
         global: { stubs: { teleport: true } },
         props: {
+            csrfToken: 'csrf-test-token',
             devices: [device(1, { alias: '<img src=x onerror=alert(1)>' })],
             pagination: {
                 currentPage: 2,
@@ -77,7 +79,7 @@ describe('dashboard workflow', () => {
         expect(wrapper.get('a[aria-current="page"]').attributes('href')).toBe(
             '/dashboard?show=20&page=2',
         );
-        expect(wrapper.get('a[data-document-action]').attributes('href')).toBe('/delete-device/1');
+        expect(wrapper.get('a[data-document-action]').attributes('href')).toBe('/archive-device/1');
         expect(wrapper.find('#show-all-devices').exists()).toBe(false);
         const map = wrapper.getComponent({ name: 'DeviceMap' });
         expect(map.props()).toMatchObject({ page: 2, perPage: 20 });
@@ -108,33 +110,44 @@ describe('dashboard workflow', () => {
         expect(Object.fromEntries(new FormData(form.element))).toEqual({ show: '30' });
     });
 
-    it('cancels Delete until confirmation without issuing a request or intercepting confirmed native navigation', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    it('requires modal confirmation and restores focus on cancellation', async () => {
+        HTMLDialogElement.prototype.showModal = function () {
+            this.open = true;
+        };
+        HTMLDialogElement.prototype.close = function () {
+            this.open = false;
+            this.dispatchEvent(new Event('close'));
+        };
+        const confirm = vi.spyOn(window, 'confirm');
         const wrapper = page();
         const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
         await trigger.trigger('click');
-        const remove = wrapper.get('a[data-document-action]').element;
+        const remove = wrapper.get('a.device-archive');
         const canceled = new MouseEvent('click', { cancelable: true });
-        remove.dispatchEvent(canceled);
-        await wrapper.vm.$nextTick();
+        remove.element.dispatchEvent(canceled);
+        await flushPromises();
         expect(canceled.defaultPrevented).toBe(true);
-        expect(confirm).toHaveBeenCalledOnce();
-        expect(trigger.attributes('aria-expanded')).toBe('false');
+        expect(confirm).not.toHaveBeenCalled();
+        const dialog = wrapper.get('dialog');
+        expect(dialog.text()).toContain('Archive device?');
+        expect(dialog.find('img').exists()).toBe(false);
+        expect(dialog.get('form').attributes()).toMatchObject({
+            action: '/archive-device/1',
+            method: 'POST',
+        });
+        expect(dialog.get('input[name="_token"]').element.value).toBe('csrf-test-token');
+        expect(dialog.get('form').attributes()).toHaveProperty('data-document-action');
+        await dialog.get('button.btn-outline-secondary').trigger('click');
+        await flushPromises();
+        expect(wrapper.find('dialog').exists()).toBe(false);
         expect(document.activeElement).toBe(trigger.element);
-        confirm.mockReturnValue(true);
         await trigger.trigger('click');
-        const accepted = new MouseEvent('click', { cancelable: true });
-        let preventedByComponent;
-        remove.addEventListener(
-            'click',
-            (event) => {
-                preventedByComponent = event.defaultPrevented;
-                event.preventDefault(); // jsdom cannot navigate; inspect the component before test cancellation.
-            },
-            { once: true },
-        );
-        remove.dispatchEvent(accepted);
-        expect(preventedByComponent).toBe(false);
+        await remove.trigger('click');
+        await flushPromises();
+        await wrapper.get('dialog').trigger('cancel');
+        await flushPromises();
+        expect(wrapper.find('dialog').exists()).toBe(false);
+        expect(document.activeElement).toBe(trigger.element);
     });
     it('reveals row actions by keyboard and closes on Escape or an outside click', async () => {
         const wrapper = page();
@@ -243,7 +256,7 @@ describe('dashboard workflow', () => {
         const wrapper = page({ devices: [device(1)] });
         const row = wrapper.get('.device-table-row');
         const toggle = row.get('button[aria-controls="device-details-1"]');
-        const alias = row.get('a[href="/device-info/1"]');
+        const alias = row.get('a[href="/devices/1"]');
         alias.element.addEventListener('click', (event) => event.preventDefault());
         await alias.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('false');
@@ -288,7 +301,7 @@ describe('dashboard workflow', () => {
         const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
         await trigger.trigger('click');
         expect(wrapper.find('#device-actions-1 hr').exists()).toBe(false);
-        expect(wrapper.find('#device-actions-1 a[href="/device-info/1"]').exists()).toBe(false);
+        expect(wrapper.find('#device-actions-1 a[href="/devices/1"]').exists()).toBe(false);
         await wrapper.get('#device-actions-1 a[href="/edit-device/1"]').trigger('click');
         modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
         expect(modal.props('mode')).toBe('edit');

@@ -47,7 +47,7 @@ class DashboardCreationTest extends TestCase
             '_creation_modal' => '1', 'alias' => 'Garden tracker',
             'serial_no' => 'MODAL-TRACKER-1', 'sku' => 'SP1', 'order_no' => 'ORDER-1',
             'address_1' => '20 Garden Street', 'address_2' => 'Rear garden', 'city' => 'Vancouver',
-            'state' => 'BC', 'zip_code' => 'V6B 1A1', 'country' => 'CA',
+            'address_state' => 'BC', 'zip_code' => 'V6B 1A1', 'country' => 'CA',
             'latitude' => '49.2827', 'longitude' => '-123.1207',
         ], $overrides);
     }
@@ -56,8 +56,7 @@ class DashboardCreationTest extends TestCase
     {
         $response = $this->get('/dashboard');
         $creation = $this->props($response)['creation'];
-        $standalone = $this->props($this->get('/create-device'), 'create-device');
-        $this->assertSame($standalone['values'], $creation['values']);
+        $this->get('/create-device')->assertRedirect('/dashboard?create=1');
         $this->assertSame('10 Profile Street', $creation['values']['address_1']);
         $this->assertSame('CA', $creation['values']['country']);
         $this->assertNull($creation['values']['alias']);
@@ -70,7 +69,7 @@ class DashboardCreationTest extends TestCase
         $this->assertSame([], $creation['errors']);
         $this->assertSame([
             'alias', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude',
-            'address_1', 'address_2', 'city', 'state', 'zip_code', 'country',
+            'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country',
         ], array_keys($creation['values']));
         $response->assertDontSee('hash-must-not-be-serialized')->assertDontSee('Retired device');
     }
@@ -79,12 +78,14 @@ class DashboardCreationTest extends TestCase
     {
         $this->owner->update(['country' => null]);
         $this->assertSame('US', $this->props($this->get('/dashboard'))['creation']['values']['country']);
-        $this->assertSame('US', $this->props($this->get('/create-device'), 'create-device')['values']['country']);
+        $this->assertTrue($this->props($this->get('/dashboard?create=1'))['creation']['initiallyOpen']);
         config(['frontend.vue3.create_device' => false]);
         $props = $this->props($this->get('/dashboard'));
-        $this->assertNull($props['creation']);
+        $this->assertNotNull($props['creation']);
         $this->assertSame(route('create-device'), $props['links']['create']);
-        $this->get('/create-device')->assertOk()->assertSee('action="'.route('create-device.store').'"', false);
+        $this->get('/create-device')->assertRedirect('/dashboard?create=1');
+        config(['frontend.vue3.dashboard' => false]);
+        $this->get('/dashboard?create=1')->assertOk()->assertSee('frontend-create-device-launcher', false);
     }
 
     public function test_unrelated_old_input_and_feedback_do_not_fill_or_open_creation(): void
@@ -109,7 +110,7 @@ class DashboardCreationTest extends TestCase
         $this->from('/dashboard?search=roof&show=20')->post('/create-device', $this->fields([
             'alias' => $alias, 'city' => '', 'latitude' => 91,
             'password' => 'secret-marker', 'api_token' => 'secret-marker', 'user_id' => 999,
-        ]))->assertRedirect('/dashboard?search=roof&show=20')
+        ]))->assertRedirect('/dashboard')
             ->assertSessionHasErrors(['city', 'latitude'])
             ->assertSessionHasInput('_creation_modal', '1');
         $this->assertSame(0, Device::count());

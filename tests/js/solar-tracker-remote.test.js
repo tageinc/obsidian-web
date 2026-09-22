@@ -50,7 +50,7 @@ function fixture(mode = 0, motorSpeed = 0) {
     const container = element({ querySelector: selector => elements[selector] });
     remote.render(container, {
         mode, motor_speed: motorSpeed, serial_no: 'test-solar-1',
-        endpoint: '/device-info/update-remote-control', csrfToken: 'test-csrf'
+        endpoint: '/devices/update-remote-control', csrfToken: 'test-csrf'
     });
     return { container, toggle, label, controls, feedback, slider, speedValue, savedSpeed };
 }
@@ -73,7 +73,7 @@ function label(speed) {
     };
 
     try {
-        const blade = fs.readFileSync(path.join(__dirname, '../../resources/views/device-info.blade.php'), 'utf8');
+        const blade = fs.readFileSync(path.join(__dirname, '../../resources/views/view-device.blade.php'), 'utf8');
         const range = blade.match(/<input type="range"[\s\S]*?>/)[0];
         for (const attribute of ['id="remote-motor-speed"', 'min="-100"', 'max="100"', 'step="10"', 'value="0"']) {
             assert.ok(range.includes(attribute), 'Range must include ' + attribute);
@@ -113,7 +113,7 @@ function label(speed) {
         automatic.toggle.checked = true;
         await automatic.toggle.change();
         assert.equal(requests.length, 1);
-        assert.equal(requests[0].url, '/device-info/update-remote-control');
+        assert.equal(requests[0].url, '/devices/update-remote-control');
         assert.equal(requests[0].method, 'POST');
         assert.equal(requests[0].credentials, 'same-origin');
         assert.equal(requests[0].headers['X-CSRF-TOKEN'], 'test-csrf');

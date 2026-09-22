@@ -1,6 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import DeviceInfoPage from './DeviceInfoPage.vue';
+import ViewDevicePage from './ViewDevicePage.vue';
 import HistoryCharts from './HistoryCharts.vue';
 import { requestJson } from '../../shared/api/client';
 vi.mock('../../shared/api/client', () => ({ requestJson: vi.fn() }));
@@ -27,7 +27,7 @@ afterEach(() => {
     document.body.innerHTML = '';
 });
 it('opens on the summary and exposes each section through accessible keyboard tabs without sending commands', async () => {
-    const wrapper = mount(DeviceInfoPage, { props, attachTo: document.body });
+    const wrapper = mount(ViewDevicePage, { props, attachTo: document.body });
     expect(wrapper.get('#device-panel-overview').isVisible()).toBe(true);
     expect(wrapper.get('#device-panel-control').isVisible()).toBe(false);
     expect(wrapper.findComponent(HistoryCharts).props('active')).toBe(false);
@@ -44,7 +44,7 @@ it('opens on the summary and exposes each section through accessible keyboard ta
 });
 it('retains confirmed control state across sections and updates the overview only after a successful save', async () => {
     requestJson.mockResolvedValue({ success: true, mode: 1, motor_speed: 0 });
-    const wrapper = mount(DeviceInfoPage, { props });
+    const wrapper = mount(ViewDevicePage, { props });
     const control = wrapper.get('#remote-mode').element;
     await wrapper.get('#device-tab-control').trigger('click');
     await wrapper.get('#remote-mode').setValue(true);
@@ -58,7 +58,7 @@ it('retains confirmed control state across sections and updates the overview onl
     wrapper.unmount();
 });
 it('moves focus into History when the overview shortcut hides its source button', async () => {
-    const wrapper = mount(DeviceInfoPage, { props, attachTo: document.body });
+    const wrapper = mount(ViewDevicePage, { props, attachTo: document.body });
     const shortcut = wrapper.get('#device-panel-overview button');
     shortcut.element.focus();
     await shortcut.trigger('click');
@@ -68,7 +68,7 @@ it('moves focus into History when the overview shortcut hides its source button'
     wrapper.unmount();
 });
 it('shows missing telemetry explicitly instead of presenting placeholder zero readings', () => {
-    const wrapper = mount(DeviceInfoPage, {
+    const wrapper = mount(ViewDevicePage, {
         props: {
             ...props,
             status: { State: 0, Updated: 'N/A', 'Temperature (°C)': 0, 'Motor Speed': 0 },
@@ -80,7 +80,7 @@ it('shows missing telemetry explicitly instead of presenting placeholder zero re
 });
 
 it('embeds device details without page navigation and requests the edit modal from its parent', async () => {
-    const wrapper = mount(DeviceInfoPage, { props: { ...props, embedded: true } });
+    const wrapper = mount(ViewDevicePage, { props: { ...props, embedded: true } });
     expect(wrapper.find('h1').exists()).toBe(false);
     expect(wrapper.find('.device-back').exists()).toBe(false);
     expect(wrapper.get('.device-heading').text()).toContain('Solar tracker');
@@ -96,12 +96,12 @@ it('embeds device details without page navigation and requests the edit modal fr
 });
 
 it('keeps standalone navigation and hides editing when the server supplies no edit link', () => {
-    const wrapper = mount(DeviceInfoPage, { props });
+    const wrapper = mount(ViewDevicePage, { props });
     expect(wrapper.get('h1').text()).toBe('Test tracker');
     expect(wrapper.get('.device-back').attributes('href')).toBe('/dashboard');
     expect(wrapper.get('.device-heading a').attributes('href')).toBe('/edit-device/1');
     wrapper.unmount();
-    const readOnly = mount(DeviceInfoPage, {
+    const readOnly = mount(ViewDevicePage, {
         props: { ...props, embedded: true, links: { ...props.links, edit: null } },
     });
     expect(readOnly.find('.device-heading button').exists()).toBe(false);

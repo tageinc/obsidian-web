@@ -57,7 +57,7 @@ class VueWorkflowPagesTest extends TestCase
         return Device::create(array_merge([
             'user_id' => $owner->id, 'serial_no' => $serial,
             'alias' => $serial.' alias', 'sku' => 'SKU', 'order_no' => 'ORDER',
-            'address_1' => '1 Device Street', 'city' => 'Vancouver', 'state' => 'BC',
+            'address_1' => '1 Device Street', 'city' => 'Vancouver', 'address_state' => 'BC',
             'zip_code' => 'V6B 1A1', 'country' => 'CA', 'latitude' => 0, 'longitude' => 0,
         ], $attributes));
     }
@@ -88,9 +88,8 @@ class VueWorkflowPagesTest extends TestCase
     public function test_device_creation_payload_uses_profile_defaults_and_allowlisted_hardware(): void
     {
         $props = $this->props($this->actingAs($this->owner)->withSession([
-            '_old_input' => ['alias' => 'Retained alias', 'latitude' => '0', 'status_notification' => 1, 'user_id' => $this->other->id],
-        ])->get('/create-device'), 'create-device');
-        $this->assertTrue($props['creating']);
+            '_old_input' => ['_creation_modal' => '1', 'alias' => 'Retained alias', 'latitude' => '0', 'status_notification' => 1, 'user_id' => $this->other->id],
+        ])->get('/dashboard'), 'dashboard')['creation'];
         $this->assertSame(route('create-device.store'), $props['action']);
         $this->assertSame('Retained alias', $props['values']['alias']);
         $this->assertSame('0', $props['values']['latitude']);
@@ -134,7 +133,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame('Saved device', $props['success']);
         $this->assertSame(route('all-devices'), $props['mapEndpoints']['all']);
         $this->assertSame(route('paginated-devices'), $props['mapEndpoints']['paginated']);
-        $this->assertSame(['id', 'alias', 'serial', 'sku', 'address', 'state', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
+        $this->assertSame(['id', 'alias', 'serial', 'sku', 'address', 'state', 'status', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
         $this->assertSame('OWNED-2', $props['devices'][0]['serial']);
         $this->assertSame('<SKU>', $props['devices'][0]['sku']);
         $this->assertSame('1 Device Street, Suite 2', $props['devices'][0]['address']);

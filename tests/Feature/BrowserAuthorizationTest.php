@@ -45,7 +45,7 @@ class BrowserAuthorizationTest extends TestCase
             $this->actingAs($user);
             $status = $user->is($this->other) ? 403 : 200;
             foreach ([
-                '/device-info/'.$this->device->id,
+                '/devices/'.$this->device->id,
                 '/device/'.$this->device->id.'/fetch-graph-data',
                 '/device/'.$this->device->id.'/refresh',
             ] as $url) {
@@ -53,6 +53,24 @@ class BrowserAuthorizationTest extends TestCase
             }
             $this->postJson('/device/refresh/'.$this->device->id)->assertStatus($status);
         }
+    }
+
+    public function test_device_resource_api_requires_authentication_and_ownership(): void
+    {
+        $url = '/api/devices/'.$this->device->id;
+        $this->getJson($url)->assertUnauthorized();
+        Sanctum::actingAs($this->owner);
+        $response = $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.id', $this->device->id)
+            ->assertJsonPath('data.state', 'active')
+            ->assertJsonPath('data.status', 'no geo data');
+        $this->assertArrayNotHasKey('user_id', $response->json('data'));
+        $this->getJson('/api/devices/999999')->assertNotFound();
+        $this->get('/device-info/'.$this->device->id)->assertNotFound();
+        Sanctum::actingAs($this->other);
+        $this->getJson($url)->assertForbidden();
+        Sanctum::actingAs($this->admin);
+        $this->getJson($url)->assertOk();
     }
 
     public function test_remote_mutation_denies_foreign_devices_before_writing(): void
@@ -68,18 +86,18 @@ class BrowserAuthorizationTest extends TestCase
 
     public function test_guest_and_unverified_browser_requests_cannot_read_or_command_a_device(): void
     {
-        $this->get('/device-info/'.$this->device->id)->assertRedirect('/login');
+        $this->get('/devices/'.$this->device->id)->assertRedirect('/login');
         $this->postJson('/update-solar-tracker', ['serial_no' => $this->device->serial_no])->assertUnauthorized();
         $this->owner->email_verified_at = null;
         $this->owner->save();
-        $this->actingAs($this->owner)->get('/device-info/'.$this->device->id)->assertRedirect('/email/verify');
+        $this->actingAs($this->owner)->get('/devices/'.$this->device->id)->assertRedirect('/email/verify');
         $this->postJson('/update-solar-tracker', ['serial_no' => $this->device->serial_no])->assertForbidden();
         $this->assertDatabaseCount('solar_tracker_remote_controls', 0);
     }
 
     public function test_missing_devices_and_invalid_remote_payload_keep_existing_responses(): void
     {
-        $this->actingAs($this->owner)->get('/device-info/999999')->assertRedirect('/device-manager');
+        $this->actingAs($this->owner)->get('/devices/999999')->assertNotFound();
         $this->getJson('/device/999999/fetch-graph-data')->assertNotFound();
         $this->postJson('/update-solar-tracker', ['serial_no' => ['invalid']])
             ->assertUnprocessable()->assertJsonValidationErrors('serial_no');
@@ -115,7 +133,7 @@ class BrowserAuthorizationTest extends TestCase
             $this->postJson('/upload-firmware')->assertForbidden();
             $this->postJson('/upload-config')->assertForbidden();
             $this->get('/edit-device/'.$this->device->id)->assertForbidden();
-            $this->get('/device-info/'.$this->device->id)->assertForbidden();
+            $this->get('/devices/'.$this->device->id)->assertForbidden();
         }
     }
 
