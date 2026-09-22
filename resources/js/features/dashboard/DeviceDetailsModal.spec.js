@@ -5,8 +5,8 @@ import { requestJson } from '../../shared/api/client.js';
 
 vi.mock('../../shared/api/client.js', () => ({ requestJson: vi.fn() }));
 const mounted = [];
-const info = { page: 'view-device', props: { device: { alias: 'Tracker' } } };
-const edit = { page: 'edit-device', props: { values: { alias: 'Tracker' } } };
+const info = { page: 'view-device', props: { device: { name: 'Tracker' } } };
+const edit = { page: 'edit-device', props: { values: { name: 'Tracker' } } };
 function modal(mode = 'view') {
     const wrapper = mount(DeviceDetailsModal, {
         attachTo: document.body,
@@ -14,7 +14,7 @@ function modal(mode = 'view') {
             mode,
             device: {
                 id: 1,
-                alias: 'Tracker',
+                name: 'Tracker',
                 links: { view: '/devices/1', edit: '/edit-device/1' },
             },
         },
@@ -69,7 +69,7 @@ describe('device view and edit modal loading', () => {
         await flushPromises();
         expect(wrapper.findComponent({ name: 'ViewDevicePage' }).exists()).toBe(false);
         const form = wrapper.getComponent({ name: 'DeviceForm' });
-        expect(form.props()).toMatchObject({ asyncSubmit: true, values: { alias: 'Tracker' } });
+        expect(form.props()).toMatchObject({ asyncSubmit: true, values: { name: 'Tracker' } });
         form.vm.$emit('pending-change', true);
         await flushPromises();
         expect(wrapper.getComponent({ name: 'FormModal' }).props('pending')).toBe(true);

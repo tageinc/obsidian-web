@@ -15,6 +15,10 @@ class EditDeviceController extends Controller
     {
         $device = $this->editableDevice(request(), $id);
 
+        if (! request()->wantsJson() || request()->header('X-Obsidian-Modal') !== '1') {
+            return redirect()->route('devices.show', ['id' => $id, 'edit' => 1]);
+        }
+
         return view('edit-device', compact('device'));
     }
 
@@ -22,7 +26,10 @@ class EditDeviceController extends Controller
     {
         $device = $this->editableDevice($request, $id);
         $validated = $request->validate([
-            'alias' => 'required|string|max:255',
+            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('devices', 'serial_no')->ignore($device->id)],
+            'sku' => 'sometimes|nullable|string|max:255',
+            'order_no' => 'sometimes|nullable|string|max:255',
+            'name' => 'required|string|max:255',
             'address_1' => 'required|string|max:255',
             'address_2' => 'nullable|string|max:255',
             'city' => 'required|string|max:255',
@@ -33,23 +40,7 @@ class EditDeviceController extends Controller
             'longitude' => 'nullable|required_with:latitude|numeric|between:-180,180',
         ]);
 
-        DB::transaction(function () use ($device, $validated) {
-            $device->fill($validated);
-            $coordinatesChanged = $device->isDirty(['latitude', 'longitude']);
-            $device->save();
-
-            if ($coordinatesChanged) {
-                $geocode = GeoCode::where('serial_no', $device->serial_no)
-                    ->latest('updated_at')->first() ?? new GeoCode([
-                        'serial_no' => $device->serial_no,
-                        'status' => 'none',
-                    ]);
-                $geocode->fill([
-                    'latitude' => $device->latitude,
-                    'longitude' => $device->longitude,
-                ])->save();
-            }
-        });
+        $this->saveDeviceFields($device, $validated);
 
         if ($request->wantsJson()) {
             if ($request->header('X-Obsidian-Modal') === '1') {
@@ -61,6 +52,52 @@ class EditDeviceController extends Controller
 
         return redirect()->route('edit-device', ['id' => $id])
             ->with('success', 'Device updated successfully.');
+    }
+
+    public function patch(Request $request, $id)
+    {
+        $device = $this->editableDevice($request, $id);
+        $rules = [
+            'name' => 'sometimes|required|string|max:255',
+            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('devices', 'serial_no')->ignore($device->id)],
+            'sku' => 'sometimes|nullable|string|max:255',
+            'order_no' => 'sometimes|nullable|string|max:255',
+            'address_1' => 'sometimes|nullable|string|max:255',
+            'address_2' => 'sometimes|nullable|string|max:255',
+            'city' => 'sometimes|nullable|string|max:255',
+            'address_state' => 'sometimes|nullable|string|max:255',
+            'zip_code' => 'sometimes|nullable|string|max:255',
+            'country' => 'sometimes|nullable|string|max:255',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
+        ];
+        $validated = $request->validate($rules + ['status' => 'prohibited', 'state' => 'prohibited']);
+        $validated = array_intersect_key($validated, $rules);
+        $this->saveDeviceFields($device, $validated);
+        return response()->json(['values' => $device->only(array_keys($rules))]);
+    }
+
+    private function saveDeviceFields(Device $device, array $validated): void
+    {
+        DB::transaction(function () use ($device, $validated) {
+            $oldSerial = $device->serial_no;
+            $device->fill($validated);
+            $coordinatesChanged = $device->isDirty(['latitude', 'longitude']);
+            if ($device->isDirty('serial_no')) {
+                foreach (['geocode', 'solar_tracker_logs', 'solar_tracker_remote_controls'] as $table) {
+                    if (DB::table($table)->where('serial_no', $device->serial_no)->exists()) {
+                        throw \Illuminate\Validation\ValidationException::withMessages(['serial_no' => 'This serial number already has device records.']);
+                    }
+                    DB::table($table)->where('serial_no', $oldSerial)->update(['serial_no' => $device->serial_no]);
+                }
+            }
+            $device->save();
+            if ($coordinatesChanged) {
+                $geocode = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->first()
+                    ?? new GeoCode(['serial_no' => $device->serial_no]);
+                $geocode->fill(['latitude' => $device->latitude, 'longitude' => $device->longitude])->save();
+            }
+        });
     }
 
     private function editableDevice(Request $request, $id): Device
@@ -93,18 +130,18 @@ class EditDeviceController extends Controller
         return redirect()->route('edit-device', ['id' => $id])->with('success', 'Address 1 updated successfully.');
     }
 
-    public function updateProductAlias(Request $request, $id)
+    public function updateDeviceName(Request $request, $id)
 {
     $device = $this->editableDevice($request, $id);
     $request->validate([
-        'alias' => 'required|string|max:255', // Adjust validation rules as needed
+        'name' => 'required|string|max:255', // Adjust validation rules as needed
     ]);
 
-    $Alias = $request->input('alias');
+    $Name = $request->input('name');
 
-    $device->update(['alias' => $Alias]);
+    $device->update(['name' => $Name]);
 
-    return redirect()->route('edit-device', ['id' => $id])->with('success', 'Product Alias updated successfully.');
+    return redirect()->route('edit-device', ['id' => $id])->with('success', 'Device name updated successfully.');
 }
 
 
@@ -185,16 +222,16 @@ class EditDeviceController extends Controller
         return response()->json(['message' => 'Address 1 updated successfully.'], 200);
     }
 
-    public function apiUpdateProductAlias(Request $request, $id)
+    public function apiUpdateDeviceName(Request $request, $id)
     {
         $request->validate([
-            'alias' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
         ]);
 
-        $alias = $request->input('alias');
-        Device::where('id', $id)->update(['alias' => $alias]);
+        $name = $request->input('name');
+        Device::where('id', $id)->update(['name' => $name]);
 
-        return response()->json(['message' => 'Product Alias updated successfully.'], 200);
+        return response()->json(['message' => 'Device name updated successfully.'], 200);
     }
 
     public function apiUpdateAddress2(Request $request, $id)

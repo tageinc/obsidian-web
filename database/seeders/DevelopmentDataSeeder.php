@@ -38,11 +38,11 @@ class DevelopmentDataSeeder extends Seeder
                 $latitude = random_int(-90000000, 90000000) / 1000000;
                 $longitude = random_int(-180000000, 180000000) / 1000000;
                 $status = self::STATUSES[array_rand(self::STATUSES)];
-                $alias = $adjectives[array_rand($adjectives)].' '.$names[array_rand($names)].' '.$index;
+                $name = $adjectives[array_rand($adjectives)].' '.$names[array_rand($names)].' '.$index;
                 DB::table('devices')->updateOrInsert(['serial_no' => $serial], [
                     'user_id' => $user->id,
                     'latitude' => $latitude, 'longitude' => $longitude,
-                    'sku' => 'SP1', 'alias' => $alias, 'order_no' => sprintf('DEV-%04d', $index),
+                    'sku' => 'SP1', 'name' => $name, 'order_no' => sprintf('DEV-%04d', $index),
                     'address_1' => '1 Development Way', 'city' => 'Testville', 'address_state' => 'CA',
                     'country' => 'US', 'zip_code' => '90000', 'status_notification' => 0,
                     'sms_notification' => 0, 'created_at' => now(), 'updated_at' => now(),

@@ -6,7 +6,7 @@ import { requestJson } from '../../shared/api/client';
 vi.mock('../../shared/api/client', () => ({ requestJson: vi.fn() }));
 const props = {
     device: {
-        alias: 'Test tracker',
+        name: 'Test tracker',
         serial: 'TEST-1',
         details: { Hardware: 'Solar Tracker', SKU: 'TEST', Address: '1 Test Street' },
     },
@@ -79,16 +79,15 @@ it('shows missing telemetry explicitly instead of presenting placeholder zero re
     wrapper.unmount();
 });
 
-it('embeds device details without page navigation and requests the edit modal from its parent', async () => {
+it('embeds device details without page navigation without a standalone edit link', async () => {
     const wrapper = mount(ViewDevicePage, { props: { ...props, embedded: true } });
     expect(wrapper.find('h1').exists()).toBe(false);
-    expect(wrapper.find('.device-back').exists()).toBe(false);
+    expect(wrapper.find('nav[aria-label="Breadcrumb"]').exists()).toBe(false);
     expect(wrapper.get('.device-heading').text()).toContain('Solar tracker');
     expect(wrapper.get('.device-heading').text()).toContain('TEST-1');
     expect(wrapper.get('#sensors-title').element.tagName).toBe('H3');
     expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);
-    await wrapper.get('.device-heading button').trigger('click');
-    expect(wrapper.emitted('edit')).toEqual([[]]);
+    expect(wrapper.find('.device-heading button').exists()).toBe(false);
     expect(requestJson).not.toHaveBeenCalled();
     await wrapper.get('#device-tab-history').trigger('click');
     expect(wrapper.findComponent(HistoryCharts).props('active')).toBe(true);
@@ -98,12 +97,24 @@ it('embeds device details without page navigation and requests the edit modal fr
 it('keeps standalone navigation and hides editing when the server supplies no edit link', () => {
     const wrapper = mount(ViewDevicePage, { props });
     expect(wrapper.get('h1').text()).toBe('Test tracker');
-    expect(wrapper.get('.device-back').attributes('href')).toBe('/dashboard');
-    expect(wrapper.get('.device-heading a').attributes('href')).toBe('/edit-device/1');
+    expect(wrapper.get('nav[aria-label="Breadcrumb"] a').attributes('href')).toBe('/dashboard');
+    expect(wrapper.find('.device-heading a').exists()).toBe(false);
     wrapper.unmount();
     const readOnly = mount(ViewDevicePage, {
         props: { ...props, embedded: true, links: { ...props.links, edit: null } },
     });
     expect(readOnly.find('.device-heading button').exists()).toBe(false);
     readOnly.unmount();
+});
+
+it('provides inline device fields without a dedicated edit link or editable status', () => {
+    const wrapper = mount(ViewDevicePage, { props: {
+        ...props, links: { ...props.links, update: '/devices/1' },
+        values: { name: 'Tracker', serial_no: 'TEST-1', sku: 'SP1' },
+    } });
+    expect(wrapper.findAllComponents({ name: 'InlineDeviceField' })).toHaveLength(12);
+    expect(wrapper.find('[aria-label="Edit status"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Edit state"]').exists()).toBe(false);
+    expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);
+    wrapper.unmount();
 });

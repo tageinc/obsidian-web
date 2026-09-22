@@ -51,7 +51,7 @@
                 'csrfToken' => csrf_token(),
                 'links' => [
                     'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
-                    'createDevice' => route('create-device'), 'login' => route('login'),
+                    'login' => route('login'),
                     'register' => route('register'), 'logout' => route('logout'),
                     'admin' => Auth::check() && Auth::user()->isDeveloper() ? route('developer-workspace') : null,
                 ],
@@ -100,9 +100,6 @@
 								<a class="dropdown-item"  href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a>
                                 <a class="dropdown-item" href="{{ route('profile') }}">
                                     {{ __('Profile') }}
-                                </a>
-                                <a class="dropdown-item" href="{{ route('create-device') }}">
-                                    {{ __('Create Device') }}
                                 </a>
 								@if(Auth::user() && Auth::user()->isDeveloper())
                                 <a class="dropdown-item" href="{{ route('developer-workspace') }}">

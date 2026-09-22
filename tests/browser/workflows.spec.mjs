@@ -131,7 +131,7 @@ test('account dropdown supports keyboard, Escape, mobile navigation and native l
     await expect(account).toBeFocused();
     await expect(dropdown.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: 'Profile', exact: true })).toBeVisible();
-    await expect(dropdown.getByRole('link', { name: 'Create Device' })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Create Device' })).toHaveCount(0);
     await expect(dropdown.getByRole('link', { name: 'Developer Workspace' })).toHaveCount(0);
     const dropdownBounds = await dropdown.boundingBox();
     expect(dropdownBounds).not.toBeNull();
@@ -195,7 +195,7 @@ test('dashboard reports loading, failed map reads, retry and a genuinely empty a
     await expect(page.getByText('No devices available for this map.')).toBeVisible();
 });
 
-test('device actions stay usable and alias search keeps the table and map in sync', async ({
+test('device actions stay usable and name search keeps the table and map in sync', async ({
     page,
     isMobile,
 }) => {
@@ -330,7 +330,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(actions).toBeFocused();
 
     await page.goto('/dashboard?show=20&page=2');
-    const search = page.getByLabel('Search by device alias', { exact: true });
+    const search = page.getByLabel('Search by device name', { exact: true });
     await search.fill('simulator');
     const matchingMapRequest = page.waitForRequest((request) => {
         const url = new URL(request.url());
@@ -365,7 +365,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(page.getByText('No devices available for this map.')).toBeVisible();
     await expect(
         page.getByText(
-            'No devices match “no-matching-fixture”. Try another alias or clear the search.',
+            'No devices match “no-matching-fixture”. Try another name or clear the search.',
         ),
     ).toBeVisible();
     await expect(page.getByText('No devices registered yet.', { exact: false })).toHaveCount(0);
@@ -379,13 +379,13 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
     await checkAccessibility(page);
     expect(deletionRequests).toEqual([]);
-    const alias = page
+    const name = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');
-    await expect(alias).toHaveAttribute('href', /\/devices\/1$/);
-    await alias.hover();
+    await expect(name).toHaveAttribute('href', /\/devices\/1$/);
+    await name.hover();
     await checkAccessibility(page);
-    await alias.click();
+    await name.click();
     await expect(page).toHaveURL(/\/dashboard(?:\?|$)/);
     const viewDialog = page.getByRole('dialog', { name: 'View device', exact: true });
     await expect(viewDialog).toBeVisible();
@@ -393,7 +393,7 @@ test('device actions stay usable and alias search keeps the table and map in syn
     await expect(viewDialog.getByText('BROWSER-SIMULATOR-1', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(viewDialog).not.toBeVisible();
-    await expect(alias).toBeFocused();
+    await expect(name).toBeFocused();
 });
 
 test('device view modal includes history and control without issuing commands and switches directly to edit', async ({
@@ -414,10 +414,10 @@ test('device view modal includes history and control without issuing commands an
     await login(page);
     await page.goto('/dashboard?show=20&search=simulator');
     const dashboardUrl = page.url();
-    const alias = page
+    const name = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');
-    await alias.click();
+    await name.click();
     const view = page.getByRole('dialog', { name: 'View device', exact: true });
     await expect(view.getByRole('tab', { name: 'Overview', exact: true })).toHaveAttribute(
         'aria-selected',
@@ -457,7 +457,7 @@ test('device view modal includes history and control without issuing commands an
     await checkModalKeyboardAndViewport(page, edit);
     await page.keyboard.press('Escape');
     await expect(edit).not.toBeVisible();
-    await expect(alias).toBeFocused();
+    await expect(name).toBeFocused();
     expect(modalReads).toEqual([
         { path: '/devices/1', modal: '1' },
         { path: '/edit-device/1', modal: '1' },
@@ -487,10 +487,10 @@ test('device modal shows loading and recoverable errors without navigating away'
             await route.continue();
         }
     });
-    const alias = page
+    const name = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');
-    await alias.click();
+    await name.click();
     const dialog = page.getByRole('dialog', { name: 'View device', exact: true });
     await expect(dialog.getByRole('status')).toHaveText('Loading device…');
     await expect(page).toHaveURL(/\/dashboard$/);
@@ -504,7 +504,7 @@ test('device modal shows loading and recoverable errors without navigating away'
     expect(reads).toEqual(['1', '1']);
     await dialog.getByRole('button', { name: 'Close device', exact: true }).click();
     await expect(dialog).not.toBeVisible();
-    await expect(alias).toBeFocused();
+    await expect(name).toBeFocused();
 });
 
 test('device edit modal retains server validation, guards pending and reloads the same dashboard after saving', async ({
@@ -591,7 +591,7 @@ test('device edit modal retains server validation, guards pending and reloads th
     await expect(page).toHaveURL(dashboardUrl);
     await expect(edit).not.toBeVisible();
     await expect(page.getByText('Device updated successfully.', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('Search by device alias', { exact: true })).toHaveValue(
+    await expect(page.getByLabel('Search by device name', { exact: true })).toHaveValue(
         'simulator',
     );
     await actions.click();
@@ -712,7 +712,7 @@ test('profile and device forms retain one save action, server errors and entered
     await page.getByLabel('Longitude', { exact: true }).fill('0');
     await page.getByRole('button', { name: 'Create Device', exact: true }).click();
     await expect(page.locator('#serial_no')).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.locator('#alias')).toHaveValue('Invalid duplicate fixture');
+    await expect(page.locator('#name')).toHaveValue('Invalid duplicate fixture');
     await checkAccessibility(page);
 
     await page.goto('/edit-device/1');
@@ -875,10 +875,10 @@ test('remote motor speed previews then saves the chosen range value and restores
         return route.fulfill({ response, json: payload });
     });
     await login(page);
-    const alias = page
+    const name = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');
-    await alias.click();
+    await name.click();
     const dialog = page.getByRole('dialog', { name: 'View device', exact: true });
     await dialog.getByRole('tab', { name: 'Control', exact: true }).click();
     const remote = dialog.locator('section[aria-labelledby="remote-title"]');
@@ -963,8 +963,8 @@ test('remote motor speed previews then saves the chosen range value and restores
     expect(commands).toHaveLength(6);
     await expect(editDevice).toBeFocused();
     await dialog.getByRole('button', { name: 'Close device', exact: true }).click();
-    await expect(alias).toBeFocused();
-    await alias.click();
+    await expect(name).toBeFocused();
+    await name.click();
     await dialog.getByRole('tab', { name: 'Control', exact: true }).click();
     await expect(mode).toBeChecked();
     await expect(slider).toHaveValue('100');

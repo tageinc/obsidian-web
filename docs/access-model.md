@@ -28,10 +28,7 @@ POST URLs remain `/upload-firmware` and `/upload-config`, with this developer
 boundary enforced on the server. Existing browser download authorization and
 external firmware/mobile API contracts are unchanged.
 
-For compatibility, internal `AdminControlCenterController`, `AdminPage`, the
-`admin-control-center.blade.php` filename, the `admin` frontend page/feature flag,
-and `AdminUserSeeder` keep their names. They implement Developer Workspace, not
-a separate role. The seeder reads `DEVELOPER_EMAIL` through application config;
-the existing `ADMIN_BOOTSTRAP_PASSWORD` and `ADMIN_BOOTSTRAP_NAME` secret inputs
-remain supported. It creates a missing configured account once and does not
-modify existing credentials.
+`DeveloperSeeder` runs in local and production environments. It reads
+`DEVELOPER_EMAIL`, `DEVELOPER_BOOTSTRAP_PASSWORD`, and `DEVELOPER_BOOTSTRAP_NAME`.
+It creates a missing configured developer account once and preserves existing
+credentials. Local `UserSeeder` uses `LOCAL_DEVELOPER_PASSWORD`.

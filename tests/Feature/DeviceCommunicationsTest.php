@@ -7,7 +7,7 @@ use App\Jobs\SendAppUpdateMail;
 use App\Models\Api\SolarTrackerLog;
 use App\Models\Device;
 use Carbon\Carbon;
-use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\DeveloperSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -120,30 +120,57 @@ class DeviceCommunicationsTest extends TestCase
     public function test_developer_user_seeder_creates_the_configured_account_once(): void
     {
         config(['app.developer_email' => 'developer@example.test']);
-        putenv('ADMIN_BOOTSTRAP_PASSWORD=seed-password');
+        putenv('DEVELOPER_BOOTSTRAP_PASSWORD=seed-password');
 
         try {
-            $this->seed(AdminUserSeeder::class);
-            $this->seed(AdminUserSeeder::class);
+            $this->seed(DeveloperSeeder::class);
+            $this->seed(DeveloperSeeder::class);
 
             $admin = DB::table('users')->where('email', 'developer@example.test')->first();
             $this->assertNotNull($admin);
             $this->assertTrue(Hash::check('seed-password', $admin->password));
             $this->assertSame(1, DB::table('users')->where('email', 'developer@example.test')->count());
         } finally {
-            putenv('ADMIN_BOOTSTRAP_PASSWORD');
+            putenv('DEVELOPER_BOOTSTRAP_PASSWORD');
+        }
+    }
+
+    public function test_developer_seeder_includes_and_preserves_the_requested_profile(): void
+    {
+        require_once database_path('migrations/2026_09_20_000001_add_registration_profile_fields_to_users_table.php');
+        (new \AddRegistrationProfileFieldsToUsersTable())->up();
+        config(['app.developer_email' => 'andre.troncoso@tezca.net']);
+        putenv('DEVELOPER_BOOTSTRAP_PASSWORD=seed-password');
+        try {
+            $this->seed(DeveloperSeeder::class);
+            $this->assertDatabaseHas('users', [
+                'email' => 'andre.troncoso@tezca.net', 'name' => 'Andre Troncoso',
+                'phone_number' => '19495296737', 'address_1' => '1605 E 4TH ST',
+                'address_2' => '200', 'city' => 'SANTA ANA', 'state' => 'CA',
+                'zip_code' => '92701', 'country' => 'United States',
+            ]);
+            $user = \App\Models\User::where('email', 'andre.troncoso@tezca.net')->firstOrFail();
+            $password = $user->password;
+            $user->update(['address_2' => 'Updated suite']);
+            putenv('DEVELOPER_BOOTSTRAP_PASSWORD=different-password');
+            $this->seed(DeveloperSeeder::class);
+            $this->assertSame($password, $user->fresh()->password);
+            $this->assertSame('Updated suite', $user->fresh()->address_2);
+            $this->assertDatabaseCount('users', 1);
+        } finally {
+            putenv('DEVELOPER_BOOTSTRAP_PASSWORD');
         }
     }
 
     public function test_developer_seeder_does_not_use_old_email_policy_when_new_setting_is_missing(): void
     {
         config(['app.developer_email' => null, 'app.admin_email' => 'old-admin@example.test']);
-        putenv('ADMIN_BOOTSTRAP_PASSWORD=seed-password');
+        putenv('DEVELOPER_BOOTSTRAP_PASSWORD=seed-password');
         try {
-            $this->seed(AdminUserSeeder::class);
+            $this->seed(DeveloperSeeder::class);
             $this->assertDatabaseCount('users', 0);
         } finally {
-            putenv('ADMIN_BOOTSTRAP_PASSWORD');
+            putenv('DEVELOPER_BOOTSTRAP_PASSWORD');
         }
     }
 

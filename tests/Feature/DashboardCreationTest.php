@@ -44,7 +44,7 @@ class DashboardCreationTest extends TestCase
     private function fields(array $overrides = []): array
     {
         return array_merge([
-            '_creation_modal' => '1', 'alias' => 'Garden tracker',
+            '_creation_modal' => '1', 'name' => 'Garden tracker',
             'serial_no' => 'MODAL-TRACKER-1', 'sku' => 'SP1', 'order_no' => 'ORDER-1',
             'address_1' => '20 Garden Street', 'address_2' => 'Rear garden', 'city' => 'Vancouver',
             'address_state' => 'BC', 'zip_code' => 'V6B 1A1', 'country' => 'CA',
@@ -59,7 +59,7 @@ class DashboardCreationTest extends TestCase
         $this->get('/create-device')->assertRedirect('/dashboard?create=1');
         $this->assertSame('10 Profile Street', $creation['values']['address_1']);
         $this->assertSame('CA', $creation['values']['country']);
-        $this->assertNull($creation['values']['alias']);
+        $this->assertNull($creation['values']['name']);
         $this->assertSame('34.052235', $creation['values']['latitude']);
         $this->assertSame('-118.243683', $creation['values']['longitude']);
         $this->assertArrayNotHasKey('hardware_id', $creation['values']);
@@ -68,7 +68,7 @@ class DashboardCreationTest extends TestCase
         $this->assertFalse($creation['initiallyOpen']);
         $this->assertSame([], $creation['errors']);
         $this->assertSame([
-            'alias', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude',
+            'name', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude',
             'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country',
         ], array_keys($creation['values']));
         $response->assertDontSee('hash-must-not-be-serialized')->assertDontSee('Retired device');
@@ -91,11 +91,11 @@ class DashboardCreationTest extends TestCase
     public function test_unrelated_old_input_and_feedback_do_not_fill_or_open_creation(): void
     {
         $props = $this->props($this->withSession([
-            '_old_input' => ['alias' => 'Other form value', 'city' => 'Other city', 'password' => 'secret-marker', 'user_id' => 999],
-            'errors' => (new ViewErrorBag)->put('default', new MessageBag(['alias' => ['Other form error.']])),
+            '_old_input' => ['name' => 'Other form value', 'city' => 'Other city', 'password' => 'secret-marker', 'user_id' => 999],
+            'errors' => (new ViewErrorBag)->put('default', new MessageBag(['name' => ['Other form error.']])),
             'error' => 'Device unavailable',
         ])->get('/dashboard'));
-        $this->assertNull($props['creation']['values']['alias']);
+        $this->assertNull($props['creation']['values']['name']);
         $this->assertSame('Toronto', $props['creation']['values']['city']);
         $this->assertFalse($props['creation']['initiallyOpen']);
         $this->assertSame([], $props['creation']['errors']);
@@ -106,9 +106,9 @@ class DashboardCreationTest extends TestCase
 
     public function test_invalid_native_modal_submission_redirects_back_and_reopens_with_only_creation_feedback(): void
     {
-        $alias = '</script><img src=x onerror=alert(1)>';
+        $name = '</script><img src=x onerror=alert(1)>';
         $this->from('/dashboard?search=roof&show=20')->post('/create-device', $this->fields([
-            'alias' => $alias, 'city' => '', 'latitude' => 91,
+            'name' => $name, 'city' => '', 'latitude' => 91,
             'password' => 'secret-marker', 'api_token' => 'secret-marker', 'user_id' => 999,
         ]))->assertRedirect('/dashboard')
             ->assertSessionHasErrors(['city', 'latitude'])
@@ -120,7 +120,7 @@ class DashboardCreationTest extends TestCase
         $props = $this->props($response);
         $creation = $props['creation'];
         $this->assertTrue($creation['initiallyOpen']);
-        $this->assertSame($alias, $creation['values']['alias']);
+        $this->assertSame($name, $creation['values']['name']);
         $this->assertSame('MODAL-TRACKER-1', $creation['values']['serial_no']);
         $this->assertNull($creation['values']['city']);
         $this->assertSame('91', (string) $creation['values']['latitude']);
@@ -129,7 +129,7 @@ class DashboardCreationTest extends TestCase
         foreach (['password', 'api_token', 'user_id', '_creation_modal'] as $field) {
             $this->assertArrayNotHasKey($field, $creation['values']);
         }
-        $response->assertDontSee($alias, false)->assertDontSee('secret-marker');
+        $response->assertDontSee($name, false)->assertDontSee('secret-marker');
     }
 
     public function test_modal_feedback_is_scoped_to_creation_fields_and_preserves_session_error_location(): void
@@ -154,7 +154,7 @@ class DashboardCreationTest extends TestCase
             'user_id' => 999, 'status_notification' => 1, 'sms_notification' => 1,
         ]))->assertRedirect('/dashboard')->assertSessionHasNoErrors();
         $this->assertDatabaseHas('devices', [
-            'serial_no' => 'MODAL-TRACKER-1', 'alias' => 'Garden tracker', 'user_id' => $this->owner->id,
+            'serial_no' => 'MODAL-TRACKER-1', 'name' => 'Garden tracker', 'user_id' => $this->owner->id,
             'status_notification' => false, 'sms_notification' => false,
         ]);
         $this->assertDatabaseHas('geocode', [
@@ -162,8 +162,8 @@ class DashboardCreationTest extends TestCase
         ]);
         $props = $this->props($this->get('/dashboard'));
         $this->assertFalse($props['creation']['initiallyOpen']);
-        $this->assertNull($props['creation']['values']['alias']);
+        $this->assertNull($props['creation']['values']['name']);
         $this->assertSame('Device created successfully.', $props['success']);
-        $this->assertSame('Garden tracker', $props['devices'][0]['alias']);
+        $this->assertSame('Garden tracker', $props['devices'][0]['name']);
     }
 }

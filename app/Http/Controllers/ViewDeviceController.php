@@ -33,7 +33,7 @@ class ViewDeviceController extends Controller
             ->latest('updated_at')->orderByDesc('id')->value('status');
 
         return response()->json(['data' => array_merge($device->only([
-            'id', 'serial_no', 'alias', 'sku', 'order_no', 'state',
+            'id', 'serial_no', 'name', 'sku', 'order_no', 'state',
             'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country',
             'latitude', 'longitude', 'created_at', 'updated_at',
         ]), ['status' => $status ?? 'no geo data'])]);

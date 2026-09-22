@@ -22,7 +22,7 @@ const mounted = [];
 const device = (id, overrides = {}) => ({
     id,
     hardwareName: 'Solar tracker',
-    alias: `Tracker ${id}`,
+    name: `Tracker ${id}`,
     serial: `SERIAL-${id}`,
     sku: `SKU-${id}`,
     address: `${id} Device Street`,
@@ -42,7 +42,7 @@ function page(overrides = {}) {
         global: { stubs: { teleport: true } },
         props: {
             csrfToken: 'csrf-test-token',
-            devices: [device(1, { alias: '<img src=x onerror=alert(1)>' })],
+            devices: [device(1, { name: '<img src=x onerror=alert(1)>' })],
             pagination: {
                 currentPage: 2,
                 perPage: 20,
@@ -252,13 +252,13 @@ describe('dashboard workflow', () => {
                 .map((value) => value.text()),
         ).toEqual(['0', '0', '0']);
     });
-    it('does not toggle details when activating the alias or action menu links', async () => {
+    it('does not toggle details when activating the name or action menu links', async () => {
         const wrapper = page({ devices: [device(1)] });
         const row = wrapper.get('.device-table-row');
         const toggle = row.get('button[aria-controls="device-details-1"]');
-        const alias = row.get('a[href="/devices/1"]');
-        alias.element.addEventListener('click', (event) => event.preventDefault());
-        await alias.trigger('click');
+        const name = row.get('a[href="/devices/1"]');
+        name.element.addEventListener('click', (event) => event.preventDefault());
+        await name.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('false');
         await row.get('button[aria-controls="device-actions-1"]').trigger('click');
         await flushPromises();
@@ -268,16 +268,16 @@ describe('dashboard workflow', () => {
         await edit.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('false');
         await row.trigger('click');
-        await alias.trigger('click');
+        await name.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('true');
     });
-    it('submits alias search from the first page, keeps the applied filter on size changes, and clears it explicitly', async () => {
+    it('submits name search from the first page, keeps the applied filter on size changes, and clears it explicitly', async () => {
         const wrapper = page({ search: 'Roof' });
         const searchForm = wrapper.get('form[role="search"]');
         expect(searchForm.attributes()).toMatchObject({ method: 'GET', action: '/dashboard' });
-        await wrapper.get('#device-alias-search').setValue('New alias');
+        await wrapper.get('#device-name-search').setValue('New name');
         expect(Object.fromEntries(new FormData(searchForm.element))).toEqual({
-            search: 'New alias',
+            search: 'New name',
             show: '20',
         });
         const sizeForm = wrapper.get('form:not([role="search"])');
@@ -287,30 +287,30 @@ describe('dashboard workflow', () => {
         });
         expect(wrapper.get('a[href="/dashboard?show=20"]').text()).toBe('Clear search');
         await wrapper.setProps({ search: 'Different' });
-        expect(wrapper.get('#device-alias-search').element.value).toBe('Different');
+        expect(wrapper.get('#device-name-search').element.value).toBe('Different');
     });
-    it('opens view from the alias and edit from the simplified menu, restoring the correct trigger', async () => {
+    it('navigates to the view page and opens edit in a modal, restoring the trigger', async () => {
         const wrapper = page({ devices: [device(1)] });
-        const alias = wrapper.get('a.device-alias');
-        await alias.trigger('click');
-        let modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
-        expect(modal.props()).toMatchObject({ mode: 'view', device: { id: 1 } });
-        await modal.get('button').trigger('click');
+        const name = wrapper.get('a.device-name');
+        expect(name.attributes('href')).toBe('/devices/1');
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        name.element.dispatchEvent(event);
         await flushPromises();
-        expect(document.activeElement).toBe(alias.element);
+        expect(event.defaultPrevented).toBe(false);
+        expect(wrapper.findComponent({ name: 'DeviceDetailsModal' }).exists()).toBe(false);
         const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
         await trigger.trigger('click');
         expect(wrapper.find('#device-actions-1 hr').exists()).toBe(false);
         expect(wrapper.find('#device-actions-1 a[href="/devices/1"]').exists()).toBe(false);
         await wrapper.get('#device-actions-1 a[href="/edit-device/1"]').trigger('click');
-        modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
+        const modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
         expect(modal.props('mode')).toBe('edit');
         expect(trigger.attributes('aria-expanded')).toBe('false');
         await modal.get('button').trigger('click');
         await flushPromises();
         expect(document.activeElement).toBe(trigger.element);
     });
-    it('distinguishes no alias matches from an account with no devices', () => {
+    it('distinguishes no name matches from an account with no devices', () => {
         const wrapper = page({
             search: 'missing',
             devices: [],

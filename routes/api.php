@@ -66,7 +66,7 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
     // Device routes with a prefix
     Route::prefix('device')->group(function () {
         Route::put('{id}/address1', [EditDeviceController::class, 'apiUpdateAddress1'])->name('device.api-update-address1');
-        Route::put('{id}/alias', [EditDeviceController::class, 'apiUpdateProductAlias'])->name('device.api-update-product-alias');
+        Route::put('{id}/name', [EditDeviceController::class, 'apiUpdateDeviceName'])->name('device.api-update-device-name');
         Route::put('{id}/address2', [EditDeviceController::class, 'apiUpdateAddress2'])->name('device.api-update-address2');
         Route::put('{id}/zipcode', [EditDeviceController::class, 'apiUpdateZipCode'])->name('device.api-update-zipcode');
         Route::put('{id}/statecity', [EditDeviceController::class, 'apiUpdateStateCity'])->name('device.api-update-statecity');

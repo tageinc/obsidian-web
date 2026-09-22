@@ -24,7 +24,7 @@ class CreateDeviceController extends Controller
     {
         $request->merge(['_creation_modal' => '1']);
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'alias' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'serial_no' => 'required|string|max:255|unique:devices,serial_no',
             'sku' => 'required|string|max:255',
             'order_no' => 'required|string|max:255',
@@ -71,7 +71,7 @@ class CreateDeviceController extends Controller
             'city' => 'required',
             'address_state' => 'required',
             'zip_code' => 'required|regex:/[0-9]+/',
-            'alias' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'serial_no' => 'required',
             'sku' => 'required',
             'order_no' => 'required|regex:/[0-9]+/',
@@ -93,7 +93,7 @@ class CreateDeviceController extends Controller
             'address_state' => $validatedData['address_state'],
             'country' => 'US',
             'zip_code' => $validatedData['zip_code'],
-            'alias' => $validatedData['alias'],
+            'name' => $validatedData['name'],
             'serial_no' => $validatedData['serial_no'],
             'sku' => $validatedData['sku'],
             'order_no' => $validatedData['order_no'],

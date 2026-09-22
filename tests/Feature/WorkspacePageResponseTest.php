@@ -47,7 +47,6 @@ class WorkspacePageResponseTest extends TestCase
         $this->actingAs($this->owner);
         $paths = [
             '/dashboard?show=20&page=1' => 'dashboard', '/profile' => 'profile',
-            '/edit-device/'.$this->device->id => 'edit-device',
             '/devices/'.$this->device->id => 'view-device',
         ];
         foreach ($paths as $url => $page) {
@@ -94,14 +93,14 @@ class WorkspacePageResponseTest extends TestCase
         }
         config(['app.developer_email' => $other->email]);
         $this->page('/devices/'.$this->device->id)->assertOk()->assertJsonPath('page', 'view-device');
-        $this->page('/edit-device/'.$this->device->id)->assertOk()->assertJsonPath('page', 'edit-device');
+        $this->page('/edit-device/'.$this->device->id)->assertRedirect('/devices/'.$this->device->id.'?edit=1');
     }
 
     public function test_noncanonical_urls_remain_working_vue_islands_without_mounting_an_unmatched_router(): void
     {
         $this->actingAs($this->owner);
         // A full URL with a query prevents the test URL helper from trimming the slash.
-        foreach (['http://localhost/profile/?source=compatibility' => 'profile', '/edit-device/0'.$this->device->id => 'edit-device', '/devices/0'.$this->device->id => 'view-device'] as $url => $page) {
+        foreach (['http://localhost/profile/?source=compatibility' => 'profile', '/devices/0'.$this->device->id => 'view-device'] as $url => $page) {
             $this->get($url)->assertOk()->assertSee('data-vue-page="'.$page.'"', false)
                 ->assertDontSee('data-workspace="1"', false);
             $this->page($url)->assertStatus(409);

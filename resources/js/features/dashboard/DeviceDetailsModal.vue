@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
     <FormModal
         id="device-dialog"
         :title="editing ? 'Edit device' : 'View device'"
-        :description="device.alias"
+        :description="device.name"
         close-label="Close device"
         :wide="!editing"
         :pending="pending"

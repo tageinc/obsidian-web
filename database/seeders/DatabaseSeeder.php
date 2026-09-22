@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             FirmwareAndConfigurationSeeder::class,
-            AdminUserSeeder::class,
+            DeveloperSeeder::class,
             UserSeeder::class,
             DevelopmentDataSeeder::class,
         ]);

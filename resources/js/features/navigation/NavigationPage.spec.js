@@ -7,7 +7,6 @@ const links = {
     home: '/',
     dashboard: '/dashboard',
     profile: '/profile',
-    createDevice: '/create-device',
     login: '/login',
     register: '/register',
     logout: '/logout',
@@ -61,6 +60,7 @@ it('keeps app links inside a collapsed account dropdown with keyboard navigation
     });
     const toggle = wrapper.get('[aria-controls="account-navigation"]');
     expect(toggle.text()).toBe('Synthetic user');
+    expect(wrapper.find('a[href="/create-device"]').exists()).toBe(false);
     expect(toggle.attributes('aria-expanded')).toBe('false');
     expect(wrapper.get('#account-navigation').isVisible()).toBe(false);
     await toggle.trigger('keydown', { key: 'ArrowDown' });

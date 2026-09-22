@@ -58,7 +58,7 @@ describe('device map data', () => {
     it('builds popup labels as text nodes instead of interpreting device values as markup', () => {
         const popup = devicePopup({
             hardware: { name: '<script>bad</script>' },
-            alias: '<img src=x>',
+            name: '<img src=x>',
             address_1: '<b>address</b>',
             last_updated: '<svg>',
         });
@@ -69,7 +69,7 @@ describe('device map data', () => {
 });
 
 describe('map lifecycle', () => {
-    it('reloads when alias-filtered endpoints change and preserves the filter in both map modes', async () => {
+    it('reloads when name-filtered endpoints change and preserves the filter in both map modes', async () => {
         requestJson.mockResolvedValue({ data: [] });
         const wrapper = page();
         await vi.dynamicImportSettled();
@@ -97,7 +97,7 @@ describe('map lifecycle', () => {
         requestJson
             .mockResolvedValueOnce({
                 data: [
-                    { alias: 'Zero', latitude: 0, longitude: 0, state: 'active', status: 'online' },
+                    { name: 'Zero', latitude: 0, longitude: 0, state: 'active', status: 'online' },
                 ],
             })
             .mockResolvedValueOnce([]);
@@ -158,7 +158,7 @@ describe('map lifecycle', () => {
         await wrapper.setProps({ showAll: true });
         await flushPromises();
         expect(oldSignal.aborted).toBe(true);
-        oldResponse({ data: [{ alias: 'Obsolete', latitude: 1, longitude: 1 }] });
+        oldResponse({ data: [{ name: 'Obsolete', latitude: 1, longitude: 1 }] });
         await flushPromises();
         expect(leaflet.marker).not.toHaveBeenCalled();
         expect(wrapper.text()).toContain('No devices available for this map.');

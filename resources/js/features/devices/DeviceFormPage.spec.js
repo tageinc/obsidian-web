@@ -12,7 +12,7 @@ function page(overrides = {}) {
             action: '/create-device',
             links: { dashboard: '/dashboard' },
             values: {
-                alias: 'Roof tracker',
+                name: 'Roof tracker',
                 serial_no: 'TRACK-1',
                 sku: 'ST',
                 order_no: 'ORD-1',
@@ -48,11 +48,11 @@ describe('device forms', () => {
         expect(wrapper.find('[name="_method"]').exists()).toBe(false);
         expect(wrapper.find('[name="status_notification"]').exists()).toBe(false);
         expect(wrapper.find('[name="sms_notification"]').exists()).toBe(false);
-        await wrapper.get('#alias').setValue('Updated name');
+        await wrapper.get('#name').setValue('Updated name');
         expect(Object.fromEntries(new FormData(wrapper.get('form').element))).toMatchObject({
             _token: 'test-csrf',
             serial_no: 'TRACK-1',
-            alias: 'Updated name',
+            name: 'Updated name',
             zip_code: 'M5V 1A1',
             latitude: '0',
             longitude: '0',
@@ -74,43 +74,26 @@ describe('device forms', () => {
         expect(wrapper.find('a[target="_blank"]').exists()).toBe(false);
     });
 
-    it('edits mutable fields only and displays escaped fixed identity without submitting it', () => {
-        const wrapper = page({
-            creating: false,
-            action: '/edit-device/1',
-            fixedIdentity: {
-                hardwareName: 'Solar tracker',
-                serialNo: '<b>TRACK-1</b>',
-                sku: 'ST',
-                orderNo: 'ORD-1',
-            },
-        });
-        expect(wrapper.get('form').attributes('action')).toBe('/edit-device/1');
+    it('edits identity fields while excluding ownership and notification fields', () => {
+        const wrapper = page({ creating: false, action: '/edit-device/1' });
         expect(wrapper.get('[name="_method"]').element.value).toBe('PUT');
-        expect(wrapper.get('dl').text()).toContain('<b>TRACK-1</b>');
-        expect(wrapper.find('dl b').exists()).toBe(false);
-        for (const name of [
-            'serial_no',
-            'serial_no',
-            'sku',
-            'order_no',
-            'user_id',
-            'status_notification',
-        ]) {
-            expect(wrapper.find(`[name="${name}"]`).exists()).toBe(false);
-        }
+        expect(wrapper.get('[name="serial_no"]').element.value).toBe('TRACK-1');
+        expect(wrapper.get('[name="sku"]').element.value).toBe('ST');
+        expect(wrapper.get('[name="order_no"]').element.value).toBe('ORD-1');
+        expect(wrapper.find('[name="user_id"]').exists()).toBe(false);
+        expect(wrapper.find('[name="status_notification"]').exists()).toBe(false);
         expect(wrapper.get('button[type="submit"]').text()).toBe('Update device');
     });
 
     it('allows both edit coordinates blank and requires the matching coordinate including when the other is zero', async () => {
-        const values = Object.freeze({ alias: 'Original', latitude: '', longitude: '' });
+        const values = Object.freeze({ name: 'Original', latitude: '', longitude: '' });
         const wrapper = page({ creating: false, values });
         expect(wrapper.get('#latitude').attributes('required')).toBeUndefined();
         expect(wrapper.get('#longitude').attributes('required')).toBeUndefined();
         await wrapper.get('#latitude').setValue('0');
         expect(wrapper.get('#longitude').attributes('required')).toBeDefined();
-        await wrapper.get('#alias').setValue('Changed');
-        expect(values.alias).toBe('Original');
+        await wrapper.get('#name').setValue('Changed');
+        expect(values.name).toBe('Original');
         expect(values.latitude).toBe('');
     });
 

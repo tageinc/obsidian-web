@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
-/** Creates the documented local development administrator account. */
+/** Creates the documented local developer account. */
 class UserSeeder extends Seeder
 {
     public const EMAIL = 'andre.troncoso@tezca.net';
@@ -18,9 +18,9 @@ class UserSeeder extends Seeder
             return;
         }
 
-        $password = env('LOCAL_ADMIN_PASSWORD');
+        $password = env('LOCAL_DEVELOPER_PASSWORD');
         if (!$password) {
-            $this->command?->warn('Set LOCAL_ADMIN_PASSWORD in the ignored local .env before seeding.');
+            $this->command?->warn('Set LOCAL_DEVELOPER_PASSWORD in the ignored local .env before seeding.');
             return;
         }
 

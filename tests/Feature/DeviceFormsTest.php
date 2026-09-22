@@ -30,7 +30,7 @@ class DeviceFormsTest extends TestCase
     private function fields(array $overrides = []): array
     {
         return array_merge([
-            'alias' => 'Garden tracker', 'serial_no' => 'SP1-forms-test',
+            'name' => 'Garden tracker', 'serial_no' => 'SP1-forms-test',
             'sku' => 'SP1', 'order_no' => 'ORD-1024',
             'address_1' => '200 Garden Street', 'address_2' => 'Rear garden',
             'city' => 'Vancouver', 'address_state' => 'BC', 'zip_code' => 'V6B 1A1',
@@ -51,14 +51,12 @@ class DeviceFormsTest extends TestCase
         $this->get('/create-device')->assertRedirect('/dashboard?create=1');
 
         $device = $this->device();
-        $edit = $this->get('/edit-device/'.$device->id)->assertOk()
-            ->assertSee('Update device')
-            ->assertSee($device->serial_no)
-            ->assertDontSee('name="status_notification"', false)
-            ->assertDontSee('name="sms_notification"', false)
-            ->assertDontSee('name="serial_no"', false);
-        preg_match('/<form id="device-form".*?<\/form>/s', $edit->getContent(), $editForm);
-        $this->assertSame(1, substr_count($editForm[0], 'type="submit"'));
+        $this->get('/edit-device/'.$device->id)->assertRedirect('/devices/'.$device->id.'?edit=1');
+        config(['frontend.vue3.device_edit' => true]);
+        $edit = $this->getJson('/edit-device/'.$device->id, ['X-Obsidian-Modal' => '1'])->assertOk();
+        $edit->assertJsonPath('props.values.serial_no', $device->serial_no);
+        $this->assertArrayNotHasKey('status_notification', $edit->json('props.values'));
+        $this->assertArrayNotHasKey('sms_notification', $edit->json('props.values'));
     }
 
     public function test_creation_saves_all_fields_and_coordinates_with_notifications_disabled(): void
@@ -82,7 +80,7 @@ class DeviceFormsTest extends TestCase
             'city' => '', 'latitude' => 91, 'longitude' => -181,
         ]))->assertRedirect('/dashboard')
             ->assertSessionHasErrors(['city', 'latitude', 'longitude'])
-            ->assertSessionHasInput('alias', 'Garden tracker');
+            ->assertSessionHasInput('name', 'Garden tracker');
 
         $this->assertSame(0, Device::count());
         $this->assertSame(0, GeoCode::count());
@@ -105,7 +103,7 @@ class DeviceFormsTest extends TestCase
             'longitude' => $device->longitude, 'status' => 'connected',
         ]);
         $changes = [
-            'alias' => 'Roof tracker', 'address_1' => '300 Roof Avenue', 'address_2' => null,
+            'name' => 'Roof tracker', 'address_1' => '300 Roof Avenue', 'address_2' => null,
             'city' => 'Montréal', 'address_state' => 'Québec', 'zip_code' => 'H2Y 1C6', 'country' => 'CA',
             'latitude' => 45.5019, 'longitude' => -73.5674,
         ];
@@ -117,12 +115,12 @@ class DeviceFormsTest extends TestCase
         ]))->assertRedirect('/edit-device/'.$device->id)->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('devices', array_merge($changes, [
-            'id' => $device->id, 'user_id' => $this->owner->id, 'serial_no' => $device->serial_no,
-            'sku' => 'SP1', 'order_no' => 'ORD-1024',
+            'id' => $device->id, 'user_id' => $this->owner->id, 'serial_no' => 'different',
+            'sku' => 'different', 'order_no' => 'different',
             'status_notification' => true, 'sms_notification' => true,
         ]));
         $this->assertDatabaseHas('geocode', [
-            'serial_no' => $device->serial_no, 'latitude' => 45.5019,
+            'serial_no' => 'different', 'latitude' => 45.5019,
             'longitude' => -73.5674, 'status' => 'connected',
         ]);
     }
@@ -132,10 +130,10 @@ class DeviceFormsTest extends TestCase
         $device = $this->device();
         $original = $device->fresh()->getAttributes();
         $this->from('/edit-device/'.$device->id)->put('/edit-device/'.$device->id, [
-            'alias' => 'Changed name', 'latitude' => 49,
+            'name' => 'Changed name', 'latitude' => 49,
         ])->assertRedirect('/edit-device/'.$device->id)
             ->assertSessionHasErrors(['address_1', 'city', 'address_state', 'country', 'zip_code', 'longitude'])
-            ->assertSessionHasInput('alias', 'Changed name');
+            ->assertSessionHasInput('name', 'Changed name');
         $this->assertSame($original, $device->fresh()->getAttributes());
         $this->assertSame(0, GeoCode::count());
     }
@@ -144,10 +142,10 @@ class DeviceFormsTest extends TestCase
     {
         $device = $this->device(['latitude' => null, 'longitude' => null]);
         $this->put('/edit-device/'.$device->id, $this->fields([
-            'alias' => 'No coordinates yet', 'latitude' => '', 'longitude' => '',
+            'name' => 'No coordinates yet', 'latitude' => '', 'longitude' => '',
         ]))->assertSessionHasNoErrors()->assertRedirect('/edit-device/'.$device->id);
         $this->assertDatabaseHas('devices', [
-            'id' => $device->id, 'alias' => 'No coordinates yet', 'latitude' => null, 'longitude' => null,
+            'id' => $device->id, 'name' => 'No coordinates yet', 'latitude' => null, 'longitude' => null,
         ]);
     }
 
@@ -159,14 +157,14 @@ class DeviceFormsTest extends TestCase
             'password' => 'test-hash', 'email_verified_at' => now(),
         ]);
         $this->actingAs($other)->get('/edit-device/'.$device->id)->assertForbidden();
-        $this->put('/edit-device/'.$device->id, $this->fields(['alias' => 'Stolen']))
+        $this->put('/edit-device/'.$device->id, $this->fields(['name' => 'Stolen']))
             ->assertForbidden();
         $this->put('/edit-device/'.$device->id.'/address1', ['address_1' => 'Stolen'])
             ->assertForbidden();
-        $this->put('/device/'.$device->id.'/update-product-alias', ['alias' => 'Stolen'])
+        $this->put('/device/'.$device->id.'/update-device-name', ['name' => 'Stolen'])
             ->assertForbidden();
         $this->assertDatabaseHas('devices', [
-            'id' => $device->id, 'alias' => 'Garden tracker', 'address_1' => '200 Garden Street',
+            'id' => $device->id, 'name' => 'Garden tracker', 'address_1' => '200 Garden Street',
         ]);
     }
 
@@ -178,8 +176,8 @@ class DeviceFormsTest extends TestCase
             'password' => 'test-hash', 'email_verified_at' => now(),
         ]);
         config(['app.developer_email' => $admin->email]);
-        $this->actingAs($admin)->get('/edit-device/'.$device->id)->assertOk();
-        $this->put('/edit-device/'.$device->id, $this->fields(['alias' => 'Admin updated']))
+        $this->actingAs($admin)->get('/edit-device/'.$device->id)->assertRedirect('/devices/'.$device->id.'?edit=1');
+        $this->put('/edit-device/'.$device->id, $this->fields(['name' => 'Admin updated']))
             ->assertSessionHasNoErrors()->assertRedirect('/edit-device/'.$device->id);
         $this->get('/edit-device/99999')->assertNotFound();
         $this->put('/edit-device/99999', $this->fields())->assertNotFound();

@@ -20,7 +20,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['pending-change', 'saved']);
 const fields = [
-    'alias',
+    'name',
     'address_1',
     'address_2',
     'city',
@@ -30,7 +30,7 @@ const fields = [
     'latitude',
     'longitude',
 ];
-if (props.creating) fields.push('serial_no', 'sku', 'order_no');
+fields.push('serial_no', 'sku', 'order_no');
 const form = ref(Object.fromEntries(fields.map((field) => [field, props.values[field] ?? ''])));
 const { pending, submit } = useNativeForm();
 watch(pending, (value) => emit('pending-change', value), { immediate: true, flush: 'sync' });
@@ -84,24 +84,11 @@ const identityFields = [
             :session-error="sessionError"
         />
     </div>
-    <template v-if="!creating">
-        <h2 class="h5 mb-3">Device details</h2>
-        <dl class="row">
-            <dt class="col-sm-4">Serial number</dt>
-            <dd class="col-sm-8">{{ fixedIdentity.serialNo }}</dd>
-            <dt class="col-sm-4">SKU</dt>
-            <dd class="col-sm-8">{{ fixedIdentity.sku ?? 'Not provided' }}</dd>
-            <dt class="col-sm-4">Order number</dt>
-            <dd class="col-sm-8">
-                {{ fixedIdentity.orderNo ?? 'Not provided' }}
-            </dd>
-        </dl>
-    </template>
     <form id="device-form" method="POST" :action="action" :aria-busy="pending" @submit="save">
         <input type="hidden" name="_token" :value="csrfToken" />
         <input v-if="creationModal" type="hidden" name="_creation_modal" value="1" />
         <input v-if="!creating" type="hidden" name="_method" value="PUT" />
-        <fieldset v-if="creating" class="mb-3">
+        <fieldset class="mb-3">
             <legend class="h5 mb-3">Device details</legend>
             <div class="row">
                 <div v-for="field in identityFields" :key="field.name" class="col-md-6">
@@ -110,7 +97,7 @@ const identityFields = [
                         :name="field.name"
                         :label="field.label"
                         maxlength="255"
-                        required
+                        :required="creating || field.name === 'serial_no'"
                         :errors="errors[field.name]"
                     />
                 </div>

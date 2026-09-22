@@ -36,13 +36,13 @@ function update(name, value) {
 
 <template>
     <FormField
-        name="alias"
+        name="name"
         label="Device name"
-        :model-value="modelValue.alias"
-        :errors="errors.alias"
+        :model-value="modelValue.name"
+        :errors="errors.name"
         maxlength="255"
         required
-        @update:model-value="update('alias', $event)"
+        @update:model-value="update('name', $event)"
     />
     <fieldset class="mb-3">
         <legend class="h5 mb-3">Installation address</legend>

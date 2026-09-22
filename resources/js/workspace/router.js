@@ -20,13 +20,6 @@ const destinations = [
         component: () => import('../features/profile/ProfilePage.vue'),
     },
     {
-        path: '/edit-device/:id([1-9]\\d*)',
-        page: 'edit-device',
-        title: 'Edit device',
-        match: /^\/edit-device\/[1-9]\d*$/,
-        component: () => import('../features/devices/DeviceFormPage.vue'),
-    },
-    {
         path: '/devices/:id([1-9]\\d*)',
         page: 'view-device',
         title: 'View Device',

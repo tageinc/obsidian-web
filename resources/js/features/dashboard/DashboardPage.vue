@@ -55,7 +55,7 @@ async function closeCreation() {
     createButton.value?.focus({ preventScroll: true });
 }
 const perPage = ref(props.pagination.perPage);
-const aliasSearch = ref(props.search);
+const nameSearch = ref(props.search);
 const expandedIds = ref([]);
 function toggleDetails(id) {
     expandedIds.value = expandedIds.value.includes(id)
@@ -77,7 +77,7 @@ watch(
 watch(
     () => props.search,
     (value) => {
-        aliasSearch.value = value;
+        nameSearch.value = value;
     },
 );
 const clearSearchUrl = computed(() => {
@@ -121,8 +121,8 @@ watch(
                         class="device-search"
                     >
                         <div class="device-search-field">
-                            <label for="device-alias-search" class="visually-hidden"
-                                >Search by device alias</label
+                            <label for="device-name-search" class="visually-hidden"
+                                >Search by device name</label
                             >
                             <button type="submit" class="device-search-submit" aria-label="Search">
                                 <svg
@@ -139,13 +139,13 @@ watch(
                                 </svg>
                             </button>
                             <input
-                                id="device-alias-search"
-                                v-model="aliasSearch"
+                                id="device-name-search"
+                                v-model="nameSearch"
                                 type="search"
                                 name="search"
                                 maxlength="255"
                                 class="device-search-input"
-                                placeholder="Search by alias…"
+                                placeholder="Search by name…"
                             />
                         </div>
                         <input type="hidden" name="show" :value="perPage" />
@@ -172,7 +172,7 @@ watch(
                             >No devices on this page. Choose another page below.</template
                         >
                         <template v-else-if="search"
-                            >No devices match “{{ search }}”. Try another alias or clear the
+                            >No devices match “{{ search }}”. Try another name or clear the
                             search.</template
                         >
                         <template v-else
@@ -206,7 +206,7 @@ watch(
                                         <button
                                             type="button"
                                             class="device-expand-button"
-                                            :aria-label="`${expandedIds.includes(device.id) ? 'Hide' : 'Show'} details for ${device.alias}`"
+                                            :aria-label="`${expandedIds.includes(device.id) ? 'Hide' : 'Show'} details for ${device.name}`"
                                             :aria-expanded="expandedIds.includes(device.id)"
                                             :aria-controls="`device-details-${device.id}`"
                                             @click="toggleDetails(device.id)"
@@ -224,16 +224,15 @@ watch(
                                             </svg>
                                         </button>
                                     </td>
-                                    <th scope="row" class="device-alias-cell">
+                                    <th scope="row" class="device-name-cell">
                                         <span class="device-field-label" aria-hidden="true"
                                             >Device</span
                                         >
                                         <a
-                                            class="device-alias"
+                                            class="device-name"
                                             :href="device.links.view"
                                             aria-haspopup="dialog"
-                                            @click="openDevice($event, device, 'view')"
-                                            >{{ device.alias }}</a
+                                            >{{ device.name }}</a
                                         >
                                     </th>
                                     <td>
@@ -480,13 +479,13 @@ watch(
     outline: 2px solid #0d6efd;
     outline-offset: 2px;
 }
-.device-alias {
+.device-name {
     color: #111827;
     font-weight: 600;
     text-decoration: none;
     overflow-wrap: anywhere;
 }
-.device-alias:hover {
+.device-name:hover {
     color: #0b5ed7;
     text-decoration: underline;
 }
@@ -643,7 +642,7 @@ watch(
         right: 0.5rem;
         padding: 0;
     }
-    .device-table-row > .device-alias-cell {
+    .device-table-row > .device-name-cell {
         padding-right: 2.5rem;
     }
     .device-field-label {

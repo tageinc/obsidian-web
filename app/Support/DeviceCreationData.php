@@ -7,7 +7,7 @@ use App\Models\User;
 /** Shared defaults and allowlist for the native device creation form. */
 class DeviceCreationData
 {
-    public const DEVICE_FIELDS = ['alias', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude'];
+    public const DEVICE_FIELDS = ['name', 'serial_no', 'sku', 'order_no', 'latitude', 'longitude'];
     public const ADDRESS_FIELDS = ['address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country'];
 
     public static function values(User $user, bool $retainOldInput = true): array

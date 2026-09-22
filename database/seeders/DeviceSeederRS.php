@@ -37,7 +37,7 @@ class DeviceSeederRS extends Seeder
             if (! $device) {
                 DB::table('devices')->insert([
                     'serial_no' => self::SERIAL, 'user_id' => $user->id,
-                    'alias' => 'Real Scenario', 'sku' => 'SP1', 'order_no' => 'DEV-RS',
+                    'name' => 'Real Scenario', 'sku' => 'SP1', 'order_no' => 'DEV-RS',
                     'latitude' => 34.052235, 'longitude' => -118.243683,
                     'city' => 'Los Angeles', 'address_state' => 'CA', 'country' => 'US',
                     'created_at' => now(), 'updated_at' => now(),

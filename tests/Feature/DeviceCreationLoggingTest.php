@@ -25,7 +25,7 @@ class DeviceCreationLoggingTest extends TestCase
         Log::swap(new Logger(new \Monolog\Logger('test', [$this->handler])));
         $user = User::create(['name' => 'Test owner', 'email' => 'device-test@example.test', 'password' => 'test-hash']);
         $this->fields = [
-            'user_id' => $user->id, 'alias' => 'sentinel-private-alias',
+            'user_id' => $user->id, 'name' => 'sentinel-private-name',
             'serial_no' => 'sentinel-private-serial', 'sku' => 'SP1', 'order_no' => '1234',
             'address_1' => 'sentinel-private-address', 'address_2' => 'sentinel-private-unit',
             'city' => 'sentinel-private-city', 'address_state' => 'CA', 'zip_code' => '99999',
@@ -63,7 +63,7 @@ class DeviceCreationLoggingTest extends TestCase
     private function assertPrivateFieldsNotLogged(): void
     {
         $records = json_encode($this->handler->getRecords());
-        foreach (['alias', 'serial_no', 'address_1', 'address_2', 'city', 'latitude', 'longitude'] as $field) {
+        foreach (['name', 'serial_no', 'address_1', 'address_2', 'city', 'latitude', 'longitude'] as $field) {
             $this->assertStringNotContainsString($this->fields[$field], $records);
         }
     }

@@ -120,12 +120,6 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
                                 >Profile</a
                             >
                             <a
-                                class="dropdown-item"
-                                :href="links.createDevice"
-                                @click="closeNavigation"
-                                >Create Device</a
-                            >
-                            <a
                                 v-if="links.admin"
                                 class="dropdown-item"
                                 :href="links.admin"

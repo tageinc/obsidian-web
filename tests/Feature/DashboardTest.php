@@ -17,8 +17,8 @@ class DashboardTest extends TestCase
     {
         $owner = $this->user('owner@example.test');
         $other = $this->user('other@example.test');
-        Device::create(['serial_no' => 'mine', 'alias' => 'My solar tracker', 'user_id' => $owner->id]);
-        Device::create(['serial_no' => 'other', 'alias' => 'Other private tracker', 'user_id' => $other->id]);
+        Device::create(['serial_no' => 'mine', 'name' => 'My solar tracker', 'user_id' => $owner->id]);
+        Device::create(['serial_no' => 'other', 'name' => 'Other private tracker', 'user_id' => $other->id]);
 
         $this->actingAs($owner)->get('/dashboard')
             ->assertOk()->assertViewIs('device-manager')
@@ -41,7 +41,7 @@ class DashboardTest extends TestCase
         $this->post('/login', ['email' => 'owner@example.test', 'password' => 'password'])
             ->assertRedirect('/dashboard');
         $this->get('/dashboard')->assertOk()->assertViewIs('device-manager')
-            ->assertSee('No devices registered yet.')->assertSee(route('create-device'));
+            ->assertSee('No devices registered yet.')->assertSee('data-vue-page="create-device-launcher"', false);
     }
 
     public function test_dashboard_requires_login_and_verified_email(): void

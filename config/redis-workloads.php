@@ -16,7 +16,7 @@ return [
         'device.all-devices-api', 'device.update-solar-tracker',
         'device.get-solar-tracker-status', 'device.get-device-data',
         'device.get-latest-status-json', 'device.api-update-address1',
-        'device.api-update-product-alias', 'device.api-update-address2',
+        'device.api-update-device-name', 'device.api-update-address2',
         'device.api-update-zipcode', 'device.api-update-statecity',
         'device.api-update-status-notification', 'device.delete',
     ],

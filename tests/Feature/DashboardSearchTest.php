@@ -31,10 +31,10 @@ class DashboardSearchTest extends TestCase
         $this->actingAs($this->owner);
     }
 
-    private function device(string $alias, ?User $owner = null, int $hardware = 1): Device
+    private function device(string $name, ?User $owner = null, int $hardware = 1): Device
     {
         return Device::create([
-            'serial_no' => 'search-'.(Device::count() + 1), 'alias' => $alias,
+            'serial_no' => 'search-'.(Device::count() + 1), 'name' => $name,
             'user_id' => ($owner ?? $this->owner)->id,
             'latitude' => 33, 'longitude' => -117,
         ]);
@@ -69,7 +69,7 @@ class DashboardSearchTest extends TestCase
         $this->getJson('/paginated-devices?status[][]=sleep')->assertStatus(422);
     }
 
-    public function test_alias_search_filters_before_pagination_and_keeps_owned_maps_aligned(): void
+    public function test_name_search_filters_before_pagination_and_keeps_owned_maps_aligned(): void
     {
         for ($index = 1; $index <= 12; $index++) {
             $this->device('Earlier device '.$index);
@@ -86,25 +86,25 @@ class DashboardSearchTest extends TestCase
         $this->getJson($props['mapEndpoints']['paginated'].'&show=1')->assertOk()->assertJsonPath('total', 2)->assertJsonPath('data.0.id', $match->id);
     }
 
-    public function test_search_treats_sql_wildcards_escape_characters_and_quotes_as_literal_alias_text(): void
+    public function test_search_treats_sql_wildcards_escape_characters_and_quotes_as_literal_name_text(): void
     {
-        $aliases = ['Panel 100%', 'Panel 1000', 'Deck_one', 'DeckXone', 'Bang! tracker', 'Bang tracker', "Owner's tracker", 'Owners tracker'];
+        $names = ['Panel 100%', 'Panel 1000', 'Deck_one', 'DeckXone', 'Bang! tracker', 'Bang tracker', "Owner's tracker", 'Owners tracker'];
         $devices = [];
-        foreach ($aliases as $alias) $devices[$alias] = $this->device($alias);
-        foreach (['%' => 'Panel 100%', '_' => 'Deck_one', '!' => 'Bang! tracker', "'" => "Owner's tracker"] as $search => $alias) {
+        foreach ($names as $name) $devices[$name] = $this->device($name);
+        foreach (['%' => 'Panel 100%', '_' => 'Deck_one', '!' => 'Bang! tracker', "'" => "Owner's tracker"] as $search => $name) {
             $query = http_build_query(['search' => $search]);
             $props = $this->dashboard($query);
-            $this->assertSame([$devices[$alias]->id], array_column($props['devices'], 'id'));
-            $this->getJson('/all-devices?'.$query)->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $devices[$alias]->id);
-            $this->getJson('/paginated-devices?'.$query)->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.id', $devices[$alias]->id);
+            $this->assertSame([$devices[$name]->id], array_column($props['devices'], 'id'));
+            $this->getJson('/all-devices?'.$query)->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $devices[$name]->id);
+            $this->getJson('/paginated-devices?'.$query)->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.id', $devices[$name]->id);
         }
     }
 
     public function test_search_and_page_size_survive_pagination_and_legacy_redirects(): void
     {
-        foreach (['North roof', 'South roof', 'East roof'] as $alias) $this->device($alias);
+        foreach (['North roof', 'South roof', 'East roof'] as $name) $this->device($name);
         $props = $this->dashboard('search=roof&show=1&page=2');
-        $this->assertSame('South roof', $props['devices'][0]['alias']);
+        $this->assertSame('South roof', $props['devices'][0]['name']);
         foreach ($props['pagination']['links'] as $link) {
             if (!$link['url']) continue;
             parse_str(parse_url($link['url'], PHP_URL_QUERY), $query);
@@ -112,7 +112,7 @@ class DashboardSearchTest extends TestCase
             $this->assertSame('1', $query['show']);
         }
         $map = $this->getJson('/paginated-devices?search=roof&show=1&page=2')->assertOk();
-        $this->assertSame('South roof', $map->json('data.0.alias'));
+        $this->assertSame('South roof', $map->json('data.0.name'));
         foreach (['next_page_url', 'prev_page_url'] as $key) {
             parse_str(parse_url($map->json($key), PHP_URL_QUERY), $query);
             $this->assertSame('roof', $query['search']);
@@ -161,7 +161,7 @@ class DashboardSearchTest extends TestCase
             ->assertSee(route('archiveDevice', $device->id), false)
             ->assertSee('class="text-danger archive-link">Archive', false);
         $this->assertStringContainsString("encodeURIComponent(\"roof\")", $response->getContent());
-        $this->get('/dashboard?search=no-match')->assertOk()->assertSee('No devices match this alias search.')->assertDontSee('No devices registered yet.');
-        $this->actingAs($this->other)->get('/dashboard')->assertOk()->assertSee('No devices registered yet.')->assertDontSee('No devices match this alias search.');
+        $this->get('/dashboard?search=no-match')->assertOk()->assertSee('No devices match this name search.')->assertDontSee('No devices registered yet.');
+        $this->actingAs($this->other)->get('/dashboard')->assertOk()->assertSee('No devices registered yet.')->assertDontSee('No devices match this name search.');
     }
 }

@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
         ref="trigger"
         type="button"
         class="device-action-trigger"
-        :aria-label="`Actions for ${device.alias}`"
+        :aria-label="`Actions for ${device.name}`"
         :aria-controls="menuId"
         :aria-expanded="open"
         @click="toggle"
@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
             ref="menu"
             v-show="open"
             role="group"
-            :aria-label="`Actions for ${device.alias}`"
+            :aria-label="`Actions for ${device.name}`"
             class="dropdown-menu show device-action-menu"
             :style="position"
             @keydown="keydown"
@@ -137,7 +137,7 @@ onBeforeUnmount(() => {
             <a
                 class="dropdown-item"
                 :href="device.links.edit"
-                :aria-label="`Edit ${device.alias}`"
+                :aria-label="`Edit ${device.name}`"
                 aria-haspopup="dialog"
                 @click="edit"
                 >Edit</a
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
             <a
                 class="dropdown-item device-archive"
                 :href="device.links.archive"
-                :aria-label="`Archive ${device.alias}`"
+                :aria-label="`Archive ${device.name}`"
                 data-document-action
                 aria-haspopup="dialog"
                 @click="confirmArchive"
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
             v-if="confirmingArchive"
             :id="`archive-device-${device.id}`"
             title="Archive device?"
-            :description="`Are you sure you want to archive ${device.alias || device.serial}?`"
+            :description="`Are you sure you want to archive ${device.name || device.serial}?`"
             @close="cancelArchive"
         >
             <template #default="{ close: closeDialog }">

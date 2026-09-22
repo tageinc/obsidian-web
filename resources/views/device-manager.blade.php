@@ -30,7 +30,7 @@
             ], fn ($line) => $line !== null));
             return [
                 'id' => $device->id,
-                'alias' => $dashboardText($device->alias) ?? $serial ?? 'Device '.$device->id,
+                'name' => $dashboardText($device->name) ?? $serial ?? 'Device '.$device->id,
                 'serial' => $serial,
                 'sku' => $dashboardText($device->sku),
                 'address' => $address !== '' ? $address : null,
@@ -145,9 +145,9 @@
                 <div class="card-header">{{ __('Device Manager') }}</div>
                 <div class="card-body">
                     <form action="{{ route('dashboard') }}" method="GET" class="mb-3" role="search">
-                        <label for="device-alias-search" class="form-label">Search device aliases</label>
+                        <label for="device-name-search" class="form-label">Search device names</label>
                         <div class="d-flex gap-2">
-                            <input id="device-alias-search" class="form-control" type="search" name="search" value="{{ $search }}" maxlength="255" placeholder="Search by alias">
+                            <input id="device-name-search" class="form-control" type="search" name="search" value="{{ $search }}" maxlength="255" placeholder="Search by name">
                             <div class="order-last d-flex align-items-center gap-2 ms-auto flex-shrink-0">
                                 <div data-status-filter-root data-props="{{ json_encode(['value' => $statusFilter, 'options' => $statusOptions]) }}"></div>
                                 @include('frontend.mount', ['page' => 'create-device-launcher', 'props' => ['creation' => $creation]])
@@ -161,14 +161,14 @@
                         @error('search')<p class="text-danger mt-1" role="alert">{{ $message }}</p>@enderror
                     </form>
                     <div class="row">
-                        <div class="col-md-2"><strong>Alias</strong></div>
+                        <div class="col-md-2"><strong>Name</strong></div>
                         <div class="col-md-4"><strong>Status</strong></div>
                         <div class="col-md-3"><strong>Last updated</strong></div>
                         <div class="col-md-3"><strong>Actions</strong></div>
                     </div>
                     @forelse ($devices as $device)
                     <div class="row mt-2">
-                        <div class="col-md-2"><a href="{{ route('devices.show', $device->id) }}">{{ $device->alias ?: $device->serial_no }}</a></div>
+                        <div class="col-md-2"><a href="{{ route('devices.show', $device->id) }}">{{ $device->name ?: $device->serial_no }}</a></div>
                         <div class="col-md-4">
 
 						<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->status)) }}"></span>{{ $device->status }}
@@ -177,7 +177,7 @@
                         <div class="col-md-3">{{ $device->last_updated }}</div>
                         <div class="col-md-3">
                             <details>
-                                <summary aria-label="Actions for {{ $device->alias ?: 'device '.$device->id }}" class="btn btn-outline-secondary btn-sm">…</summary>
+                                <summary aria-label="Actions for {{ $device->name ?: 'device '.$device->id }}" class="btn btn-outline-secondary btn-sm">…</summary>
                                 <div class="d-flex flex-column align-items-start gap-2 p-2">
                                     <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
                                     <a href="{{ route('archiveDevice', $device->id) }}"
@@ -190,7 +190,7 @@
                     @if ($devices->total() > 0)
                         <p class="text-muted mt-3 mb-0">No devices on this page. Choose another page to see matching devices.</p>
                     @elseif ($search !== '')
-                        <p class="text-muted mt-3 mb-0">No devices match this alias search. Try another alias or clear the search.</p>
+                        <p class="text-muted mt-3 mb-0">No devices match this name search. Try another name or clear the search.</p>
                     @else
                         <p class="text-muted mt-3 mb-0">No devices registered yet. Use Create + to add your first device.</p>
                     @endif
@@ -289,7 +289,7 @@
 
                             const popup = document.createElement('div');
                             [
-                                ['Alias', device.alias || ''],
+                                ['Name', device.name || ''],
                                 ['Address', (device.address_1 || 'No Address') + ', ' + (device.address_2 || '')],
                                 ['Last Updated', device.last_updated || 'No data'],
                             ].forEach(function ([label, value]) {

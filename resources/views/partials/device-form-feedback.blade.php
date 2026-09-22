@@ -1,5 +1,8 @@
 @if (session('success'))
-    <div class="alert alert-success" role="status">{{ session('success') }}</div>
+    <div class="alert alert-success alert-dismissible" role="status">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss notification"></button>
+                </div>
 @endif
 @if (session('error'))
     <div class="alert alert-danger" role="alert">{{ session('error') }}</div>

@@ -30,7 +30,7 @@ foreach (['owner', 'admin', 'empty'] as $role) {
 }
 $device = Device::create([
     'user_id' => $owner->id, 'hardware_id' => 1, 'serial_no' => 'BROWSER-SIMULATOR-1',
-    'alias' => 'Browser simulator', 'sku' => 'FIXTURE', 'order_no' => 'TEST-ORDER',
+    'name' => 'Browser simulator', 'sku' => 'FIXTURE', 'order_no' => 'TEST-ORDER',
     'address_1' => '1 Fixture Street', 'city' => 'Test City', 'address_state' => 'CA',
     'zip_code' => '90001', 'country' => 'US', 'latitude' => 33.7263, 'longitude' => -117.9190,
 ]);

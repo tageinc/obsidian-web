@@ -70,8 +70,8 @@ async function reload() {
             if (!point) continue;
             leaflet
                 .marker(point, {
-                    title: String(device.alias ?? 'Device'),
-                    alt: String(device.alias ?? 'Device'),
+                    title: String(device.name ?? 'Device'),
+                    alt: String(device.name ?? 'Device'),
                     keyboard: true,
                     icon: leaflet.divIcon({
                         html: markerIcon(device.status),

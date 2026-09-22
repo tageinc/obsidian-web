@@ -56,7 +56,7 @@ export function mapDevices(payload, showAll) {
 export function devicePopup(device) {
     const popup = document.createElement('div');
     const rows = [
-        ['Alias', device.alias ?? 'Unnamed device'],
+        ['Name', device.name ?? 'Unnamed device'],
         [
             'Address',
             [device.address_1 || 'No Address', device.address_2].filter(Boolean).join(', '),

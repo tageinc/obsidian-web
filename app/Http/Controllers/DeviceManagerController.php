@@ -23,7 +23,7 @@ class DeviceManagerController extends Controller
 
     public function index(Request $request)
     {
-        $search = $this->aliasSearch($request);
+        $search = $this->nameSearch($request);
         // Attempt to get the 'show' parameter from the request
         $pagination_size = $request->input('show');
 
@@ -34,7 +34,7 @@ class DeviceManagerController extends Controller
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
         $devices = $this->ownedDevices($search)
-        ->select('id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
+        ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
         ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
 
         // //Log::info('Initial Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
@@ -93,9 +93,9 @@ class DeviceManagerController extends Controller
 
     public function allDevices(Request $request)
 {
-    $search = $this->aliasSearch($request);
+    $search = $this->nameSearch($request);
     $devices = $this->ownedDevices($search)
-             ->get(['id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
+             ->get(['id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
     foreach ($devices as $device) {
             // Fetching the geo status as before
@@ -130,11 +130,11 @@ $devicesJson = $devices->toJson();
     // import this class loads in the values for the map when show is NOT checked
     public function paginatedDevices(Request $request)
 {
-    $search = $this->aliasSearch($request);
+    $search = $this->nameSearch($request);
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
     $devices = $this->ownedDevices($search)
-             ->select('id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
+             ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
              ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
 
     foreach ($devices as $device) {
@@ -160,7 +160,7 @@ $devicesJson = $devices->toJson();
     return response()->json($devices);
 }
 
-    private function aliasSearch(Request $request): string
+    private function nameSearch(Request $request): string
     {
         $validated = $request->validate(['search' => 'nullable|string|max:255']);
 
@@ -191,7 +191,7 @@ $devicesJson = $devices->toJson();
         if ($search !== '') {
             // Bound parameters and an explicit escape character make %, _ and ! literal.
             $literal = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
-            $query->whereRaw("LOWER(alias) LIKE LOWER(?) ESCAPE '!'", ['%'.$literal.'%']);
+            $query->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '!'", ['%'.$literal.'%']);
         }
 
         return $query->orderBy('id');
@@ -222,7 +222,7 @@ $devicesJson = $devices->toJson();
 
             $devices = Device::where('state', 'active')->where('user_id', $user_id)
                 ->get([
-                    'id', 'state', 'serial_no', 'sku', 'alias', 'latitude', 'longitude',
+                    'id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude',
                     'address_1', 'address_2', 'updated_at', 'status_notification', 'zip_code'
                 ]);
 

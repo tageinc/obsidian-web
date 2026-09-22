@@ -63,7 +63,7 @@ afterEach(() => {
 describe('bounded workspace navigation', () => {
     it('only recognizes the five same-origin workspace URLs and no aliases or destructive/download paths', () => {
         expect(workspaceDestination('/dashboard?show=20&page=2').page).toBe('dashboard');
-        expect(workspaceDestination('/edit-device/12').page).toBe('edit-device');
+        expect(workspaceDestination('/edit-device/12')).toBeNull();
         expect(workspaceDestination('/devices/12').page).toBe('view-device');
         for (const path of [
             '/',

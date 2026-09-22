@@ -1,8 +1,8 @@
 <div class="form-group mb-4">
-    <label for="alias">Device name</label>
-    <input id="alias" name="alias" type="text" maxlength="255" value="{{ old('alias', optional($device)->alias) }}"
-           class="form-control @error('alias') is-invalid @enderror" required>
-    @error('alias') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    <label for="name">Device name</label>
+    <input id="name" name="name" type="text" maxlength="255" value="{{ old('name', optional($device)->name) }}"
+           class="form-control @error('name') is-invalid @enderror" required>
+    @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
 </div>
 
 <h2 class="h5 mb-3">Installation address</h2>

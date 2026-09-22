@@ -14,7 +14,7 @@ function form(overrides = {}, slots = {}) {
             csrfToken: 'test-csrf',
             action: '/create-device',
             values: {
-                alias: 'Roof tracker',
+                name: 'Roof tracker',
                 serial_no: 'TRACK-1',
                 sku: 'ST',
                 order_no: 'ORD-1',
@@ -51,7 +51,7 @@ describe('reusable device form', () => {
             _token: 'test-csrf',
             _creation_modal: '1',
             serial_no: 'TRACK-1',
-            alias: 'Roof tracker',
+            name: 'Roof tracker',
             latitude: '0',
             longitude: '0',
         });
@@ -111,7 +111,10 @@ describe('reusable device form', () => {
                 }),
         );
         const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
-        await wrapper.get('#alias').setValue('Updated tracker');
+        await wrapper.get('#name').setValue('Updated tracker');
+        await wrapper.get('#serial_no').setValue('TRACK-2');
+        await wrapper.get('#sku').setValue('SP2');
+        await wrapper.get('#order_no').setValue('ORD-2');
         const first = new Event('submit', { cancelable: true });
         wrapper.get('form').element.dispatchEvent(first);
         expect(first.defaultPrevented).toBe(true);
@@ -123,7 +126,10 @@ describe('reusable device form', () => {
             csrfToken: 'test-csrf',
             headers: { 'X-Obsidian-Modal': '1' },
             data: {
-                alias: 'Updated tracker',
+                serial_no: 'TRACK-2',
+                sku: 'SP2',
+                order_no: 'ORD-2',
+                name: 'Updated tracker',
                 address_1: '1 Example Street',
                 address_2: '',
                 city: 'Toronto',
@@ -136,7 +142,7 @@ describe('reusable device form', () => {
         });
         expect(wrapper.get('button[type="submit"]').element.disabled).toBe(true);
         expect(wrapper.emitted('saved')).toBeUndefined();
-        const response = { success: true, device: { id: 1, alias: 'Updated tracker' } };
+        const response = { success: true, device: { id: 1, name: 'Updated tracker' } };
         complete(response);
         await flushPromises();
         expect(wrapper.emitted('saved')).toEqual([[response]]);
@@ -148,26 +154,26 @@ describe('reusable device form', () => {
         requestJson.mockRejectedValueOnce(
             Object.assign(new Error('Validation failed.'), {
                 status: 422,
-                fieldErrors: { alias: ['This alias is too long.'] },
+                fieldErrors: { name: ['This name is too long.'] },
             }),
         );
         const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
-        await wrapper.get('#alias').setValue('Changed alias');
+        await wrapper.get('#name').setValue('Changed name');
         await wrapper.get('form').trigger('submit');
         await flushPromises();
-        expect(wrapper.get('#alias').element.value).toBe('Changed alias');
-        expect(wrapper.get('#alias').attributes('aria-invalid')).toBe('true');
-        expect(wrapper.get('#alias-errors').text()).toContain('This alias is too long.');
+        expect(wrapper.get('#name').element.value).toBe('Changed name');
+        expect(wrapper.get('#name').attributes('aria-invalid')).toBe('true');
+        expect(wrapper.get('#name-errors').text()).toContain('This name is too long.');
         expect(document.activeElement).toBe(wrapper.get('[role="alert"]').element);
         expect(wrapper.emitted('saved')).toBeUndefined();
         expect(wrapper.get('button[type="submit"]').element.disabled).toBe(false);
 
         requestJson.mockResolvedValueOnce({ success: true });
-        await wrapper.get('#alias').setValue('Corrected alias');
+        await wrapper.get('#name').setValue('Corrected name');
         await wrapper.get('form').trigger('submit');
         await flushPromises();
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
-        expect(requestJson.mock.lastCall[1].data.alias).toBe('Corrected alias');
+        expect(requestJson.mock.lastCall[1].data.name).toBe('Corrected name');
         expect(wrapper.emitted('saved')).toEqual([[{ success: true }]]);
     });
 
