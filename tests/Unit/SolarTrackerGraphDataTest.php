@@ -81,10 +81,10 @@ class SolarTrackerGraphDataTest extends TestCase
 
     public function test_graph_response_has_raw_points_without_legacy_averages(): void
     {
-        Schema::create('device_registers', function (Blueprint $table) {
+        Schema::create('devices', function (Blueprint $table) {
             $table->id(); $table->string('serial_no'); $table->integer('hardware_id');
         });
-        DB::table('device_registers')->insert(['id' => 1, 'serial_no' => 'SP1', 'hardware_id' => 1]);
+        DB::table('devices')->insert(['id' => 1, 'serial_no' => 'SP1', 'hardware_id' => 1]);
         DB::table('solar_tracker_logs')->insert([
             'serial_no' => 'SP1', 'temp' => 12.5, 'updated_at' => '2026-09-21 01:00:00',
         ]);

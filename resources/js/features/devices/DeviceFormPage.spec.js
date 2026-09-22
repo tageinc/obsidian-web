@@ -7,13 +7,11 @@ function page(overrides = {}) {
     const wrapper = mount(DeviceFormPage, {
         attachTo: document.body,
         props: {
-            registering: true,
+            creating: true,
             csrfToken: 'test-csrf',
-            action: '/dataInsert',
+            action: '/create-device',
             links: { dashboard: '/dashboard' },
-            hardwareOptions: [{ id: 1, name: 'Solar tracker' }],
             values: {
-                hardware_id: 1,
                 alias: 'Roof tracker',
                 serial_no: 'TRACK-1',
                 sku: 'ST',
@@ -38,20 +36,19 @@ describe('device forms', () => {
     it('registers all fields through the existing native POST contract without notification opt-ins', async () => {
         const wrapper = page();
         expect(wrapper.get('form').attributes()).toMatchObject({
-            action: '/dataInsert',
+            action: '/create-device',
             method: 'POST',
         });
         expect(wrapper.findAll('button[type="submit"]')).toHaveLength(1);
-        expect(wrapper.get('h1').text()).toBe('Register device');
+        expect(wrapper.get('h1').text()).toBe('Create Device');
         expect(wrapper.get('a[href="/dashboard"]').text()).toBe('Back to dashboard');
-        expect(wrapper.find('[name="_registration_modal"]').exists()).toBe(false);
+        expect(wrapper.find('[name="_creation_modal"]').exists()).toBe(false);
         expect(wrapper.find('[name="_method"]').exists()).toBe(false);
         expect(wrapper.find('[name="status_notification"]').exists()).toBe(false);
         expect(wrapper.find('[name="sms_notification"]').exists()).toBe(false);
         await wrapper.get('#alias').setValue('Updated name');
         expect(Object.fromEntries(new FormData(wrapper.get('form').element))).toMatchObject({
             _token: 'test-csrf',
-            hardware_id: '1',
             serial_no: 'TRACK-1',
             alias: 'Updated name',
             zip_code: 'M5V 1A1',
@@ -72,12 +69,12 @@ describe('device forms', () => {
             step: 'any',
             required: '',
         });
-        expect(wrapper.get('a[target="_blank"]').attributes('rel')).toBe('noopener noreferrer');
+        expect(wrapper.find('a[target="_blank"]').exists()).toBe(false);
     });
 
     it('edits mutable fields only and displays escaped fixed identity without submitting it', () => {
         const wrapper = page({
-            registering: false,
+            creating: false,
             action: '/edit-device/1',
             fixedIdentity: {
                 hardwareName: 'Solar tracker',
@@ -91,7 +88,7 @@ describe('device forms', () => {
         expect(wrapper.get('dl').text()).toContain('<b>TRACK-1</b>');
         expect(wrapper.find('dl b').exists()).toBe(false);
         for (const name of [
-            'hardware_id',
+            'serial_no',
             'serial_no',
             'sku',
             'order_no',
@@ -105,7 +102,7 @@ describe('device forms', () => {
 
     it('allows both edit coordinates blank and requires the matching coordinate including when the other is zero', async () => {
         const values = Object.freeze({ alias: 'Original', latitude: '', longitude: '' });
-        const wrapper = page({ registering: false, values });
+        const wrapper = page({ creating: false, values });
         expect(wrapper.get('#latitude').attributes('required')).toBeUndefined();
         expect(wrapper.get('#longitude').attributes('required')).toBeUndefined();
         await wrapper.get('#latitude').setValue('0');
@@ -115,20 +112,18 @@ describe('device forms', () => {
         expect(values.latitude).toBe('');
     });
 
-    it('connects server validation to hardware and address fields while retaining supplied input', () => {
+    it('connects server validation to serial number and address fields while retaining supplied input', () => {
         const wrapper = page({
             errors: {
-                hardware_id: ['Choose valid hardware.'],
+                serial_no: ['Enter a valid serial number.'],
                 zip_code: ['Postal code is required.'],
             },
             sessionError: 'Could not save.',
         });
-        expect(wrapper.get('#hardware_id').attributes('aria-describedby')).toBe(
-            'hardware_id-errors',
-        );
+        expect(wrapper.get('#serial_no').attributes('aria-describedby')).toBe('serial_no-errors');
         expect(wrapper.get('#zip_code').attributes('aria-describedby')).toBe('zip_code-errors');
         expect(wrapper.get('#zip_code').element.value).toBe('M5V 1A1');
-        expect(wrapper.get('#hardware_id').attributes('aria-invalid')).toBe('true');
+        expect(wrapper.get('#serial_no').attributes('aria-invalid')).toBe('true');
         expect(wrapper.findAll('[role="alert"]')).toHaveLength(2);
     });
 

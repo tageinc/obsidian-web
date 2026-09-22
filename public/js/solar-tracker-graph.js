@@ -65,21 +65,52 @@
         return points.filter(function (point) { return point.epoch_ms >= latest - hours * 60 * 60 * 1000; });
     }
 
+    function linearRegression(points) {
+        const valid = (points || []).filter(function (point) {
+            return point && Number.isFinite(point.x) && Number.isFinite(point.y);
+        }).sort(function (a, b) { return a.x - b.x; });
+        if (valid.length < 2 || valid[0].x === valid[valid.length - 1].x) return [];
+        const origin = valid[0].x;
+        const elapsed = valid.map(function (point) { return { x: (point.x - origin) / 3600000, y: point.y }; });
+        const meanX = elapsed.reduce(function (sum, point) { return sum + point.x; }, 0) / elapsed.length;
+        const meanY = elapsed.reduce(function (sum, point) { return sum + point.y; }, 0) / elapsed.length;
+        let covariance = 0;
+        let variance = 0;
+        elapsed.forEach(function (point) {
+            const centeredX = point.x - meanX;
+            covariance += centeredX * (point.y - meanY);
+            variance += centeredX * centeredX;
+        });
+        if (!Number.isFinite(variance) || variance === 0) return [];
+        const slope = covariance / variance;
+        const fitted = [valid[0].x, valid[valid.length - 1].x].map(function (x) {
+            return { x: x, y: meanY + slope * ((x - origin) / 3600000 - meanX) };
+        });
+        return fitted.every(function (point) { return Number.isFinite(point.y); }) ? fitted : [];
+    }
+
     function makeChart(canvas, series, points) {
         if (!root.Chart) return null;
         const includeDate = shouldIncludeDate(points);
+        const datasets = series.map(function (metric) {
+            return { label: metric.label, data: points.map(function (point) { return { x: point.epoch_ms, y: point[metric.field], id: point.id }; }), borderColor: metric.color, backgroundColor: metric.color, showLine: false, pointRadius: 2, pointHoverRadius: 4, pointStyle: 'circle', tension: 0, spanGaps: false, order: 0 };
+        });
+        const trends = datasets.flatMap(function (dataset, index) {
+            const fitted = linearRegression(dataset.data);
+            if (!fitted.length) return [];
+            const metric = series[index];
+            return [{ type: 'line', label: metric.label + ' — linear trend', data: fitted, borderColor: metric.color, backgroundColor: metric.color, showLine: true, pointRadius: 0, pointHoverRadius: 0, pointStyle: 'line', borderDash: [6, 4], borderWidth: 2, tension: 0, fill: false, order: 1, isTrend: true }];
+        });
         return new root.Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: { datasets: series.map(function (metric) {
-                return { label: metric.label, data: points.map(function (point) { return { x: point.epoch_ms, y: point[metric.field], id: point.id }; }), borderColor: metric.color, backgroundColor: metric.color, pointRadius: 2, tension: 0, spanGaps: false };
-            }) },
+            type: 'scatter',
+            data: { datasets: datasets.concat(trends) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'nearest' }, scales: {
                 x: { type: 'linear', ticks: { maxTicksLimit: 7, callback: function (value) { return includeDate ? formatTimestamp(Number(value), true) : formatTime(Number(value)); } }, title: { display: true, text: 'Recorded time (Pacific Time)' } },
                 y: { beginAtZero: false }
-            }, plugins: { tooltip: { callbacks: {
+            }, plugins: { tooltip: { filter: function (item) { return !item.dataset.isTrend; }, callbacks: {
                 title: function (items) { return items.length ? formatTimestamp(items[0].parsed.x, true) : ''; },
                 afterLabel: function (item) { return item.raw.id != null ? 'Reading #' + item.raw.id : ''; }
-            } }, legend: { display: series.length > 1 } } }
+            } }, legend: { display: true, labels: { usePointStyle: true } } } }
         });
     }
 
@@ -105,5 +136,5 @@
         redraw(0);
     }
 
-    return { TIME_ZONE: TIME_ZONE, formatTime: formatTime, formatTimestamp: formatTimestamp, normalizePoints: normalizePoints, rangeLabel: rangeLabel, filteredPoints: filteredPoints, shouldIncludeDate: shouldIncludeDate, render: render };
+    return { TIME_ZONE: TIME_ZONE, formatTime: formatTime, formatTimestamp: formatTimestamp, normalizePoints: normalizePoints, rangeLabel: rangeLabel, filteredPoints: filteredPoints, shouldIncludeDate: shouldIncludeDate, linearRegression: linearRegression, render: render };
 }));

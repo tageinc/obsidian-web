@@ -27,7 +27,9 @@ class SolarTrackerLogSeederTest extends TestCase
             'name' => 'Andre', 'email' => UserSeeder::EMAIL, 'password' => 'existing-hash',
         ]);
         $this->seed(DevelopmentDataSeeder::class);
-        $logs = DB::table('solar_tracker_logs')->orderBy('updated_at')->get();
+        DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->delete();
+        $this->seed(SolarTrackerLogSeeder::class);
+        $logs = DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->orderBy('updated_at')->get();
         $this->assertCount(2017, $logs);
         $this->assertSame('2026-10-26 12:00:00', $logs->first()->updated_at);
         $this->assertSame('2026-11-02 12:00:00', $logs->last()->updated_at);
@@ -41,10 +43,10 @@ class SolarTrackerLogSeederTest extends TestCase
                 $this->assertSame(300, strtotime($log->updated_at.' UTC') - strtotime($logs[$index - 1]->updated_at.' UTC'));
             }
         }
-        $this->seed(DevelopmentDataSeeder::class);
-        $this->assertSame(2017, DB::table('solar_tracker_logs')->count());
-        $this->assertSame(1, DB::table('device_registers')->count());
-        $this->assertEquals($logs->first(), DB::table('solar_tracker_logs')->orderBy('updated_at')->first());
+        $this->seed(SolarTrackerLogSeeder::class);
+        $this->assertSame(2017, DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->count());
+        $this->assertSame(15, DB::table('devices')->count());
+        $this->assertEquals($logs->first(), DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->orderBy('updated_at')->first());
         $this->assertSame('existing-hash', DB::table('users')->value('password'));
     }
 

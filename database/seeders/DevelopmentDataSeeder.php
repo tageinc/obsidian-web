@@ -2,15 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
-/** Synthetic local device and telemetry. Never run this against production. */
+/** Random synthetic local data. Never run this against production. */
 class DevelopmentDataSeeder extends Seeder
 {
-    public const SERIAL = '202600000001';
-    public const LATITUDE = 34.0522;
-    public const LONGITUDE = -118.2437;
+    public const DEVICE_COUNT = 15;
+    public const STATUSES = ['online', 'offline', 'idle', 'set-up', 'calibration', 'solar-track', 'sleep', 'safe', 'remote-control'];
 
     public function run(): void
     {
@@ -20,30 +21,46 @@ class DevelopmentDataSeeder extends Seeder
             return;
         }
 
-        $userId = DB::table('users')->where('email', UserSeeder::EMAIL)->value('id');
-        if (! $userId) {
-            $this->call(UserSeeder::class);
-            $userId = DB::table('users')->where('email', UserSeeder::EMAIL)->value('id');
-        }
-        if (! $userId) {
-            throw new \RuntimeException('Set LOCAL_ADMIN_PASSWORD to create the development account before seeding development data.');
-        }
-        $this->call(HardwareSeeder::class);
-        $hardwareId = HardwareSeeder::SOLAR_TRACKER_ID;
-        $serial = self::SERIAL;
-        // Downtown Los Angeles; also repair the previously unlocated local fixture.
-        $coordinates = ['latitude' => self::LATITUDE, 'longitude' => self::LONGITUDE];
-        if (! DB::table('device_registers')->where('serial_no', $serial)->exists()) {
-            DB::table('device_registers')->insert($coordinates + [
-                'user_id' => $userId, 'hardware_id' => $hardwareId, 'serial_no' => $serial,
-                'sku' => 'SP1', 'alias' => 'Development Solar Tracker', 'order_no' => 'DEV-0001',
-                'address_1' => '1 Development Way', 'city' => 'Testville', 'state' => 'CA',
-                'country' => 'US', 'zip_code' => '90000', 'status_notification' => 0,
-                'sms_notification' => 0, 'created_at' => now(), 'updated_at' => now(),
+        DB::transaction(function () {
+            $user = User::firstOrCreate(['email' => 'developer@example.test'], [
+                'name' => 'Obsidian Development User',
+                'email' => 'developer@example.test',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
-        } else {
-            DB::table('device_registers')->where('serial_no', $serial)->update($coordinates);
-        }
-        $this->call(SolarTrackerLogSeeder::class);
+            $adjectives = ['Sunny', 'Golden', 'Quiet', 'Bright', 'Silver', 'Emerald', 'Crimson', 'Amber'];
+            $names = ['Meadow', 'Ridge', 'Valley', 'Summit', 'Grove', 'Horizon', 'Orchard', 'Canyon'];
+
+            for ($index = 1; $index <= self::DEVICE_COUNT; $index++) {
+                $serial = sprintf('2026%08d', $index);
+                $latitude = random_int(-90000000, 90000000) / 1000000;
+                $longitude = random_int(-180000000, 180000000) / 1000000;
+                $status = self::STATUSES[array_rand(self::STATUSES)];
+                $alias = $adjectives[array_rand($adjectives)].' '.$names[array_rand($names)].' '.$index;
+                DB::table('devices')->updateOrInsert(['serial_no' => $serial], [
+                    'user_id' => $user->id,
+                    'latitude' => $latitude, 'longitude' => $longitude,
+                    'sku' => 'SP1', 'alias' => $alias, 'order_no' => sprintf('DEV-%04d', $index),
+                    'address_1' => '1 Development Way', 'city' => 'Testville', 'state' => 'CA',
+                    'country' => 'US', 'zip_code' => '90000', 'status_notification' => 0,
+                    'sms_notification' => 0, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+                DB::table('geocode')->updateOrInsert(['serial_no' => $serial], [
+                    'latitude' => $latitude, 'longitude' => $longitude, 'status' => $status,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                // Keep map status and telemetry-based status checks consistent.
+                $reportedAt = $status === 'offline'
+                    ? now()->subSeconds((int) config('devices.telemetry_freshness_seconds', 600) + 60)
+                    : now();
+                DB::table('solar_tracker_logs')->updateOrInsert(['serial_no' => $serial], [
+                    'ps1' => 0, 'ps2' => 0, 'ps_avg' => 0, 'pds' => 0,
+                    'motor_speed' => 0, 'temp' => 20, 'cts' => 0, 'state' => $status,
+                    'created_at' => $reportedAt, 'updated_at' => $reportedAt,
+                ]);
+            }
+        });
     }
 }

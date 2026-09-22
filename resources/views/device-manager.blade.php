@@ -14,7 +14,6 @@
             ], fn ($line) => $line !== null));
             return [
                 'id' => $device->id,
-                'hardwareName' => optional($device->hardware)->name ?? 'Unknown',
                 'alias' => $dashboardText($device->alias) ?? $serial ?? 'Device '.$device->id,
                 'serial' => $serial,
                 'sku' => $dashboardText($device->sku),
@@ -40,31 +39,30 @@
                 return ['url' => $link['url'], 'label' => html_entity_decode(strip_tags($link['label']), ENT_QUOTES, 'UTF-8'), 'active' => $link['active']];
             })->all(),
         ];
-        $registration = null;
-        if ($registrationHardware !== null) {
-            $modalSubmission = old('_registration_modal') === '1';
-            $registrationErrors = $modalSubmission ? \App\Support\DeviceRegistrationData::errors($errors->messages()) : [];
-            $registrationError = $modalSubmission ? session('error') : null;
-            $registration = [
+        $creation = null;
+        if ($creationEnabled) {
+            $modalSubmission = old('_creation_modal') === '1';
+            $creationErrors = $modalSubmission ? \App\Support\DeviceCreationData::errors($errors->messages()) : [];
+            $creationError = $modalSubmission ? session('error') : null;
+            $creation = [
                 'csrfToken' => csrf_token(),
-                'action' => route('dataInsert'),
-                'values' => \App\Support\DeviceRegistrationData::values(Auth::user(), $modalSubmission),
-                'hardwareOptions' => $registrationHardware->map->only(['id', 'name'])->values()->all(),
-                'errors' => $registrationErrors,
-                'sessionError' => $registrationError,
-                'initiallyOpen' => $modalSubmission && (!empty($registrationErrors) || !empty($registrationError)),
+                'action' => route('create-device.store'),
+                'values' => \App\Support\DeviceCreationData::values(Auth::user(), $modalSubmission),
+                'errors' => $creationErrors,
+                'sessionError' => $creationError,
+                'initiallyOpen' => $modalSubmission && (!empty($creationErrors) || !empty($creationError)),
             ];
         }
     @endphp
     @include('frontend.mount', ['page' => 'dashboard', 'props' => [
         'devices' => $dashboardDevices,
-        'registration' => $registration,
+        'creation' => $creation,
         'search' => $search,
         'pagination' => $dashboardPagination,
         'mapEndpoints' => ['all' => route('all-devices', $search !== '' ? ['search' => $search] : []), 'paginated' => route('paginated-devices', $search !== '' ? ['search' => $search] : [])],
-        'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'register' => route('device-register')],
+        'links' => ['dashboard' => route('dashboard'), 'profile' => route('profile'), 'create' => route('create-device')],
         'success' => session('success'),
-        'sessionError' => $registration && $registration['initiallyOpen'] ? null : session('error'),
+        'sessionError' => $creation && $creation['initiallyOpen'] ? null : session('error'),
     ]])
 @else
 <style>
@@ -103,7 +101,7 @@
     .battery-dead {
         background-color: #FF0000;
     }
-	
+
 
     .idle { background-color: #000000; } /* Black */
     .set-up { background-color: #FA8072; } /* Salmon */
@@ -136,11 +134,8 @@
     <div class="row justify-content-center">
         <div class="col-md-10">
             <div id="map" style="height: 400px;"></div>
-            <form id="allDevicesForm">
-                <input type="checkbox" name="showAll" id="showAllDevicesCheckbox"> Show All Devices
-            </form>
             <div class="d-flex justify-content-end my-3">
-                <a class="btn btn-primary" href="{{ route('device-register') }}">Create +</a>
+                <a class="btn btn-primary" href="{{ route('create-device') }}">Create +</a>
             </div>
             <div class="card">
                 <div class="card-header">{{ __('Device Manager') }}</div>
@@ -158,23 +153,17 @@
                         @error('search')<p class="text-danger mt-1" role="alert">{{ $message }}</p>@enderror
                     </form>
                     <div class="row">
-                        <div class="col-md-2"><strong>Hardware</strong></div>
                         <div class="col-md-2"><strong>Alias</strong></div>
                         <div class="col-md-4"><strong>Status</strong></div>
                         <div class="col-md-3"><strong>Actions</strong></div>
                     </div>
                     @forelse ($devices as $device)
                     <div class="row mt-2">
-                        <div class="col-md-2">{{ $device->hardware->name }}</div>
                         <div class="col-md-2"><a href="{{ route('device-info', $device->id) }}">{{ $device->alias ?: $device->serial_no }}</a></div>
                         <div class="col-md-4">
-						@if($device->hardware_id == 1)
+
 						<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
 						<p>Last updated at: {{ $device->last_updated }}</p>
-						@elseif(in_array($device->hardware_id, [2, 3]))
-							<span class="status-dot {{ strtolower(str_replace(' ', '-', $device->state)) }}"></span>{{ $device->state }}
-							<p>Last updated at: {{ $device->last_updated }}</p>
-						@endif
                         </div>
                         <div class="col-md-3">
                             <details>
@@ -251,8 +240,8 @@
         'gray': '#808080' // Gray
     };
 
-        function loadDevices(page = 1, showAll = false, pagination_size = 10) {
-            var url = showAll ? '/all-devices' : '/paginated-devices';
+        function loadDevices(page = 1, pagination_size = 10) {
+            var url = '/paginated-devices';
             url += '?page=' + page + '&show=' + pagination_size;
             url += '&search=' + encodeURIComponent(@json($search));
 
@@ -272,7 +261,7 @@
                         }
                     });
 
-                    let devices = showAll ? data : data.data; // This line might need adjustment based on the actual data structure
+                    let devices = data.data; // This line might need adjustment based on the actual data structure
                     devices.forEach(function (device) {
                         var state = device.state ? device.state.toLowerCase().replace(' ', '-') : 'unknown';
                         var color = stateColors[state] || '#808080'; // Default to grey if no match found
@@ -288,7 +277,6 @@
 
                             const popup = document.createElement('div');
                             [
-                                ['Hardware', device.hardware ? device.hardware.name : 'Unknown'],
                                 ['Alias', device.alias || ''],
                                 ['Address', (device.address_1 || 'No Address') + ', ' + (device.address_2 || '')],
                                 ['Last Updated', device.last_updated || 'No data'],
@@ -315,27 +303,23 @@
         }
 
         var showSelect = document.querySelector('select[name="show"]');
-        var showAllCheckbox = document.getElementById('showAllDevicesCheckbox');
 
         showSelect.addEventListener('change', function () {
-            loadDevices(1, showAllCheckbox.checked, this.value);
+            loadDevices(1, this.value);
         });
 
-        showAllCheckbox.addEventListener('change', function () {
-            loadDevices(1, this.checked, showSelect.value);
-        });
 
         // Initial load
         var initialPage = new URLSearchParams(window.location.search).get('page') || 1;
         var initialShow = showSelect.value;
-        loadDevices(initialPage, showAllCheckbox.checked, initialShow);
+        loadDevices(initialPage, initialShow);
 
         // Handle browser navigation events
         window.onpopstate = function (event) {
             var newParams = new URLSearchParams(window.location.search);
             var newPage = newParams.get('page') || 1;
             var newShow = newParams.get('show') || showSelect.value;
-            loadDevices(newPage, showAllCheckbox.checked, newShow);
+            loadDevices(newPage, newShow);
         };
     });
 </script>

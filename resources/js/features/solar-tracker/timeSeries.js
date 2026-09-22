@@ -57,24 +57,86 @@ export function axisFormatter(points) {
         ? formatTimestamp
         : formatTime;
 }
+export function linearRegression(data) {
+    const valid = (Array.isArray(data) ? data : []).filter(
+        (point) => point && Number.isFinite(point.x) && Number.isFinite(point.y),
+    );
+    if (valid.length < 2) return [];
+    let first = Infinity;
+    let last = -Infinity;
+    for (const point of valid) {
+        first = Math.min(first, point.x);
+        last = Math.max(last, point.x);
+    }
+    if (first === last) return [];
+
+    // Fit elapsed hours around their mean, avoiding cancellation from large epoch values.
+    // Every valid reading contributes independently, including repeated timestamps.
+    const elapsed = (x) => (x - first) / 3600000;
+    const meanX = valid.reduce((sum, point) => sum + elapsed(point.x) / valid.length, 0);
+    const meanY = valid.reduce((sum, point) => sum + point.y / valid.length, 0);
+    let covariance = 0;
+    let variance = 0;
+    for (const point of valid) {
+        const centeredX = elapsed(point.x) - meanX;
+        covariance += centeredX * (point.y - meanY);
+        variance += centeredX * centeredX;
+    }
+    if (!(variance > 0)) return [];
+    const slope = covariance / variance;
+    const endpoints = [first, last].map((x) => ({
+        x,
+        y: meanY + slope * (elapsed(x) - meanX),
+    }));
+    return endpoints.every((point) => Number.isFinite(point.y)) ? endpoints : [];
+}
 export function chartOptions(points, series) {
     const label = axisFormatter(points);
     const first = points[0]?.epoch_ms;
     const last = points.at(-1)?.epoch_ms;
     const min = first === last ? first - 1800000 : first;
     const max = first === last ? last + 1800000 : last;
+    const readings = series.map(([field, title, color]) => ({
+        label: title,
+        data: points.map((point) => ({ x: point.epoch_ms, y: point[field], id: point.id })),
+        borderColor: color,
+        backgroundColor: color,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        pointStyle: 'circle',
+        showLine: false,
+        tension: 0,
+        spanGaps: false,
+        order: 0,
+    }));
+    const trends = readings.flatMap((reading) => {
+        const data = linearRegression(reading.data);
+        return data.length
+            ? [
+                  {
+                      type: 'line',
+                      label: `${reading.label} — linear trend`,
+                      data,
+                      borderColor: reading.borderColor,
+                      backgroundColor: reading.backgroundColor,
+                      borderDash: [6, 4],
+                      borderWidth: 2,
+                      pointRadius: 0,
+                      pointHoverRadius: 0,
+                      pointStyle: 'line',
+                      showLine: true,
+                      tension: 0,
+                      fill: false,
+                      order: 1,
+                      isTrend: true,
+                  },
+              ]
+            : [];
+    });
     return {
-        type: 'line',
+        type: 'scatter',
         data: {
-            datasets: series.map(([field, title, color]) => ({
-                label: title,
-                data: points.map((point) => ({ x: point.epoch_ms, y: point[field], id: point.id })),
-                borderColor: color,
-                backgroundColor: color,
-                pointRadius: 2,
-                tension: 0,
-                spanGaps: false,
-            })),
+            datasets: [...readings, ...trends],
         },
         options: {
             responsive: true,
@@ -105,8 +167,9 @@ export function chartOptions(points, series) {
                 y: { beginAtZero: false },
             },
             plugins: {
-                legend: { display: series.length > 1 },
+                legend: { display: true, labels: { usePointStyle: true } },
                 tooltip: {
+                    filter: (item) => !item.dataset.isTrend,
                     callbacks: {
                         title: (items) => (items.length ? formatTimestamp(items[0].parsed.x) : ''),
                         afterLabel: (item) =>

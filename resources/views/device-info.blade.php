@@ -7,7 +7,7 @@
 @if ($usesVue)
     @include('frontend.mount', ['page' => 'device-info', 'props' => [
         'device' => ['alias' => $device->alias, 'serial' => $device->serial_no, 'details' => [
-            'Hardware' => $device->hardware->name, 'Alias' => $device->alias, 'SKU' => $device->sku,
+            'Alias' => $device->alias, 'SKU' => $device->sku,
             'Serial No.' => $device->serial_no,
             'Address' => implode(' ', array_filter([$device->address_1, $device->address_2, $device->city, $device->state, $device->zip_code])),
         ]],
@@ -27,7 +27,6 @@
             <div class="card mb-3">
                 <div class="card-header">Device Info</div>
                 <div class="card-body">
-                    <p><strong>Hardware:</strong> {{ $device->hardware->name }}</p>
                     <p><strong>Alias:</strong> {{ $device->alias }}</p>
                     <p><strong>SKU:</strong> {{ $device->sku }}</p>
                     <p><strong>Serial No.:</strong> {{ $device->serial_no }}</p>
@@ -100,6 +99,7 @@
             </div>
         </div>
         <div class="card-body">
+            <p class="text-muted small">Points show raw readings. Dashed lines fit all valid readings in the selected range; a trend needs at least two distinct timestamps.</p>
             <p class="text-muted small" data-graph-range-label></p>
             <p class="text-muted" data-graph-empty hidden>No telemetry was recorded for this time range.</p>
             <div class="row g-3">

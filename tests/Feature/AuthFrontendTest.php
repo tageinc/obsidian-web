@@ -100,7 +100,7 @@ class AuthFrontendTest extends TestCase
         }
     }
 
-    public function test_registration_keeps_server_validation_and_sends_verification_once(): void
+    public function test_creation_keeps_server_validation_and_sends_verification_once(): void
     {
         $fields = [
             'name' => 'New account', 'email' => 'new-account@example.test', 'phone_number' => '6045550123',

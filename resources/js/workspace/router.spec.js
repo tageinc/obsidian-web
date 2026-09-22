@@ -14,7 +14,7 @@ import FormFeedback from '../shared/components/FormFeedback.vue';
 const fixtures = [];
 const Page = { props: ['label'], template: '<div><h1>{{ label }}</h1><p>Page content</p></div>' };
 const components = Object.fromEntries(
-    ['dashboard', 'profile', 'device-register', 'edit-device', 'device-info'].map((page) => [
+    ['dashboard', 'profile', 'create-device', 'edit-device', 'device-info'].map((page) => [
         page,
         Page,
     ]),
@@ -174,13 +174,13 @@ describe('bounded workspace navigation', () => {
                         finishSlow = resolve;
                     }),
             )
-            .mockResolvedValueOnce(envelope('device-register', '/device-register', 'New page'));
+            .mockResolvedValueOnce(envelope('create-device', '/create-device', 'New page'));
         const item = await fixture(request);
         const slow = item.router.push('/profile');
         await flushPromises();
         expect(item.wrapper.text()).toContain('Loading page');
         const signal = request.mock.calls[0][1].signal;
-        await item.router.push('/device-register');
+        await item.router.push('/create-device');
         expect(signal.aborted).toBe(true);
         finishSlow(envelope('profile', '/profile', 'Stale page'));
         await slow;
@@ -248,7 +248,7 @@ describe('bounded workspace navigation', () => {
         await item.router.push('/profile');
         expect(item.navigateDocument).toHaveBeenCalledWith('/profile');
         expect(item.session.clear).not.toHaveBeenCalled();
-        await item.router.push('/device-register');
+        await item.router.push('/create-device');
         expect(item.state.error.message).toContain('could not be loaded');
         expect(item.state.props).toBeNull();
     });
@@ -298,11 +298,7 @@ describe('bounded workspace navigation', () => {
         const item = await fixture(
             vi.fn((url) =>
                 Promise.resolve(
-                    envelope(
-                        url === '/profile' ? 'profile' : 'device-register',
-                        url,
-                        'Current page',
-                    ),
+                    envelope(url === '/profile' ? 'profile' : 'create-device', url, 'Current page'),
                 ),
             ),
             {
@@ -317,11 +313,11 @@ describe('bounded workspace navigation', () => {
         );
         const slow = item.router.push('/profile').catch(() => {});
         await flushPromises();
-        await item.router.push('/device-register');
+        await item.router.push('/create-device');
         failChunk(new Error('outdated chunk'));
         await slow;
         expect(item.state.error).toBeNull();
-        expect(item.state.page).toBe('device-register');
+        expect(item.state.page).toBe('create-device');
         expect(item.wrapper.text()).toContain('Current page');
     });
 });

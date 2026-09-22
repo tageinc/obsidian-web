@@ -4,7 +4,7 @@ import FormField from './FormField.vue';
 const props = defineProps({
     modelValue: { type: Object, required: true },
     errors: { type: Object, default: () => ({}) },
-    registering: { type: Boolean, default: false },
+    creating: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 const addressFields = [
@@ -64,16 +64,8 @@ function update(name, value) {
     <fieldset class="mb-3">
         <legend class="h5 mb-2">Device coordinates</legend>
         <p id="coordinates-help" class="text-muted small">
-            Enter the installation location in decimal degrees.<template v-if="!registering">
+            Enter the installation location in decimal degrees.<template v-if="!creating">
                 If coordinates are not available, leave both fields blank.</template
-            >
-        </p>
-        <p class="small">
-            <a
-                href="https://www.latlong.net/convert-address-to-lat-long.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                >Find coordinates from an address</a
             >
         </p>
         <div class="row">
@@ -87,7 +79,7 @@ function update(name, value) {
                     :max="field.limit"
                     :model-value="modelValue[field.name]"
                     :errors="errors[field.name]"
-                    :required="registering || String(modelValue[field.other] ?? '') !== ''"
+                    :required="creating || String(modelValue[field.other] ?? '') !== ''"
                     @update:model-value="update(field.name, $event)"
                 />
             </div>

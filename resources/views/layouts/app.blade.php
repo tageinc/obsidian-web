@@ -9,7 +9,7 @@
 
 	<!-- icon of the app -->
 	<link rel="shortcut icon" type="image/png" href="{{ asset('img/icon.png') }}"/>
-	
+
     <!-- this is the title name of the app -->
     <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -51,7 +51,7 @@
                 'csrfToken' => csrf_token(),
                 'links' => [
                     'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
-                    'registerDevice' => route('device-register'), 'login' => route('login'),
+                    'createDevice' => route('create-device'), 'login' => route('login'),
                     'register' => route('register'), 'logout' => route('logout'),
                     'admin' => Auth::check() && Auth::user()->isDeveloper() ? route('developer-workspace') : null,
                 ],
@@ -101,15 +101,15 @@
                                 <a class="dropdown-item" href="{{ route('profile') }}">
                                     {{ __('Profile') }}
                                 </a>
-                                <a class="dropdown-item" href="{{ route('device-register') }}">
-                                    {{ __('Register my device') }}
+                                <a class="dropdown-item" href="{{ route('create-device') }}">
+                                    {{ __('Create Device') }}
                                 </a>
 								@if(Auth::user() && Auth::user()->isDeveloper())
                                 <a class="dropdown-item" href="{{ route('developer-workspace') }}">
                                     {{ __('Developer Workspace') }}
                                 </a>
                                 @endif
-		
+
                                 <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault();
                                     document.getElementById('logout-form').submit();">
                                     {{ __('Logout') }}
@@ -123,7 +123,7 @@
                     </ul>
                     <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ms-auto">
-						
+
                     </ul>
                 </div>
 
@@ -147,7 +147,7 @@
         integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
         crossorigin="anonymous"></script>
     @endunless
-	
+
 	</body>
-	
+
 </html>

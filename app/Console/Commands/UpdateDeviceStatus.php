@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\LowVoltageMail;
 use App\Mail\TheftVandalismMail;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\GeoCode;
 use App\Services\AppUpdateDelivery;
 use App\Services\DeviceCommunicationStatus;
@@ -19,7 +19,7 @@ class UpdateDeviceStatus extends Command
 
     public function handle(DeviceCommunicationStatus $communication, AppUpdateDelivery $delivery)
     {
-        foreach (DeviceRegister::where('hardware_id', 1)->cursor() as $device) {
+        foreach (Device::cursor() as $device) {
             // The status and database mail job commit together. If enqueueing
             // fails, the next check can still detect and notify this transition.
             DB::transaction(function () use ($device, $communication, $delivery) {

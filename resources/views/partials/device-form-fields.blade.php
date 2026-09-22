@@ -16,7 +16,7 @@
         'country' => ['Country', 'country-name', 'col-md-6'],
     ] as $field => [$label, $autocomplete, $column])
         @php
-            $default = $registering ? Auth::user()->getAttribute($field) : $device->getAttribute($field);
+            $default = $creating ? Auth::user()->getAttribute($field) : $device->getAttribute($field);
             $default = $field === 'country' && !$default ? 'US' : $default;
         @endphp
         <div class="{{ $column }} form-group mb-3">
@@ -30,15 +30,14 @@
 </div>
 
 <h2 class="h5 mt-3 mb-2">Device coordinates</h2>
-<p class="text-muted small">Enter the installation location in decimal degrees.{{ $registering ? '' : ' If coordinates are not available, leave both fields blank.' }}</p>
-<p class="small"><a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank" rel="noopener noreferrer">Find coordinates from an address</a></p>
+<p class="text-muted small">Enter the installation location in decimal degrees.{{ $creating ? '' : ' If coordinates are not available, leave both fields blank.' }}</p>
 <div class="row mb-3">
     @foreach (['latitude' => ['Latitude', 90], 'longitude' => ['Longitude', 180]] as $field => [$label, $limit])
         <div class="col-md-6 form-group mb-3">
             <label for="{{ $field }}">{{ $label }}</label>
             <input id="{{ $field }}" name="{{ $field }}" type="number" step="any" min="-{{ $limit }}" max="{{ $limit }}"
-                   value="{{ old($field, optional($device)->getAttribute($field)) }}" class="form-control @error($field) is-invalid @enderror"
-                   @if ($registering) required @endif>
+                   value="{{ old($field, $creating ? (['latitude' => '34.052235', 'longitude' => '-118.243683'][$field]) : optional($device)->getAttribute($field)) }}" class="form-control @error($field) is-invalid @enderror"
+                   @if ($creating) required @endif>
             @error($field) <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
     @endforeach

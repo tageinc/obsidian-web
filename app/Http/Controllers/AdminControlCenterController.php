@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Models\FirmwareVersions;
 use App\Models\ConfigVersions;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use Illuminate\Support\Facades\Log;
 use App\Models\SmartPanelLog;
 use App\Models\GeoCode;
@@ -44,41 +44,41 @@ class AdminControlCenterController extends Controller
 
 
 
-        //$deviceLocations = DeviceRegister::select('latitude', 'longitude', 'address_1', 'sku', 'serial_no')->get();
+        //$deviceLocations = Device::select('latitude', 'longitude', 'address_1', 'sku', 'serial_no')->get();
 
 
         $endDate = new \DateTime();
         $startDate = (clone $endDate)->sub(new \DateInterval('P6M'));
 
         /*
-        $deviceRegistrations = DeviceRegister::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as count')
+        $deviceCreations = Device::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as count')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('year', 'month')
             ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
             ->get();
 
-        $labels = $deviceRegistrations->map(function ($item) {
+        $labels = $deviceCreations->map(function ($item) {
             return \DateTime::createFromFormat('!m', $item->month)->format('M') . ' ' . $item->year;
         });
         */
          /*
         // Existing logic for accumulated data
         $runningTotal = 0;
-        $accumulatedData = $deviceRegistrations->map(function ($item) use (&$runningTotal) {
+        $accumulatedData = $deviceCreations->map(function ($item) use (&$runningTotal) {
             $runningTotal += $item->count;
             return $runningTotal;
         });
         */
         /*
-        $newDeviceRegistrations = $deviceRegistrations->map(function ($registration) {
+        $newDeviceCreations = $deviceCreations->map(function ($creation) {
             return [
-                'month' => \DateTime::createFromFormat('!m', $registration->month)->format('M') . ' ' . $registration->year,
-                'new_devices' => $registration->count
+                'month' => \DateTime::createFromFormat('!m', $creation->month)->format('M') . ' ' . $creation->year,
+                'new_devices' => $creation->count
             ];
         })->toArray(); // Convert the collection to an array
         */
-        //$devices = DeviceRegister::with('hardware')->get();
+        //$devices = Device::with('hardware')->get();
 
          // Fetch all Solar Tracker Logs for devices in one go (if applicable)
         /*
@@ -91,7 +91,7 @@ class AdminControlCenterController extends Controller
         // Augment devices with their matching GeoCode information
         /*
         $augmentedDevices = $devices->map(function ($device) use ($geoCodes,  $solarTrackerLogs) {
-            $serialNo = $device->serial_no; // Assuming 'serial_no' is the column name in DeviceRegister
+            $serialNo = $device->serial_no; // Assuming 'serial_no' is the column name in Device
             if ($geoCodes->has($serialNo)) {
                 // If there's a matching GeoCode, augment the device data with it
                 $geoCode = $geoCodes->get($serialNo);
@@ -120,8 +120,8 @@ class AdminControlCenterController extends Controller
 
 
 
-        //$newLabels = array_column($newDeviceRegistrations, 'month');
-        //$newData = array_column($newDeviceRegistrations, 'new_devices');
+        //$newLabels = array_column($newDeviceCreations, 'month');
+        //$newData = array_column($newDeviceCreations, 'new_devices');
         return view('admin-control-center', [
             'firmwareUpdates' => $firmwareUpdates,
             'configVersions' => $configVersions,
@@ -129,8 +129,8 @@ class AdminControlCenterController extends Controller
             'configPaginationSize' => $configPaginationSize,
             //'labels' => $labels, // Existing labels for the accumulated data graph
             //'data' => $accumulatedData, // Existing data for the accumulated data graph
-            //'newLabels' => $newLabels, // New labels for the new registrations graph
-            // 'newData' => $newData, // New data for the new registrations graph
+            //'newLabels' => $newLabels, // New labels for the new creations graph
+            // 'newData' => $newData, // New data for the new creations graph
             //'deviceLocations' => $augmentedDevices,
         ]);
     }
@@ -233,7 +233,7 @@ class AdminControlCenterController extends Controller
     /**
      * Get the latest version of the config
      * @param prefix Alphanumeric representation of a product
-     * @return The string represents the latest version of the config table 
+     * @return The string represents the latest version of the config table
      */
     public function getLatestConfigVersionNumber($prefix = null)
     {
@@ -250,7 +250,7 @@ class AdminControlCenterController extends Controller
     /**
      * Get the latest version of the firmware
      * @param prefix Alphanumeric representation of a product
-     * @return The string represents the latest version of the config table 
+     * @return The string represents the latest version of the config table
      */
     public function getLatestFirmwareVersionNumber($prefix = null)
     {

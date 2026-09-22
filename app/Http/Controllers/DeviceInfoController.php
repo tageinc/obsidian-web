@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Api\SolarTrackerLog;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\SolarTrackerRemoteControl;
 use App\Services\SolarTrackerGraphData;
 use Carbon\Carbon;
@@ -13,14 +13,10 @@ class DeviceInfoController extends Controller
 {
     public function index($id)
     {
-        $device = DeviceRegister::find($id);
+        $device = Device::find($id);
 
         if (!$device) {
             return redirect()->route('device-manager')->with('error', 'Device not found');
-        }
-
-        if ((int) $device->hardware_id !== 1) {
-            return redirect()->route('device-manager')->with('error', 'This device type is archived and is no longer available.');
         }
 
         $remoteControl = SolarTrackerRemoteControl::where('serial_no', $device->serial_no)->first();
@@ -36,14 +32,10 @@ class DeviceInfoController extends Controller
 
     public function getLatestStatusJson($serialNo)
     {
-        $device = DeviceRegister::where('serial_no', $serialNo)->first();
+        $device = Device::where('serial_no', $serialNo)->first();
 
         if (!$device) {
             return response()->json(['error' => 'Device not found'], 404);
-        }
-
-        if ((int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
         }
 
         return response()->json(array_merge(['device' => $serialNo], $this->statusPayload($serialNo)));
@@ -51,14 +43,10 @@ class DeviceInfoController extends Controller
 
     public function getDeviceData($id)
     {
-        $device = DeviceRegister::find($id);
+        $device = Device::find($id);
 
         if (!$device) {
             return response()->json(['error' => 'Device not found'], 404);
-        }
-
-        if ((int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
         }
 
         return response()->json($this->graphPayload($device->serial_no));
@@ -66,14 +54,10 @@ class DeviceInfoController extends Controller
 
     public function refresh($id)
     {
-        $device = DeviceRegister::find($id);
+        $device = Device::find($id);
         if (!$device) {
             return response()->json(['error' => 'Device not found'], 404);
         }
-        if ((int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
-        }
-
         $log = SolarTrackerLog::where('serial_no', $device->serial_no)->latest('updated_at')->first();
         if (!$log) {
             return response()->json(['error' => 'No matching data found'], 404);
@@ -94,9 +78,9 @@ class DeviceInfoController extends Controller
             'serial_no' => 'required|string|max:255',
         ]);
 
-        $device = DeviceRegister::where('serial_no', $data['serial_no'])->first();
-        if (!$device || (int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
+        $device = Device::where('serial_no', $data['serial_no'])->first();
+        if (!$device) {
+            return response()->json(['error' => 'Device not found'], 404);
         }
 
         $mode = (int) $data['mode'];
@@ -116,9 +100,9 @@ class DeviceInfoController extends Controller
     public function getSolarTrackerStatus(Request $request)
     {
         $data = $request->validate(['serial_no' => 'required|string|max:255']);
-        $device = DeviceRegister::where('serial_no', $data['serial_no'])->first();
-        if (!$device || (int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
+        $device = Device::where('serial_no', $data['serial_no'])->first();
+        if (!$device) {
+            return response()->json(['error' => 'Device not found'], 404);
         }
         $panel = SolarTrackerRemoteControl::where('serial_no', $data['serial_no'])->first();
 

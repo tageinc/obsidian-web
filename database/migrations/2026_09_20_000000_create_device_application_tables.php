@@ -13,20 +13,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('hardware')) {
-            Schema::create('hardware', function (Blueprint $table) {
-                $table->id();
-                $table->string('name')->unique();
-                $table->string('prefix')->nullable()->index();
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('device_registers')) {
-            Schema::create('device_registers', function (Blueprint $table) {
+        if (!Schema::hasTable('devices')) {
+            Schema::create('devices', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-                $table->foreignId('hardware_id')->nullable()->constrained('hardware')->nullOnDelete();
                 $table->string('serial_no')->index();
                 $table->string('sku')->nullable();
                 $table->string('alias')->nullable();
@@ -43,7 +33,6 @@ return new class extends Migration
                 $table->boolean('sms_notification')->default(false);
                 $table->string('state_message')->nullable();
                 $table->timestamps();
-                $table->index(['user_id', 'hardware_id']);
             });
         }
 

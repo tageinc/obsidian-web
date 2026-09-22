@@ -42,6 +42,44 @@ assert.equal(graph.shouldIncludeDate(graph.normalizePoints([
 assert.match(graph.formatTimestamp('2026-11-01T08:30:00Z', true), /1:30 AM PDT/);
 assert.match(graph.formatTimestamp('2026-11-01T09:30:00Z', true), /1:30 AM PST/);
 
+function closeTo(actual, expected, message) {
+  assert.ok(Math.abs(actual - expected) < 1e-9, message || (actual + ' should equal ' + expected));
+}
+
+const regressionOrigin = Date.parse('2026-06-02T07:00:00Z');
+function regressionData(samples) {
+  return samples.map(([hours, y]) => ({ x: regressionOrigin + hours * 3600000, y }));
+}
+
+// Irregular spacing and noisy readings must use elapsed time, not point indexes or endpoint interpolation.
+const noisy = regressionData([[3, 4], [0, 1], [1, 4]]);
+const originalNoisy = JSON.parse(JSON.stringify(noisy));
+const noisyFit = graph.linearRegression(noisy);
+assert.deepEqual(noisyFit.map(point => point.x), [regressionOrigin, regressionOrigin + 3 * 3600000]);
+closeTo(noisyFit[0].y, 13 / 7);
+closeTo(noisyFit[1].y, 31 / 7);
+assert.deepEqual(noisy, originalNoisy, 'Regression must not reorder or modify source readings');
+
+// A repeated timestamp is another reading, not a group to average before fitting.
+const duplicateFit = graph.linearRegression(regressionData([[0, 0], [0, 4], [1, 1], [2, 2]]));
+closeTo(duplicateFit[0].y, 20 / 11);
+closeTo(duplicateFit[1].y, 18 / 11);
+assert.deepEqual(graph.linearRegression(regressionData([[0, 5], [2, 5], [7, 5]])), [
+  { x: regressionOrigin, y: 5 }, { x: regressionOrigin + 7 * 3600000, y: 5 }
+]);
+
+const missingFit = graph.linearRegression([
+  ...regressionData([[-1, null], [0, 2], [1, 4], [2, undefined], [3, Infinity], [4, NaN], [5, '12']]),
+  { x: Infinity, y: 100 }, { x: null, y: 2 }, null
+]);
+assert.deepEqual(missingFit, [{ x: regressionOrigin, y: 2 }, { x: regressionOrigin + 3600000, y: 4 }]);
+for (const insufficient of [[], [{ x: 0, y: 1 }], [{ x: 0, y: 1 }, { x: 0, y: 9 }], [{ x: 0, y: null }, { x: 1, y: 2 }]]) {
+  assert.deepEqual(graph.linearRegression(insufficient), [], 'A fit requires valid readings at distinct timestamps');
+}
+const millisecondFit = graph.linearRegression([0, 1, 2].map(offset => ({ x: regressionOrigin + offset, y: offset })));
+closeTo(millisecondFit[0].y, 0);
+closeTo(millisecondFit[1].y, 2);
+
 // Exercise the rendering entry point: formatting-only tests cannot catch a
 // missing Chart reference or a broken range-control redraw.
 const createdCharts = [];
@@ -92,6 +130,7 @@ try {
   ['temperature', 'panel', 'motor'].forEach(function (metric, index) {
     const chart = createdCharts[index];
     assert.equal(chart.context, metric);
+    assert.equal(chart.config.type, 'scatter');
     assert.deepEqual(chart.config.data.datasets[0].data.map(point => point.x), [
       Date.parse('2026-06-02T05:30:00Z'),
       Date.parse('2026-06-02T07:00:00Z'),
@@ -103,27 +142,56 @@ try {
     assert.match(chart.config.options.plugins.tooltip.callbacks.title([{ parsed: { x: midnight } }]), /12:00 AM PDT/);
     assert.equal(chart.config.options.plugins.tooltip.callbacks.afterLabel({ raw: { id: 2 } }), 'Reading #2');
     assert.equal(chart.config.options.plugins.tooltip.callbacks.afterLabel({ raw: {} }), '');
-    chart.config.data.datasets.forEach(dataset => {
+    chart.config.data.datasets.filter(dataset => !dataset.isTrend).forEach(dataset => {
       assert.equal(dataset.tension, 0);
       assert.equal(dataset.spanGaps, false);
+      assert.equal(dataset.showLine, false);
+      assert.equal(dataset.pointRadius, 2);
+      assert.equal(dataset.pointHoverRadius, 4);
+      assert.equal(dataset.pointStyle, 'circle');
+      assert.equal(dataset.order, 0);
       assert.deepEqual(dataset.data.map(point => point.id), [1, 2, 3, 4]);
+      assert.equal(chart.config.options.plugins.tooltip.filter({ dataset }), true);
     });
+    chart.config.data.datasets.filter(dataset => dataset.isTrend).forEach(dataset => {
+      assert.equal(dataset.type, 'line');
+      assert.equal(dataset.showLine, true);
+      assert.equal(dataset.pointRadius, 0);
+      assert.equal(dataset.pointHoverRadius, 0);
+      assert.equal(dataset.pointStyle, 'line');
+      assert.equal(dataset.order, 1);
+      assert.equal(dataset.borderWidth, 2);
+      assert.deepEqual(dataset.borderDash, [6, 4]);
+      assert.equal(dataset.tension, 0);
+      assert.equal(dataset.fill, false);
+      assert.equal(dataset.data.length, 2);
+      assert.equal(chart.config.options.plugins.tooltip.filter({ dataset }), false);
+    });
+    assert.equal(chart.config.options.plugins.legend.display, true);
+    assert.equal(chart.config.options.plugins.legend.labels.usePointStyle, true);
   });
   assert.deepEqual(createdCharts[0].config.data.datasets[0].data.map(point => point.y), [20, null, 22, 24]);
-  assert.deepEqual(createdCharts[1].config.data.datasets.map(dataset => dataset.label), ['PS1', 'PS2']);
+  assert.deepEqual(createdCharts[1].config.data.datasets.map(dataset => dataset.label), ['PS1', 'PS2', 'PS1 — linear trend', 'PS2 — linear trend']);
   assert.deepEqual(createdCharts[1].config.data.datasets[0].data.map(point => point.y), [40, 0, 42, 45]);
   assert.deepEqual(createdCharts[1].config.data.datasets[1].data.map(point => point.y), [50, null, 52, 55]);
   assert.equal(createdCharts[1].config.options.plugins.legend.display, true);
-  assert.equal(createdCharts[0].config.options.plugins.legend.display, false);
+  assert.equal(createdCharts[0].config.options.plugins.legend.display, true);
   assert.deepEqual(createdCharts[2].config.data.datasets[0].data.map(point => point.y), [10, 0, 11, 12]);
+  closeTo(createdCharts[0].config.data.datasets[1].data[0].y, 258 / 13);
+  closeTo(createdCharts[0].config.data.datasets[1].data[1].y, 306 / 13);
 
   container.buttons[0].click();
   assert.equal(createdCharts.length, 6);
   assert.ok(createdCharts.slice(0, 3).every(chart => chart.destroyed));
   assert.deepEqual(createdCharts[3].config.data.datasets[0].data.map(point => point.y), [null, 22, 24]);
+  assert.deepEqual(createdCharts[3].config.data.datasets[1].data, [
+    { x: Date.parse('2026-06-02T07:00:00Z'), y: 22 },
+    { x: Date.parse('2026-06-02T07:30:00Z'), y: 24 }
+  ], 'Changing the range must fit its valid readings again without extrapolation');
   container.buttons[3].click();
   assert.equal(createdCharts.length, 9);
   assert.equal(createdCharts[6].config.data.datasets[0].data.length, 4);
+  closeTo(createdCharts[6].config.data.datasets[1].data[0].y, 258 / 13);
 
   const emptyContainer = graphContainer();
   graph.render(emptyContainer, []);
@@ -142,6 +210,8 @@ try {
     rangedContainer.buttons[buttonIndex].click();
     const chart = createdCharts[createdCharts.length - 3];
     assert.deepEqual(chart.config.data.datasets[0].data.map(point => point.y), values);
+    assert.equal(chart.config.data.datasets[1].data[0].x, chart.config.data.datasets[0].data[0].x);
+    assert.equal(chart.config.data.datasets[1].data[1].x, latestEpoch);
     assert.match(chart.config.options.scales.x.ticks.callback(latestEpoch), /12:00 PM/);
   });
 
@@ -149,6 +219,13 @@ try {
   graph.render(sparseContainer, [{ id: 1, epoch_ms: latestEpoch, temp: 0, ps1: null, ps2: 0, motor_speed: null }]);
   assert.equal(sparseContainer.elements['[data-graph-empty]'].hidden, true);
   assert.deepEqual(createdCharts[createdCharts.length - 3].config.data.datasets[0].data, [{ x: latestEpoch, y: 0, id: 1 }]);
+  assert.ok(createdCharts.slice(-3).every(chart => chart.config.data.datasets.every(dataset => !dataset.isTrend)));
+
+  const duplicateContainer = graphContainer();
+  graph.render(duplicateContainer, [10, 20].map((value, index) => ({
+    id: index, epoch_ms: latestEpoch, temp: value, ps1: value, ps2: null, motor_speed: null
+  })));
+  assert.ok(createdCharts.slice(-3).every(chart => chart.config.data.datasets.every(dataset => !dataset.isTrend)), 'Duplicate times alone cannot define a trend');
 } finally {
   if (originalChart === undefined) delete globalThis.Chart;
   else globalThis.Chart = originalChart;

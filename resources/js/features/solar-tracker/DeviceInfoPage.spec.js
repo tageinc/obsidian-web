@@ -83,7 +83,7 @@ it('embeds device details without page navigation and requests the edit modal fr
     const wrapper = mount(DeviceInfoPage, { props: { ...props, embedded: true } });
     expect(wrapper.find('h1').exists()).toBe(false);
     expect(wrapper.find('.device-back').exists()).toBe(false);
-    expect(wrapper.get('.device-heading').text()).toContain('Solar Tracker');
+    expect(wrapper.get('.device-heading').text()).toContain('Solar tracker');
     expect(wrapper.get('.device-heading').text()).toContain('TEST-1');
     expect(wrapper.get('#sensors-title').element.tagName).toBe('H3');
     expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);

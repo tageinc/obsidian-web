@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DeviceRegisterController;
+use App\Http\Controllers\CreateDeviceController;
 use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\DeviceInfoController;
 use App\Http\Controllers\AdminControlCenterController;
@@ -42,8 +42,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
     Route::get('/dashboard', [DeviceManagerController::class, 'index'])->name('dashboard');
-    Route::get('/device-register', [DeviceRegisterController::class, 'index'])->name('device-register');
-    Route::post('/dataInsert', [DeviceRegisterController::class, 'dataInsert'])->name('dataInsert');
+    Route::get('/create-device', [CreateDeviceController::class, 'index'])->name('create-device');
+    Route::post('/create-device', [CreateDeviceController::class, 'createDevice'])->name('create-device.store');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/update-name', [ProfileController::class, 'updateName'])->name('profile.updateName');

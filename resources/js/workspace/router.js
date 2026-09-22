@@ -20,10 +20,10 @@ const destinations = [
         component: () => import('../features/profile/ProfilePage.vue'),
     },
     {
-        path: '/device-register',
-        page: 'device-register',
-        title: 'Register device',
-        match: /^\/device-register$/,
+        path: '/create-device',
+        page: 'create-device',
+        title: 'Create Device',
+        match: /^\/create-device$/,
         component: () => import('../features/devices/DeviceFormPage.vue'),
     },
     {

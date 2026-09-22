@@ -6,8 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Api\SolarTrackerLog;
-use App\Models\DeviceRegister;
-use App\Models\Hardware;
+use App\Models\Device;
 use Illuminate\Support\Facades\Log;
 
 
@@ -15,11 +14,10 @@ class DeviceLogController extends Controller
 {
     // JSON Response Messages
     const SUCCESS_RESPONSE = "{\"msg\":\"success\"}";
-    const INVALID_HARDWARE_RESPONSE = "{\"msg\":\"invalid hardware\"}";
 	const DEVICE_NOT_REGISTERED = "{\"msg\":\"device is not registered\"}";
 
     public function logData(Request $request)
-    {			
+    {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'serial_no' => 'required|string|max:255',
             'data' => 'required|string|max:16384',
@@ -33,21 +31,13 @@ class DeviceLogController extends Controller
             return $this->invalidPayload();
         }
         $serial_no = (string) $request->serial_no;
-		$device_register = DeviceRegister::where('serial_no', '=', $serial_no)->get()->first();
-		if($device_register){
-			$hardware_id = (int)$device_register->hardware_id;
-			if ($hardware_id === 1 && !$this->validTelemetry($json, $hardware_id)) {
+		$create_device = Device::where('serial_no', '=', $serial_no)->get()->first();
+		if($create_device){
+            if (!$this->validTelemetry($json)) {
                 return $this->invalidPayload();
             }
-            switch($hardware_id){
-				case 1: // Smart Panels
-					self::logSolarTrackerData($json, $serial_no);
-					return self::SUCCESS_RESPONSE;
-				default:
-					// Do nothing
-					return self::INVALID_HARDWARE_RESPONSE;
-			
-			}
+            self::logSolarTrackerData($json, $serial_no);
+            return self::SUCCESS_RESPONSE;
 		}else{
 			return self::DEVICE_NOT_REGISTERED;
 		}
@@ -60,7 +50,7 @@ class DeviceLogController extends Controller
         return response()->json(['msg' => 'invalid telemetry'], 422);
     }
 
-    private function validTelemetry(array $data, int $hardware): bool
+    private function validTelemetry(array $data): bool
     {
         $fields = ['ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed', 'temp', 'cts', 'state'];
         $hasValue = false;

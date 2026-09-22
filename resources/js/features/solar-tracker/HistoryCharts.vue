@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
         <header class="history-heading">
             <div>
                 <h2 id="history-title">Reading history</h2>
-                <p>Explore the original readings recorded by your tracker.</p>
+                <p>Compare raw readings with their overall linear trend.</p>
             </div>
             <span class="history-badge">Raw data · Pacific Time</span>
         </header>
@@ -124,7 +124,7 @@ onBeforeUnmount(() => {
                         role="img"
                         :aria-label="
                             selected.title +
-                            ', ' +
+                            ', scatter plot with linear trend lines, ' +
                             visible.length +
                             ' raw readings. ' +
                             rangeLabel(visible)
@@ -134,7 +134,11 @@ onBeforeUnmount(() => {
             </div>
             <footer class="history-footer">
                 <p>{{ rangeLabel(visible) }}</p>
-                <p>Ranges end at the latest reading. Missing measurements appear as gaps.</p>
+                <p>
+                    Points show raw readings. Dashed lines fit all valid readings in the selected
+                    range; a trend needs at least two distinct timestamps.
+                </p>
+                <p>Ranges end at the latest reading. Missing measurements are omitted.</p>
             </footer>
         </div>
     </section>

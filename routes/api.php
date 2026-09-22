@@ -9,7 +9,7 @@ use App\Http\Controllers\DeviceManagerController;
 use App\Http\Controllers\DeviceInfoController;
 use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DeviceRegisterController;
+use App\Http\Controllers\CreateDeviceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,12 +39,12 @@ Route::post('/remote-control-set/{data?}', [DeviceRemoteController::class, 'remo
 // Public routes (without logging)
 Route::post('/login', [LoginController::class, 'apiLogin'])->name('api.login');
 Route::post('/logout', [LoginController::class, 'logout'])->name('api.logout');
-Route::post('/device-register', [DeviceRegisterController::class, 'apiRegisterDevice']); //register device
+Route::post('/create-device', [CreateDeviceController::class, 'apiCreateDevice']); //register device
 
 
 // Routes that require Sanctum authentication and logging
 Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
-    
+
 
     // Profile Routes
     Route::put('/update-name', [ProfileController::class, 'updateNameApi'])->name('profile.update-name');
@@ -60,7 +60,7 @@ Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
     Route::get('/solar-tracker/{serial_no}', [DeviceInfoController::class, 'getLatestStatusJson'])->name('device.get-latest-status-json');
 
 
-    
+
 
     // Device routes with a prefix
     Route::prefix('device')->group(function () {

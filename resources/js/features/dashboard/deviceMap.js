@@ -56,7 +56,6 @@ export function mapDevices(payload, showAll) {
 export function devicePopup(device) {
     const popup = document.createElement('div');
     const rows = [
-        ['Hardware', device.hardware?.name ?? 'Unknown'],
         ['Alias', device.alias ?? 'Unnamed device'],
         [
             'Address',

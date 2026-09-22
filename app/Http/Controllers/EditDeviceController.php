@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\GeoCode;
 use Illuminate\Support\Facades\DB;
 
@@ -63,9 +63,9 @@ class EditDeviceController extends Controller
             ->with('success', 'Device updated successfully.');
     }
 
-    private function editableDevice(Request $request, $id): DeviceRegister
+    private function editableDevice(Request $request, $id): Device
     {
-        $device = DeviceRegister::findOrFail($id);
+        $device = Device::findOrFail($id);
         $user = $request->user();
         abort_unless($user && (
             (int) $device->user_id === (int) $user->id
@@ -180,7 +180,7 @@ class EditDeviceController extends Controller
         ]);
 
         $address1 = $request->input('address_1');
-        DeviceRegister::where('id', $id)->update(['address_1' => $address1]);
+        Device::where('id', $id)->update(['address_1' => $address1]);
 
         return response()->json(['message' => 'Address 1 updated successfully.'], 200);
     }
@@ -192,7 +192,7 @@ class EditDeviceController extends Controller
         ]);
 
         $alias = $request->input('alias');
-        DeviceRegister::where('id', $id)->update(['alias' => $alias]);
+        Device::where('id', $id)->update(['alias' => $alias]);
 
         return response()->json(['message' => 'Product Alias updated successfully.'], 200);
     }
@@ -204,7 +204,7 @@ class EditDeviceController extends Controller
         ]);
 
         $address2 = $request->input('address_2');
-        DeviceRegister::where('id', $id)->update(['address_2' => $address2]);
+        Device::where('id', $id)->update(['address_2' => $address2]);
 
         return response()->json(['message' => 'Address 2 updated successfully.'], 200);
     }
@@ -216,7 +216,7 @@ class EditDeviceController extends Controller
         ]);
 
         $zipCode = $request->input('zip_code');
-        DeviceRegister::where('id', $id)->update(['zip_code' => $zipCode]);
+        Device::where('id', $id)->update(['zip_code' => $zipCode]);
 
         return response()->json(['message' => 'Zip Code updated successfully.'], 200);
     }
@@ -226,7 +226,7 @@ class EditDeviceController extends Controller
         $state = $request->input('state');
         $city = $request->input('city');
 
-        DeviceRegister::where('id', $id)->update([
+        Device::where('id', $id)->update([
             'state' => $state,
             'city' => $city,
         ]);
@@ -236,7 +236,7 @@ class EditDeviceController extends Controller
 
     public function apiUpdateStatusNotification(Request $request, $id)
     {
-        $device = DeviceRegister::findOrFail($id);
+        $device = Device::findOrFail($id);
         $device->status_notification = $request->status_notification == '1';
         $device->save();
 

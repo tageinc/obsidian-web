@@ -10,12 +10,10 @@ function form(overrides = {}, slots = {}) {
     const wrapper = mount(DeviceForm, {
         attachTo: document.body,
         props: {
-            registering: true,
+            creating: true,
             csrfToken: 'test-csrf',
-            action: '/dataInsert',
-            hardwareOptions: [{ id: 1, name: 'Solar tracker' }],
+            action: '/create-device',
             values: {
-                hardware_id: 1,
                 alias: 'Roof tracker',
                 serial_no: 'TRACK-1',
                 sku: 'ST',
@@ -39,20 +37,19 @@ beforeEach(() => vi.resetAllMocks());
 afterEach(() => mounted.splice(0).forEach((wrapper) => wrapper.unmount()));
 
 describe('reusable device form', () => {
-    it('adds the modal marker to the existing native registration contract only when requested', () => {
+    it('adds the modal marker to the existing native creation contract only when requested', () => {
         const standalone = form();
-        expect(standalone.find('[name="_registration_modal"]').exists()).toBe(false);
+        expect(standalone.find('[name="_creation_modal"]').exists()).toBe(false);
         standalone.unmount();
         mounted.pop();
-        const modal = form({ registrationModal: true });
+        const modal = form({ creationModal: true });
         expect(modal.get('form').attributes()).toMatchObject({
             method: 'POST',
-            action: '/dataInsert',
+            action: '/create-device',
         });
         expect(Object.fromEntries(new FormData(modal.get('form').element))).toMatchObject({
             _token: 'test-csrf',
-            _registration_modal: '1',
-            hardware_id: '1',
+            _creation_modal: '1',
             serial_no: 'TRACK-1',
             alias: 'Roof tracker',
             latitude: '0',
@@ -64,7 +61,7 @@ describe('reusable device form', () => {
 
     it('retains validation errors and entered values when mounted in a reopened modal', () => {
         const wrapper = form({
-            registrationModal: true,
+            creationModal: true,
             errors: { serial_no: ['This serial number is already registered.'] },
         });
         expect(wrapper.get('#serial_no').element.value).toBe('TRACK-1');
@@ -73,13 +70,13 @@ describe('reusable device form', () => {
             'This serial number is already registered.',
         );
         expect(wrapper.find('[role="alert"]').exists()).toBe(true);
-        expect(wrapper.get('#hardware_id').element.value).toBe('1');
+        expect(wrapper.find('#hardware_id').exists()).toBe(false);
         expect(wrapper.get('#latitude').attributes('required')).toBeDefined();
     });
 
     it('reports pending synchronously and supplies it to the actions slot until native navigation resumes', async () => {
         const wrapper = form(
-            { registrationModal: true },
+            { creationModal: true },
             {
                 actions:
                     '<template #actions="{ pending }"><button type="button" :disabled="pending">Cancel</button></template>',
@@ -113,7 +110,7 @@ describe('reusable device form', () => {
                     complete = resolve;
                 }),
         );
-        const wrapper = form({ registering: false, asyncSubmit: true, action: '/update-device/1' });
+        const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
         await wrapper.get('#alias').setValue('Updated tracker');
         const first = new Event('submit', { cancelable: true });
         wrapper.get('form').element.dispatchEvent(first);
@@ -154,7 +151,7 @@ describe('reusable device form', () => {
                 fieldErrors: { alias: ['This alias is too long.'] },
             }),
         );
-        const wrapper = form({ registering: false, asyncSubmit: true, action: '/update-device/1' });
+        const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
         await wrapper.get('#alias').setValue('Changed alias');
         await wrapper.get('form').trigger('submit');
         await flushPromises();
@@ -179,7 +176,7 @@ describe('reusable device form', () => {
         'The request could not be completed. Please try again.',
     ])('shows request failures without losing changes: %s', async (message) => {
         requestJson.mockRejectedValueOnce(new Error(message));
-        const wrapper = form({ registering: false, asyncSubmit: true, action: '/update-device/1' });
+        const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
         await wrapper.get('#city').setValue('Los Angeles');
         await wrapper.get('form').trigger('submit');
         await flushPromises();

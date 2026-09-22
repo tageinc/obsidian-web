@@ -32,9 +32,23 @@ it('redraws selected ranges and destroys every chart on navigation', async () =>
     await vi.dynamicImportSettled();
     await flushPromises();
     expect(Chart).toHaveBeenCalledTimes(1);
+    const initial = Chart.mock.calls[0][1];
+    expect(initial.type).toBe('scatter');
+    expect(initial.data.datasets[0].showLine).toBe(false);
+    expect(initial.data.datasets[1]).toMatchObject({
+        isTrend: true,
+        label: 'Temperature (°C) — linear trend',
+        data: [
+            { x: 0, y: 2 },
+            { x: 7200000, y: 3 },
+        ],
+    });
+    expect(wrapper.get('canvas').attributes('aria-label')).toContain('scatter plot');
+    expect(wrapper.text()).toContain('Dashed lines fit all valid readings in the selected');
     await wrapper.get('button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('1 raw readings');
+    expect(Chart.mock.calls.at(-1)[1].data.datasets).toHaveLength(1);
     expect(destroy).toHaveBeenCalledTimes(1);
     await wrapper.get('select').setValue('panels');
     await flushPromises();

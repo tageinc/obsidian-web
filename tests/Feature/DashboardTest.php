@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -17,9 +17,8 @@ class DashboardTest extends TestCase
     {
         $owner = $this->user('owner@example.test');
         $other = $this->user('other@example.test');
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
-        DeviceRegister::create(['serial_no' => 'mine', 'alias' => 'My solar tracker', 'hardware_id' => 1, 'user_id' => $owner->id]);
-        DeviceRegister::create(['serial_no' => 'other', 'alias' => 'Other private tracker', 'hardware_id' => 1, 'user_id' => $other->id]);
+        Device::create(['serial_no' => 'mine', 'alias' => 'My solar tracker', 'user_id' => $owner->id]);
+        Device::create(['serial_no' => 'other', 'alias' => 'Other private tracker', 'user_id' => $other->id]);
 
         $this->actingAs($owner)->get('/dashboard')
             ->assertOk()->assertViewIs('device-manager')
@@ -36,13 +35,13 @@ class DashboardTest extends TestCase
         $this->get('/device-manager?show=20&page=2')->assertRedirect('/dashboard?show=20&page=2');
     }
 
-    public function test_login_lands_on_dashboard_and_empty_dashboard_has_a_registration_link(): void
+    public function test_login_lands_on_dashboard_and_empty_dashboard_has_a_creation_link(): void
     {
         $this->user('owner@example.test');
         $this->post('/login', ['email' => 'owner@example.test', 'password' => 'password'])
             ->assertRedirect('/dashboard');
         $this->get('/dashboard')->assertOk()->assertViewIs('device-manager')
-            ->assertSee('No devices registered yet.')->assertSee(route('device-register'));
+            ->assertSee('No devices registered yet.')->assertSee(route('create-device'));
     }
 
     public function test_dashboard_requires_login_and_verified_email(): void

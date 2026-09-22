@@ -19,9 +19,8 @@ class SolarTrackerLogSeeder extends Seeder
             return;
         }
 
-        $serial = DevelopmentDataSeeder::SERIAL;
-        if (! DB::table('device_registers')->where('serial_no', $serial)
-            ->where('hardware_id', HardwareSeeder::SOLAR_TRACKER_ID)->exists()) {
+        $serial = '202600000001';
+        if (! DB::table('devices')->where('serial_no', $serial)->exists()) {
             throw new \RuntimeException('Run DevelopmentDataSeeder first to create the local Solar Tracker device.');
         }
 

@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use Illuminate\Console\Command;
 
 class DeactivateSmsNotifications extends Command
@@ -13,7 +13,7 @@ class DeactivateSmsNotifications extends Command
 
     public function handle()
     {
-        $query = DeviceRegister::where('sms_notification', true);
+        $query = Device::where('sms_notification', true);
         $count = $query->count();
 
         if (!$this->option('apply')) {

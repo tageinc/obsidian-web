@@ -19,17 +19,9 @@ or modify those tables or records. The original repository does not include
 tracked migrations for those tables, so their production schemas remain an
 operator-owned reference and must not be reconstructed from application models.
 
-## Deactivation boundary
+## Current device behavior
 
-Hardware ID `1` (Solar Tracker/Smart Panel) reads and writes only
-`solar_tracker_logs`; it does not invoke Energy Monitor writers or aggregators.
-Hardware IDs previously used for Energy Monitor no longer receive telemetry,
-status evaluation, device-info rendering, graph generation, or scheduled data
-aggregation. Requests for those devices return a deliberate archived/unsupported
-response where applicable.
-
-Before deploying, inventory devices using retired hardware IDs and inform their
-owners that the product UI and ingestion endpoints are being withdrawn. Keep a
-database backup under the existing retention policy. Roll back by redeploying the
-prior application commit; do not restore or alter historical tables as part of
-this code change.
+Devices no longer have a hardware assignment. Every registered device uses
+`solar_tracker_logs` for telemetry and status. Payloads containing only retired
+Energy Monitor fields are rejected as invalid telemetry. The historical Energy
+Monitor tables remain untouched; their writers and aggregators remain retired.

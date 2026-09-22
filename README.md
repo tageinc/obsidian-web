@@ -78,3 +78,16 @@ not change an existing database user's password.
 
 Run `composer lint` to syntax-check first-party PHP files and `composer test`
 to run the Laravel test suite. `composer check` runs both checks in order.
+
+## Restored device workflows
+
+Device creation uses `/create-device` (GET and POST) and `/api/create-device`
+(POST). Run `php artisan migrate` to rename the legacy device table to `devices`
+and remove hardware assignments while retaining device records.
+
+In local/testing environments, `php artisan db:seed --class=DevelopmentDataSeeder`
+creates or refreshes 15 devices for `developer@example.test`, with random names,
+worldwide coordinates, and matching statuses. `FirmwareAndConfigurationSeeder`
+creates downloadable SP1 development fixtures; its firmware is not flashable.
+`SolarTrackerLogSeeder` remains available for seven days of sample graph history
+for the first development device.

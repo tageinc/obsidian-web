@@ -39,10 +39,35 @@ order, with record ID as the tie-breaker. Every reading retains its original
 timestamp and value, including duplicate timestamps; no averaging, bucketing,
 resampling, or curve smoothing is applied. The sensor graph plots PS1 and PS2
 separately rather than the device-reported `ps_avg`. Temperature and motor speed
-also use their raw recorded values. Lines connect readings with straight segments;
-missing metric values remain null gaps and are never presented as zero. Empty
+also use their raw recorded values. Each reading is a scatter point; readings
+are not connected. Missing metric values remain null, are omitted from the plot
+and the fit, and are never presented as zero. Empty
 ranges show an explicit no-telemetry message. Rows without a recorded timestamp
 cannot be positioned and are excluded.
+
+Each measurement also has a separately labelled dashed linear regression line,
+fitted by ordinary least squares to **every valid raw reading in the selected
+range**. PS1 and PS2 get independent fits. Each observation has equal weight,
+including readings with duplicate timestamps; no bucket averages replace the
+samples. Changing the range recalculates the fit. The line stops at the earliest
+and latest valid timestamp for that measurement, without extrapolating.
+
+The regression uses elapsed hours from the earliest valid timestamp, centered
+around the mean, for stable arithmetic with large epoch values. Consequently,
+irregular sampling and daylight-saving transitions retain their actual elapsed
+spacing. At least two readings at distinct timestamps are required; empty,
+single-reading, and single-timestamp series show no regression line. A constant
+measurement across distinct timestamps produces a horizontal fit.
+
+Legends distinguish raw readings from fitted trends. Tooltips retain source
+timestamps and reading IDs for the raw points; the fitted endpoints are not
+reported as measured readings. The current-status values and remote controls
+remain independent of the graphs.
+
+`timeSeries.spec.js` and `tests/js/solar-tracker-graph.test.js` cover regression
+math, irregular sampling, duplicates, missing data, degenerate fits, and range
+changes for Vue and the legacy fallback. Component and desktop/mobile browser
+checks cover measurement/range controls and accessible chart descriptions.
 
 Graph responses return only `graph` with `points`; the legacy `tempAverages`,
 `psAverages`, and `motorAvgs` arrays have been removed. Each point includes the

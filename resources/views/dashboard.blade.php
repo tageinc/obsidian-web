@@ -25,11 +25,11 @@
                         <p class="address-line">{{ $address_1 }}, {{ $address_2 }}</p>
                         <p class="address-line">{{ $city }}, {{ $state }} {{ $zip_code }}</p>
                         <p class="address-line">{{ $country }}</p>
-                        <p class="device-count">{{ __('Number of devices: ') }}{{ $deviceRegisterCount }}</p>
+                        <p class="device-count">{{ __('Number of devices: ') }}{{ $deviceCount }}</p>
                     </div>
                     @else
                         <p class="no-address">{{ __('No address found for this user.') }}</p>
-                    @endif            
+                    @endif
                 </div>
             </div>
         </div>

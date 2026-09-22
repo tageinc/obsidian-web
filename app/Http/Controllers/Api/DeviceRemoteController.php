@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\SolarTrackerRemoteControl;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 
 class DeviceRemoteController extends Controller{
-	
+
 	const ERROR_RESPONSE = "{\"msg\":\"serial number null or not found\"}";
-	
+
 	/**
 	 * Get a JSON of the remote control information that consists of modes, speeds, and other parameters
 	 * @param serial_no
@@ -21,9 +21,9 @@ class DeviceRemoteController extends Controller{
 	 */
 	public function getRemoteControlInfo($serial_no = null){
 		if($serial_no){
-			$device = DeviceRegister::where('serial_no', $serial_no)->first();
-			if (!$device || (int) $device->hardware_id !== 1) {
-				return response()->json(['error' => 'Unsupported hardware type'], 410);
+			$device = Device::where('serial_no', $serial_no)->first();
+			if (!$device) {
+				return response()->json(['error' => 'Device not found'], 404);
 			}
 			//Log::info('Remote control info requested. serial_no: ' . $serial_no);
 			$remote_control = SolarTrackerRemoteControl::where('serial_no', $serial_no)->select('mode', 'motor_speed')->first();
@@ -34,19 +34,19 @@ class DeviceRemoteController extends Controller{
 			return self::ERROR_RESPONSE;
 		}
 	}
-	
-	public function remoteControl(Request $request){		
+
+	public function remoteControl(Request $request){
         $validatedData = $request->validate([
             'mode' => 'required|boolean',
             'motor_speed' => 'required|numeric|min:-100|max:100',
             'serial_no' => 'required|string|max:255',
         ]);
 
-        $device = DeviceRegister::where('serial_no', $validatedData['serial_no'])->first();
-        if (!$device || (int) $device->hardware_id !== 1) {
-            return response()->json(['error' => 'Unsupported hardware type'], 410);
+        $device = Device::where('serial_no', $validatedData['serial_no'])->first();
+        if (!$device) {
+            return response()->json(['error' => 'Device not found'], 404);
         }
-    
+
         // Use updateOrCreate to insert a new row if the serial number does not exist, or update the existing row
         $panel = SolarTrackerRemoteControl::updateOrCreate(
             ['serial_no' => $validatedData['serial_no']], // Search criteria
@@ -55,7 +55,7 @@ class DeviceRemoteController extends Controller{
                 'motor_speed' => $validatedData['motor_speed']
             ]
         );
-    
+
         return response()->json(['success' => true, 'message' => 'Solar panel updated successfully.']);
 	}
 }

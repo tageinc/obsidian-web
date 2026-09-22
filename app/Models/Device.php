@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DeviceRegister extends Model
+class Device extends Model
 {
     use HasFactory;
 
@@ -15,11 +15,6 @@ class DeviceRegister extends Model
 	{
 		return $this->belongsTo(User::class, 'user_id');
 	}
-
-	public function hardware()
-    {
-        return $this->belongsTo(Hardware::class, 'hardware_id');
-    }
 
 }
 

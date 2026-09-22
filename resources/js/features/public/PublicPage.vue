@@ -22,11 +22,11 @@ defineProps({
                     </address>
                 </template>
                 <template v-else-if="mode === 'thank-you'">
-                    <h1>Thank You for Registering Your Device!</h1>
+                    <h1>Thank You for Creating Your Device!</h1>
                     <p>Your device has been successfully registered.</p>
                     <div class="d-flex flex-wrap justify-content-center gap-2">
-                        <a :href="links.registerDevice" class="btn btn-primary"
-                            >Register Another Device</a
+                        <a :href="links.createDevice" class="btn btn-primary"
+                            >Create Another Device</a
                         >
                         <a :href="links.deviceManager" class="btn btn-secondary">View My Devices</a>
                     </div>

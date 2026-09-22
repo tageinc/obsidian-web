@@ -7,7 +7,7 @@ const links = {
     home: '/',
     dashboard: '/dashboard',
     profile: '/profile',
-    registerDevice: '/device-register',
+    createDevice: '/create-device',
     login: '/login',
     register: '/register',
     logout: '/logout',

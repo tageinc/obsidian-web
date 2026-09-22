@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\GeoCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +16,7 @@ class DeviceModalTest extends TestCase
     use UsesFrontendManifest;
 
     private User $owner;
-    private DeviceRegister $device;
+    private Device $device;
 
     protected function setUp(): void
     {
@@ -25,7 +25,7 @@ class DeviceModalTest extends TestCase
         $this->travelTo(now()->startOfMinute());
         config([
             'frontend.vue3.workspace' => false,
-            'frontend.vue3.device_register' => true,
+            'frontend.vue3.create_device' => true,
             'frontend.vue3.device_edit' => true,
             'frontend.vue3.device_info' => true,
         ]);
@@ -34,9 +34,8 @@ class DeviceModalTest extends TestCase
             'password' => 'never-serialize-password-hash', 'email_verified_at' => now(),
             'address_1' => '10 Profile Street',
         ]);
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
-        $this->device = DeviceRegister::create(array_merge($this->fields(), [
-            'serial_no' => 'modal-owned-tracker', 'hardware_id' => 1, 'user_id' => $this->owner->id,
+        $this->device = Device::create(array_merge($this->fields(), [
+            'serial_no' => 'modal-owned-tracker', 'user_id' => $this->owner->id,
             'sku' => 'SP1', 'order_no' => 'MODAL-ORDER',
             'status_notification' => true, 'sms_notification' => true,
         ]));
@@ -59,7 +58,7 @@ class DeviceModalTest extends TestCase
     private function modalPaths(): array
     {
         return [
-            '/device-register' => 'device-register',
+            '/create-device' => 'create-device',
             '/edit-device/'.$this->device->id => 'edit-device',
             '/device-info/'.$this->device->id => 'device-info',
         ];
@@ -88,7 +87,7 @@ class DeviceModalTest extends TestCase
 
         $edit = $this->modal('/edit-device/'.$this->device->id)->json('props');
         $this->assertSame(['alias', 'address_1', 'address_2', 'city', 'state', 'zip_code', 'country', 'latitude', 'longitude'], array_keys($edit['values']));
-        $this->assertSame(['hardwareName', 'serialNo', 'sku', 'orderNo'], array_keys($edit['fixedIdentity']));
+        $this->assertSame(['serialNo', 'sku', 'orderNo'], array_keys($edit['fixedIdentity']));
         $info = $this->modal('/device-info/'.$this->device->id)->json('props');
         $this->assertSame(['device', 'status', 'remote', 'points', 'csrfToken', 'links'], array_keys($info));
         $this->assertSame(['alias', 'serial', 'details'], array_keys($info['device']));
@@ -109,8 +108,8 @@ class DeviceModalTest extends TestCase
         $this->modal('/device-info/'.$this->device->id)->assertStatus(409);
         config(['frontend.vue3.device_edit' => false]);
         $this->modal($path)->assertStatus(409);
-        config(['frontend.vue3.device_register' => false]);
-        $this->modal('/device-register')->assertStatus(409);
+        config(['frontend.vue3.create_device' => false]);
+        $this->modal('/create-device')->assertStatus(409);
         $this->get($path)->assertOk()->assertSee('id="device-form"', false);
     }
 
@@ -118,7 +117,7 @@ class DeviceModalTest extends TestCase
     {
         $this->actingAs($this->owner);
         foreach ([
-            'http://localhost/device-register/?source=compatibility',
+            'http://localhost/create-device/?source=compatibility',
             '/edit-device/0'.$this->device->id,
             '/device-info/0'.$this->device->id,
             'http://localhost/device-info/'.$this->device->id.'/?source=compatibility',
@@ -143,7 +142,7 @@ class DeviceModalTest extends TestCase
             $this->modal($path)->assertForbidden();
         }
         $other->update(['email_verified_at' => now()]);
-        $this->modal('/device-register')->assertOk();
+        $this->modal('/create-device')->assertOk();
         foreach (['/edit-device/', '/device-info/'] as $prefix) {
             $this->modal($prefix.$this->device->id)->assertForbidden();
         }
@@ -158,9 +157,7 @@ class DeviceModalTest extends TestCase
         $this->actingAs($this->owner);
         $this->modal('/edit-device/999999')->assertNotFound();
         $this->modal('/device-info/999999')->assertRedirect('/device-manager');
-        DB::table('hardware')->insert(['id' => 2, 'name' => 'Archived', 'prefix' => 'OLD']);
-        $this->device->update(['hardware_id' => 2]);
-        $this->modal('/device-info/'.$this->device->id)->assertRedirect('/device-manager');
+        $this->modal('/device-info/'.$this->device->id)->assertOk();
     }
 
     public function test_json_updates_save_all_editable_fields_and_geocode_without_changing_identity(): void
@@ -174,13 +171,13 @@ class DeviceModalTest extends TestCase
             'latitude' => '34.0540', 'longitude' => '-118.2450',
         ]);
         $this->actingAs($this->owner)->putJson('/edit-device/'.$this->device->id, array_merge($changes, [
-            'user_id' => 999, 'serial_no' => 'changed', 'hardware_id' => 2, 'sku' => 'changed',
+            'user_id' => 999, 'serial_no' => 'changed', 'sku' => 'changed',
             'order_no' => 'changed', 'status_notification' => 0, 'sms_notification' => 0,
         ]))->assertOk()->assertExactJson(['message' => 'Device updated successfully.'])
             ->assertSessionMissing('success');
-        $this->assertDatabaseHas('device_registers', array_merge($changes, [
+        $this->assertDatabaseHas('devices', array_merge($changes, [
             'id' => $this->device->id, 'user_id' => $this->owner->id,
-            'serial_no' => $this->device->serial_no, 'hardware_id' => 1,
+            'serial_no' => $this->device->serial_no,
             'sku' => 'SP1', 'order_no' => 'MODAL-ORDER',
             'status_notification' => true, 'sms_notification' => true,
         ]));
@@ -214,7 +211,7 @@ class DeviceModalTest extends TestCase
 
         config(['app.developer_email' => $other->email]);
         $this->putJson($path, $this->fields(['alias' => 'Developer updated']))->assertOk();
-        $this->assertDatabaseHas('device_registers', ['id' => $this->device->id, 'alias' => 'Developer updated']);
+        $this->assertDatabaseHas('devices', ['id' => $this->device->id, 'alias' => 'Developer updated']);
         $this->putJson('/edit-device/999999', $this->fields())->assertNotFound();
     }
 }

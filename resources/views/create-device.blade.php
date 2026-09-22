@@ -1,19 +1,18 @@
 @php
-    $usesVue = config('frontend.vue3.device_register');
+    $usesVue = config('frontend.vue3.create_device');
 @endphp
 @extends('layouts.app')
 
 @section('content')
 @if ($usesVue)
     @php
-        $deviceValues = \App\Support\DeviceRegistrationData::values(Auth::user());
+        $deviceValues = \App\Support\DeviceCreationData::values(Auth::user());
     @endphp
-    @include('frontend.mount', ['page' => 'device-register', 'props' => [
-        'registering' => true,
+    @include('frontend.mount', ['page' => 'create-device', 'props' => [
+        'creating' => true,
         'csrfToken' => csrf_token(),
-        'action' => route('dataInsert'),
+        'action' => route('create-device.store'),
         'values' => $deviceValues,
-        'hardwareOptions' => $hardwares->map->only(['id', 'name'])->values()->all(),
         'errors' => $errors->messages(),
         'success' => session('success'),
         'sessionError' => session('error'),
@@ -24,25 +23,16 @@
     <div class="row justify-content-center">
         <div class="col-lg-9">
             <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary mb-3">Back to dashboard</a>
-            <h1 class="h3 mb-3">Register device</h1>
+            <h1 class="h3 mb-3">Create Device</h1>
             <p class="text-muted">Add your device details and installation address, then save everything together.</p>
 
             <div class="card">
                 <div class="card-body">
                     @include('partials.device-form-feedback')
-                    <form id="device-form" action="{{ route('dataInsert') }}" method="POST">
+                    <form id="device-form" action="{{ route('create-device.store') }}" method="POST">
                         @csrf
                         <h2 class="h5 mb-3">Device details</h2>
                         <div class="row">
-                            <div class="col-md-6 form-group mb-3">
-                                <label for="hardware_id">Hardware</label>
-                                <select id="hardware_id" name="hardware_id" class="form-control @error('hardware_id') is-invalid @enderror" required>
-                                    @foreach ($hardwares as $hardware)
-                                        <option value="{{ $hardware->id }}" @if ((string) old('hardware_id', 1) === (string) $hardware->id) selected @endif>{{ $hardware->name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('hardware_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
                             @foreach (['serial_no' => 'Serial number', 'sku' => 'SKU', 'order_no' => 'Order number'] as $field => $label)
                                 <div class="col-md-6 form-group mb-3">
                                     <label for="{{ $field }}">{{ $label }}</label>
@@ -53,8 +43,8 @@
                             @endforeach
                         </div>
 
-                        @include('partials.device-form-fields', ['device' => null, 'registering' => true])
-                        <button type="submit" class="btn btn-primary">Register device</button>
+                        @include('partials.device-form-fields', ['device' => null, 'creating' => true])
+                        <button type="submit" class="btn btn-primary">Create Device</button>
                     </form>
                 </div>
             </div>

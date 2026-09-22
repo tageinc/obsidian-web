@@ -63,7 +63,7 @@ describe('device map data', () => {
             last_updated: '<svg>',
         });
         expect(popup.querySelector('img,script,b,svg')).toBeNull();
-        expect(popup.textContent).toContain('<script>bad</script>');
+        expect(popup.textContent).not.toContain('Hardware');
         expect(popup.textContent).toContain('<b>address</b>');
     });
 });

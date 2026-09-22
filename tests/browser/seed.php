@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Api\SolarTrackerLog;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\GeoCode;
 use App\Models\SolarTrackerRemoteControl;
 use App\Models\User;
@@ -28,7 +28,7 @@ foreach (['owner', 'admin', 'empty'] as $role) {
     ]);
     if ($role === 'owner') $owner = $user;
 }
-$device = DeviceRegister::create([
+$device = Device::create([
     'user_id' => $owner->id, 'hardware_id' => 1, 'serial_no' => 'BROWSER-SIMULATOR-1',
     'alias' => 'Browser simulator', 'sku' => 'FIXTURE', 'order_no' => 'TEST-ORDER',
     'address_1' => '1 Fixture Street', 'city' => 'Test City', 'state' => 'CA',

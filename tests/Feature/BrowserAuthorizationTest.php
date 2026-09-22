@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Api\SolarTrackerLog;
 use App\Models\ConfigVersions;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\FirmwareVersions;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +21,7 @@ class BrowserAuthorizationTest extends TestCase
     private User $owner;
     private User $admin;
     private User $other;
-    private DeviceRegister $device;
+    private Device $device;
 
     protected function setUp(): void
     {
@@ -33,9 +33,8 @@ class BrowserAuthorizationTest extends TestCase
                 'password' => 'test-hash', 'email_verified_at' => now(),
             ]);
         }
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
-        $this->device = DeviceRegister::create([
-            'serial_no' => 'browser-owned', 'hardware_id' => 1, 'user_id' => $this->owner->id,
+        $this->device = Device::create([
+            'serial_no' => 'browser-owned', 'user_id' => $this->owner->id,
         ]);
         SolarTrackerLog::create(['serial_no' => $this->device->serial_no, 'ps1' => 10]);
     }
@@ -85,7 +84,7 @@ class BrowserAuthorizationTest extends TestCase
         $this->postJson('/update-solar-tracker', ['serial_no' => ['invalid']])
             ->assertUnprocessable()->assertJsonValidationErrors('serial_no');
         $this->postJson('/update-solar-tracker', ['serial_no' => 'missing', 'mode' => 0, 'motor_speed' => 0])
-            ->assertStatus(410);
+            ->assertNotFound();
     }
 
     public function test_developer_workspace_and_uploads_are_restricted_server_side(): void

@@ -22,7 +22,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $phoneRules = ['nullable', 'string', 'max:20'];
-        // Registration historically allowed formatted and shared numbers. Leave
+        // Creation historically allowed formatted and shared numbers. Leave
         // those values intact when users save other parts of their profile.
         if ($request->input('phone_number') !== $user->phone_number) {
             $phoneRules[] = 'regex:/^[0-9]{10,15}$/';
@@ -65,7 +65,7 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'required|string|max:255', // Example validation rule for name
         ]);
-        
+
 
         // Update the user's name
         $user->name = $request->input('name');
@@ -116,13 +116,13 @@ class ProfileController extends Controller
 
         // Get the user's current email
         $currentEmail = $user->email;
-        
+
 
         // Update the user's email
         $user->email = $request->input('email');
 
         if ($user->save()) {
-            // Update the email in the device_registers table
+            // Update the email in the devices table
             DB::table('users')
                 ->where('email', $currentEmail)
                 ->update(['email' => $user->email]);
@@ -185,12 +185,12 @@ class ProfileController extends Controller
 
         // Get the user's current phone #
         $currentPhoneNumber = $user->phone_number;
-        
+
         // Update the user's phone number
         $user->phone_number = $request->input('phone_number');
 
         if ($user->save()) {
-            // Update the email in the device_registers table
+            // Update the email in the devices table
             DB::table('users')
                 ->where('phone_number', $currentPhoneNumber)
                 ->update(['phone_number' => $user->phone_number]);

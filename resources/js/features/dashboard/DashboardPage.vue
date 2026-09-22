@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import DeviceMap from './DeviceMap.vue';
 import DeviceActions from './DeviceActions.vue';
-import DeviceRegistrationModal from './DeviceRegistrationModal.vue';
+import CreateDeviceModal from './CreateDeviceModal.vue';
 import DeviceDetailsModal from './DeviceDetailsModal.vue';
 import { statusColor } from './deviceMap.js';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
@@ -15,9 +15,9 @@ const props = defineProps({
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
     search: { type: String, default: '' },
-    registration: { type: Object, default: null },
+    creation: { type: Object, default: null },
 });
-const registeringDevice = ref(props.registration?.initiallyOpen ?? false);
+const creatingDevice = ref(props.creation?.initiallyOpen ?? false);
 const createButton = ref(null);
 const selectedDevice = ref(null);
 const deviceMode = ref('view');
@@ -39,12 +39,11 @@ function deviceSaved() {
     // Reload the current filter/page so the table and map share fresh server data.
     window.location.reload();
 }
-async function closeRegistration() {
-    registeringDevice.value = false;
+async function closeCreation() {
+    creatingDevice.value = false;
     await nextTick();
     createButton.value?.focus({ preventScroll: true });
 }
-const showAll = ref(false);
 const perPage = ref(props.pagination.perPage);
 const aliasSearch = ref(props.search);
 const expandedIds = ref([]);
@@ -88,44 +87,32 @@ watch(
 
 <template>
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 gap-2">
-            <div>
-                <h1 class="h3 mb-1">Dashboard</h1>
-                <p class="text-muted mb-2">Manage your devices and their locations.</p>
-            </div>
-        </div>
-        <FormFeedback :success="success" :session-error="sessionError" />
         <div class="row justify-content-center">
             <div class="col-md-10">
+                <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 gap-2">
+                    <div>
+                        <h1 class="h3 mb-1">Dashboard</h1>
+                        <p class="text-muted mb-2">Manage your devices and their locations.</p>
+                    </div>
+                </div>
+                <FormFeedback :success="success" :session-error="sessionError" />
                 <DeviceMap
                     :endpoints="mapEndpoints"
                     :page="pagination.currentPage"
                     :per-page="pagination.perPage"
-                    :show-all="showAll"
                 />
-                <div class="form-check mb-3">
-                    <input
-                        id="show-all-devices"
-                        v-model="showAll"
-                        type="checkbox"
-                        class="form-check-input"
-                    />
-                    <label class="form-check-label" for="show-all-devices">{{
-                        search ? 'Show all matching devices on map' : 'Show all devices on map'
-                    }}</label>
-                </div>
                 <div class="device-create-toolbar">
                     <button
-                        v-if="registration"
+                        v-if="creation"
                         ref="createButton"
                         type="button"
                         class="btn btn-primary"
                         aria-haspopup="dialog"
-                        @click="registeringDevice = true"
+                        @click="creatingDevice = true"
                     >
                         Create +
                     </button>
-                    <a v-else class="btn btn-primary" :href="links.register">Create +</a>
+                    <a v-else class="btn btn-primary" :href="links.create">Create +</a>
                 </div>
                 <section class="device-manager" aria-labelledby="device-manager-heading">
                     <h2 id="device-manager-heading" class="h5 mb-3">Device Manager</h2>
@@ -177,13 +164,13 @@ watch(
                             search.</template
                         >
                         <template v-else
-                            >No devices registered yet. Use Create + to add your first
+                            >No devices created yet. Use Create + to add your first
                             device.</template
                         >
                     </p>
                     <table v-else class="device-table" role="table">
                         <caption class="visually-hidden">
-                            Your registered devices
+                            Your devices
                         </caption>
                         <thead>
                             <tr>
@@ -191,7 +178,6 @@ watch(
                                     <span class="visually-hidden">Details</span>
                                 </th>
                                 <th scope="col">Device</th>
-                                <th scope="col">Hardware</th>
                                 <th scope="col">Last updated</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Actions</th>
@@ -238,11 +224,6 @@ watch(
                                             >{{ device.alias }}</a
                                         >
                                     </th>
-                                    <td>
-                                        <span class="device-field-label" aria-hidden="true"
-                                            >Hardware</span
-                                        >{{ device.hardwareName }}
-                                    </td>
                                     <td class="device-updated">
                                         <span class="device-field-label" aria-hidden="true"
                                             >Last updated</span
@@ -280,7 +261,7 @@ watch(
                                     :id="`device-details-${device.id}`"
                                     class="device-details-row"
                                 >
-                                    <td colspan="6">
+                                    <td colspan="5">
                                         <dl class="device-details">
                                             <div>
                                                 <dt>Serial number</dt>
@@ -344,10 +325,10 @@ watch(
                 </section>
             </div>
         </div>
-        <DeviceRegistrationModal
-            v-if="registration && registeringDevice"
-            :registration="registration"
-            @close="closeRegistration"
+        <CreateDeviceModal
+            v-if="creation && creatingDevice"
+            :creation="creation"
+            @close="closeCreation"
         />
         <DeviceDetailsModal
             v-if="selectedDevice"

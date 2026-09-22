@@ -13,12 +13,11 @@
         }
     @endphp
     @include('frontend.mount', ['page' => 'edit-device', 'props' => [
-        'registering' => false,
+        'creating' => false,
         'csrfToken' => csrf_token(),
         'action' => route('device.update', ['id' => $device->id]),
         'values' => $deviceValues,
         'fixedIdentity' => [
-            'hardwareName' => optional($device->hardware)->name ?? 'Unknown',
             'serialNo' => $device->serial_no,
             'sku' => $device->sku,
             'orderNo' => $device->order_no,
@@ -41,8 +40,6 @@
                     @include('partials.device-form-feedback')
                     <h2 class="h5 mb-3">Registered device</h2>
                     <dl class="row">
-                        <dt class="col-sm-4">Hardware</dt>
-                        <dd class="col-sm-8">{{ optional($device->hardware)->name ?? 'Unknown' }}</dd>
                         <dt class="col-sm-4">Serial number</dt>
                         <dd class="col-sm-8">{{ $device->serial_no }}</dd>
                         <dt class="col-sm-4">SKU</dt>
@@ -53,7 +50,7 @@
                     <form id="device-form" action="{{ route('device.update', ['id' => $device->id]) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        @include('partials.device-form-fields', ['registering' => false])
+                        @include('partials.device-form-fields', ['creating' => false])
                         <button type="submit" class="btn btn-primary">Update device</button>
                     </form>
                 </div>

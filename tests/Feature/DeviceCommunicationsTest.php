@@ -5,10 +5,9 @@ namespace Tests\Feature;
 use App\Mail\LowVoltageMail;
 use App\Jobs\SendAppUpdateMail;
 use App\Models\Api\SolarTrackerLog;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use Carbon\Carbon;
 use Database\Seeders\AdminUserSeeder;
-use Database\Seeders\HardwareSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -26,10 +25,9 @@ class DeviceCommunicationsTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-09-20 12:00:00'));
         config(['devices.telemetry_freshness_seconds' => 600]);
 
-        Schema::create('device_registers', function (Blueprint $table) {
+        Schema::create('devices', function (Blueprint $table) {
             $table->id();
             $table->string('serial_no');
-            $table->integer('hardware_id');
             $table->integer('user_id')->nullable();
             $table->boolean('status_notification')->default(false);
             $table->boolean('sms_notification')->default(false);
@@ -81,7 +79,7 @@ class DeviceCommunicationsTest extends TestCase
 
     public function test_solar_telemetry_is_accepted_and_invalid_payload_is_rejected_without_a_write(): void
     {
-        DB::table('device_registers')->insert(['serial_no' => 'solar', 'hardware_id' => 1]);
+        DB::table('devices')->insert(['serial_no' => 'solar']);
 
         $this->post('/api/log', ['serial_no' => 'solar', 'data' => '{"ps1":0,"state":"online"}'])
             ->assertOk()->assertExactJson(['msg' => 'success']);
@@ -92,10 +90,10 @@ class DeviceCommunicationsTest extends TestCase
 
     public function test_retired_energy_monitor_telemetry_is_not_written(): void
     {
-        DB::table('device_registers')->insert(['serial_no' => 'retired', 'hardware_id' => 2]);
+        DB::table('devices')->insert(['serial_no' => 'retired']);
 
         $this->postJson('/api/log', ['serial_no' => 'retired', 'data' => '{"v_batt":12.5}'])
-            ->assertOk()->assertExactJson(['msg' => 'invalid hardware']);
+            ->assertStatus(422)->assertExactJson(['msg' => 'invalid telemetry']);
 
         $this->assertSame(0, SolarTrackerLog::count());
     }
@@ -148,26 +146,13 @@ class DeviceCommunicationsTest extends TestCase
         }
     }
 
-    public function test_hardware_seeder_creates_the_solar_tracker_at_legacy_id_one(): void
-    {
-        $this->seed(HardwareSeeder::class);
-        $this->seed(HardwareSeeder::class);
-
-        $this->assertDatabaseHas('hardware', [
-            'id' => HardwareSeeder::SOLAR_TRACKER_ID,
-            'name' => 'Solar Tracker',
-            'prefix' => HardwareSeeder::SOLAR_TRACKER_PREFIX,
-        ]);
-        $this->assertSame(1, DB::table('hardware')->count());
-    }
-
     public function test_status_command_preserves_email_notifications_without_sms_or_twilio(): void
     {
         Mail::fake();
         Queue::fake();
         DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
-        DB::table('device_registers')->insert([
-            'serial_no' => 'solar', 'hardware_id' => 1, 'user_id' => 1,
+        DB::table('devices')->insert([
+            'serial_no' => 'solar', 'user_id' => 1,
             'status_notification' => true, 'sms_notification' => true, 'address_1' => '1 Main St',
         ]);
         DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline', 'latitude' => 1, 'longitude' => 2]);
@@ -188,8 +173,8 @@ class DeviceCommunicationsTest extends TestCase
     public function test_failed_enqueue_does_not_consume_the_status_transition(): void
     {
         DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
-        DB::table('device_registers')->insert([
-            'serial_no' => 'solar', 'hardware_id' => 1, 'user_id' => 1,
+        DB::table('devices')->insert([
+            'serial_no' => 'solar', 'user_id' => 1,
             'status_notification' => true, 'address_1' => '1 Main St',
         ]);
         DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline']);
@@ -210,16 +195,16 @@ class DeviceCommunicationsTest extends TestCase
 
     public function test_sms_deactivation_is_explicit_and_non_destructive(): void
     {
-        DB::table('device_registers')->insert([
-            ['serial_no' => 'one', 'hardware_id' => 1, 'sms_notification' => true],
-            ['serial_no' => 'two', 'hardware_id' => 1, 'sms_notification' => false],
+        DB::table('devices')->insert([
+            ['serial_no' => 'one', 'sms_notification' => true],
+            ['serial_no' => 'two', 'sms_notification' => false],
         ]);
 
         $this->artisan('device:deactivate-sms-notifications')->assertExitCode(0);
-        $this->assertDatabaseHas('device_registers', ['serial_no' => 'one', 'sms_notification' => true]);
+        $this->assertDatabaseHas('devices', ['serial_no' => 'one', 'sms_notification' => true]);
         $this->artisan('device:deactivate-sms-notifications', ['--apply' => true])->assertExitCode(0);
-        $this->assertDatabaseHas('device_registers', ['serial_no' => 'one', 'sms_notification' => false]);
-        $this->assertDatabaseHas('device_registers', ['serial_no' => 'two', 'sms_notification' => false]);
+        $this->assertDatabaseHas('devices', ['serial_no' => 'one', 'sms_notification' => false]);
+        $this->assertDatabaseHas('devices', ['serial_no' => 'two', 'sms_notification' => false]);
     }
 
     public function test_sms_routes_configuration_and_dependency_are_removed(): void
@@ -235,12 +220,12 @@ class DeviceCommunicationsTest extends TestCase
     {
         $this->assertFileDoesNotExist(app_path('Models/Api/EnergyMonitorLog.php'));
         $this->assertFileExists(base_path('docs/archive/energy-monitor.md'));
-        DB::table('device_registers')->insert(['id' => 2, 'serial_no' => 'retired', 'hardware_id' => 2]);
+        DB::table('devices')->insert(['id' => 2, 'serial_no' => 'retired']);
         DB::table('geocode')->insert(['serial_no' => 'retired', 'status' => 'archived']);
 
         $response = app(\App\Http\Controllers\DeviceInfoController::class)->getLatestStatusJson('retired');
-        $this->assertSame(410, $response->getStatusCode());
+        $this->assertSame(200, $response->getStatusCode());
         $this->artisan('device:check-status')->assertExitCode(0);
-        $this->assertDatabaseHas('geocode', ['serial_no' => 'retired', 'status' => 'archived']);
+        $this->assertDatabaseHas('geocode', ['serial_no' => 'retired', 'status' => 'offline']);
     }
 }

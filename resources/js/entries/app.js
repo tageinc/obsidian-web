@@ -8,7 +8,7 @@ const modules = import.meta.glob('../features/**/*Page.vue');
 const pages = {
     navigation: '../features/navigation/NavigationPage.vue',
     profile: '../features/profile/ProfilePage.vue',
-    'device-register': '../features/devices/DeviceFormPage.vue',
+    'create-device': '../features/devices/DeviceFormPage.vue',
     'edit-device': '../features/devices/DeviceFormPage.vue',
     dashboard: '../features/dashboard/DashboardPage.vue',
     'device-info': '../features/solar-tracker/DeviceInfoPage.vue',

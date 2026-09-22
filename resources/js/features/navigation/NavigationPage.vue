@@ -121,9 +121,9 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
                             >
                             <a
                                 class="dropdown-item"
-                                :href="links.registerDevice"
+                                :href="links.createDevice"
                                 @click="closeNavigation"
-                                >Register my device</a
+                                >Create Device</a
                             >
                             <a
                                 v-if="links.admin"

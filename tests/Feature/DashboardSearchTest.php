@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -28,18 +28,14 @@ class DashboardSearchTest extends TestCase
                 'password' => 'synthetic-hash', 'email_verified_at' => now(),
             ]);
         }
-        DB::table('hardware')->insert([
-            ['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1'],
-            ['id' => 2, 'name' => 'Archived hardware', 'prefix' => 'OLD'],
-        ]);
         $this->actingAs($this->owner);
     }
 
-    private function device(string $alias, ?User $owner = null, int $hardware = 1): DeviceRegister
+    private function device(string $alias, ?User $owner = null, int $hardware = 1): Device
     {
-        return DeviceRegister::create([
-            'serial_no' => 'search-'.(DeviceRegister::count() + 1), 'alias' => $alias,
-            'user_id' => ($owner ?? $this->owner)->id, 'hardware_id' => $hardware,
+        return Device::create([
+            'serial_no' => 'search-'.(Device::count() + 1), 'alias' => $alias,
+            'user_id' => ($owner ?? $this->owner)->id,
             'latitude' => 33, 'longitude' => -117,
         ]);
     }
@@ -63,10 +59,10 @@ class DashboardSearchTest extends TestCase
 
         $props = $this->dashboard('search=%20tArGeT%20&show=1');
         $this->assertSame('tArGeT', $props['search']);
-        $this->assertSame(1, $props['pagination']['total']);
+        $this->assertSame(2, $props['pagination']['total']);
         $this->assertSame([$match->id], array_column($props['devices'], 'id'));
-        $this->getJson($props['mapEndpoints']['all'])->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $match->id);
-        $this->getJson($props['mapEndpoints']['paginated'].'&show=1')->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.id', $match->id);
+        $this->getJson($props['mapEndpoints']['all'])->assertOk()->assertJsonCount(2)->assertJsonPath('0.id', $match->id);
+        $this->getJson($props['mapEndpoints']['paginated'].'&show=1')->assertOk()->assertJsonPath('total', 2)->assertJsonPath('data.0.id', $match->id);
     }
 
     public function test_search_treats_sql_wildcards_escape_characters_and_quotes_as_literal_alias_text(): void

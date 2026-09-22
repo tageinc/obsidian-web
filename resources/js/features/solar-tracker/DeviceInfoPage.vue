@@ -47,7 +47,7 @@ function navigateSection(event, index) {
         <a v-if="!embedded" :href="links.dashboard" class="device-back">← Devices</a>
         <header class="device-heading">
             <div>
-                <p class="device-eyebrow">{{ device.details.Hardware || 'Solar tracker' }}</p>
+                <p class="device-eyebrow">Solar tracker</p>
                 <h1 v-if="!embedded">{{ device.alias || 'Device information' }}</h1>
                 <p class="device-identity">
                     Serial <span>{{ device.serial }}</span>
@@ -141,10 +141,7 @@ function navigateSection(event, index) {
                         Device details
                     </component>
                     <dl class="device-details">
-                        <div>
-                            <dt>Hardware</dt>
-                            <dd>{{ device.details.Hardware || '—' }}</dd>
-                        </div>
+                        <div></div>
                         <div>
                             <dt>SKU</dt>
                             <dd>{{ device.details.SKU || '—' }}</dd>

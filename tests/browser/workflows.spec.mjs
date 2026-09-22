@@ -131,7 +131,7 @@ test('account dropdown supports keyboard, Escape, mobile navigation and native l
     await expect(account).toBeFocused();
     await expect(dropdown.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: 'Profile', exact: true })).toBeVisible();
-    await expect(dropdown.getByRole('link', { name: 'Register my device' })).toBeVisible();
+    await expect(dropdown.getByRole('link', { name: 'Create Device' })).toBeVisible();
     await expect(dropdown.getByRole('link', { name: 'Developer Workspace' })).toHaveCount(0);
     const dropdownBounds = await dropdown.boundingBox();
     expect(dropdownBounds).not.toBeNull();
@@ -613,7 +613,7 @@ test('device edit modal retains server validation, guards pending and reloads th
     ).toBeVisible();
 });
 
-test('registration modal stays in the dashboard and preserves native validation and keyboard focus', async ({
+test('creation modal stays in the dashboard and preserves native validation and keyboard focus', async ({
     page,
 }) => {
     await login(page);
@@ -627,7 +627,7 @@ test('registration modal stays in the dashboard and preserves native validation 
     expect(createBounds.y).toBeGreaterThanOrEqual(mapBounds.y + mapBounds.height);
     expect(createBounds.y + createBounds.height).toBeLessThanOrEqual(managerBounds.y);
 
-    const dialog = page.getByRole('dialog', { name: 'Register device', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Create Device', exact: true });
     await expect(dialog).not.toBeVisible();
     await create.focus();
     await page.keyboard.press('Enter');
@@ -639,7 +639,7 @@ test('registration modal stays in the dashboard and preserves native validation 
     await expect(create).toBeFocused();
 
     await create.click();
-    await dialog.getByRole('button', { name: 'Close registration', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Close creation', exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await expect(create).toBeFocused();
     await create.click();
@@ -649,8 +649,8 @@ test('registration modal stays in the dashboard and preserves native validation 
 
     await create.click();
     await expect(dialog.locator('form')).toHaveAttribute('method', /post/i);
-    await expect(dialog.locator('form')).toHaveAttribute('action', /\/dataInsert$/);
-    await expect(dialog.locator('[name="_registration_modal"]')).toHaveValue('1');
+    await expect(dialog.locator('form')).toHaveAttribute('action', /\/createDevice$/);
+    await expect(dialog.locator('[name="_creation_modal"]')).toHaveValue('1');
     await expect(dialog.locator('button[type="submit"]')).toHaveCount(1);
     await dialog.getByLabel('Hardware', { exact: true }).selectOption('1');
     await dialog.getByLabel('Serial number', { exact: true }).fill('BROWSER-SIMULATOR-1');
@@ -660,7 +660,7 @@ test('registration modal stays in the dashboard and preserves native validation 
     await dialog.getByLabel('City', { exact: true }).fill('Modal city');
     await dialog.getByLabel('Latitude', { exact: true }).fill('0');
     await dialog.getByLabel('Longitude', { exact: true }).fill('0');
-    await dialog.getByRole('button', { name: 'Register device', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Create Device', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel('Serial number', { exact: true })).toHaveAttribute(
@@ -674,7 +674,7 @@ test('registration modal stays in the dashboard and preserves native validation 
     await expect(dialog.getByLabel('Latitude', { exact: true })).toHaveValue('0');
     await expect(dialog.getByRole('alert')).toBeFocused();
     await expect(
-        dialog.getByRole('button', { name: 'Register device', exact: true }),
+        dialog.getByRole('button', { name: 'Create Device', exact: true }),
     ).toBeEnabled();
     await checkAccessibility(page);
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -700,8 +700,8 @@ test('profile and device forms retain one save action, server errors and entered
     await expect(page.locator('#password')).toHaveValue('');
     await expect(page.getByRole('alert')).toBeFocused();
 
-    await page.goto('/device-register');
-    await expect(page.getByRole('heading', { name: 'Register device', exact: true })).toBeVisible();
+    await page.goto('/create-device');
+    await expect(page.getByRole('heading', { name: 'Create Device', exact: true })).toBeVisible();
     await expect(page.locator('main button[type="submit"]')).toHaveCount(1);
     await expect(
         page.locator('[name="status_notification"], [name="sms_notification"]'),
@@ -712,7 +712,7 @@ test('profile and device forms retain one save action, server errors and entered
     await page.getByLabel('Device name', { exact: true }).fill('Invalid duplicate fixture');
     await page.getByLabel('Latitude', { exact: true }).fill('0');
     await page.getByLabel('Longitude', { exact: true }).fill('0');
-    await page.getByRole('button', { name: 'Register device', exact: true }).click();
+    await page.getByRole('button', { name: 'Create Device', exact: true }).click();
     await expect(page.locator('#serial_no')).toHaveAttribute('aria-invalid', 'true');
     await expect(page.locator('#alias')).toHaveValue('Invalid duplicate fixture');
     await checkAccessibility(page);
@@ -760,16 +760,59 @@ test('raw chart ranges render timestamps and navigation never sends a remote com
     );
     await expect(page.getByText('6 raw readings', { exact: true })).toBeVisible();
     await expect(page.locator('canvas')).toHaveCount(1);
+    await expect(page.locator('#device-panel-history .history-plot')).toHaveAttribute(
+        'aria-busy',
+        'false',
+    );
+    await expect(page.getByRole('img', { name: /Temperature.*Pacific Time/ })).toHaveAttribute(
+        'aria-label',
+        /^Temperature, scatter plot with linear trend lines, 6 raw readings\./,
+    );
+    await expect(
+        page.getByText(
+            'Points show raw readings. Dashed lines fit all valid readings in the selected range; a trend needs at least two distinct timestamps.',
+            { exact: true },
+        ),
+    ).toBeVisible();
     await expect(page.getByRole('img', { name: /Temperature.*Pacific Time/ })).toHaveAttribute(
         'aria-label',
         /(?:AM|PM)/,
     );
     await page.getByRole('button', { name: '1 hour', exact: true }).click();
     await expect(page.getByText('2 raw readings', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '1 hour', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
     await page.getByRole('button', { name: '12 hours', exact: true }).click();
     await expect(page.getByText('4 raw readings', { exact: true })).toBeVisible();
     await page.getByLabel('Measurement', { exact: true }).selectOption('panels');
-    await expect(page.getByRole('img', { name: /Panel sensors.*Pacific Time/ })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Panel sensors.*Pacific Time/ })).toHaveAttribute(
+        'aria-label',
+        /^Panel sensors, scatter plot with linear trend lines, 4 raw readings\./,
+    );
+    await expect(page.getByRole('button', { name: '12 hours', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+    await page.getByLabel('Measurement', { exact: true }).selectOption('motor');
+    await expect(page.getByRole('img', { name: /Motor speed.*Pacific Time/ })).toHaveAttribute(
+        'aria-label',
+        /^Motor speed, scatter plot with linear trend lines, 4 raw readings\./,
+    );
+    await page.getByRole('button', { name: '24 hours', exact: true }).click();
+    await expect(page.getByText('5 raw readings', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'All', exact: true }).click();
+    await expect(page.getByText('6 raw readings', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+    await expect(page.locator('#device-panel-history .history-plot')).toHaveAttribute(
+        'aria-busy',
+        'false',
+    );
+    await expect(page.locator('#device-panel-history').getByRole('alert')).toHaveCount(0);
     await checkAccessibility(page);
     await page.getByRole('tab', { name: 'Control', exact: true }).click();
     await expect(page.locator('#device-panel-control')).toBeVisible();

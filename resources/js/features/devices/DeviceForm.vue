@@ -7,16 +7,15 @@ import { useNativeForm } from '../../shared/composables/useNativeForm.js';
 import { requestJson } from '../../shared/api/client.js';
 
 const props = defineProps({
-    registering: { type: Boolean, default: false },
+    creating: { type: Boolean, default: false },
     csrfToken: { type: String, required: true },
     action: { type: String, required: true },
     values: { type: Object, default: () => ({}) },
     errors: { type: Object, default: () => ({}) },
     success: { type: String, default: null },
     sessionError: { type: String, default: null },
-    registrationModal: { type: Boolean, default: false },
+    creationModal: { type: Boolean, default: false },
     asyncSubmit: { type: Boolean, default: false },
-    hardwareOptions: { type: Array, default: () => [] },
     fixedIdentity: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(['pending-change', 'saved']);
@@ -31,7 +30,7 @@ const fields = [
     'latitude',
     'longitude',
 ];
-if (props.registering) fields.push('hardware_id', 'serial_no', 'sku', 'order_no');
+if (props.creating) fields.push('serial_no', 'sku', 'order_no');
 const form = ref(Object.fromEntries(fields.map((field) => [field, props.values[field] ?? ''])));
 const { pending, submit } = useNativeForm();
 watch(pending, (value) => emit('pending-change', value), { immediate: true, flush: 'sync' });
@@ -85,13 +84,9 @@ const identityFields = [
             :session-error="sessionError"
         />
     </div>
-    <template v-if="!registering">
-        <h2 class="h5 mb-3">Registered device</h2>
+    <template v-if="!creating">
+        <h2 class="h5 mb-3">Device details</h2>
         <dl class="row">
-            <dt class="col-sm-4">Hardware</dt>
-            <dd class="col-sm-8">
-                {{ fixedIdentity.hardwareName ?? 'Unknown' }}
-            </dd>
             <dt class="col-sm-4">Serial number</dt>
             <dd class="col-sm-8">{{ fixedIdentity.serialNo }}</dd>
             <dt class="col-sm-4">SKU</dt>
@@ -104,43 +99,11 @@ const identityFields = [
     </template>
     <form id="device-form" method="POST" :action="action" :aria-busy="pending" @submit="save">
         <input type="hidden" name="_token" :value="csrfToken" />
-        <input v-if="registrationModal" type="hidden" name="_registration_modal" value="1" />
-        <input v-if="!registering" type="hidden" name="_method" value="PUT" />
-        <fieldset v-if="registering" class="mb-3">
+        <input v-if="creationModal" type="hidden" name="_creation_modal" value="1" />
+        <input v-if="!creating" type="hidden" name="_method" value="PUT" />
+        <fieldset v-if="creating" class="mb-3">
             <legend class="h5 mb-3">Device details</legend>
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="hardware_id" class="form-label">Hardware</label>
-                    <select
-                        id="hardware_id"
-                        v-model="form.hardware_id"
-                        name="hardware_id"
-                        class="form-select"
-                        :class="{ 'is-invalid': errors.hardware_id?.length }"
-                        required
-                        :aria-invalid="errors.hardware_id?.length ? 'true' : undefined"
-                        :aria-describedby="
-                            errors.hardware_id?.length ? 'hardware_id-errors' : undefined
-                        "
-                    >
-                        <option
-                            v-for="hardware in hardwareOptions"
-                            :key="hardware.id"
-                            :value="hardware.id"
-                        >
-                            {{ hardware.name }}
-                        </option>
-                    </select>
-                    <div
-                        v-if="errors.hardware_id?.length"
-                        id="hardware_id-errors"
-                        class="invalid-feedback"
-                    >
-                        <div v-for="message in errors.hardware_id" :key="message">
-                            {{ message }}
-                        </div>
-                    </div>
-                </div>
                 <div v-for="field in identityFields" :key="field.name" class="col-md-6">
                     <FormField
                         v-model="form[field.name]"
@@ -153,11 +116,11 @@ const identityFields = [
                 </div>
             </div>
         </fieldset>
-        <DeviceFields v-model="form" :errors="errors" :registering="registering" />
+        <DeviceFields v-model="form" :errors="errors" :creating="creating" />
         <div class="d-flex flex-wrap align-items-center gap-2">
             <slot name="actions" :pending="pending" />
             <button type="submit" class="btn btn-primary" :disabled="pending">
-                {{ pending ? 'Saving device…' : registering ? 'Register device' : 'Update device' }}
+                {{ pending ? 'Saving device…' : creating ? 'Create Device' : 'Update device' }}
             </button>
         </div>
         <span class="visually-hidden" role="status">{{

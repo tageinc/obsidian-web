@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ConfigVersions;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\FirmwareVersions;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,7 +28,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->useFrontendManifest();
         config([
             'frontend.vue3.profile' => true,
-            'frontend.vue3.device_register' => true,
+            'frontend.vue3.create_device' => true,
             'frontend.vue3.device_edit' => true,
             'frontend.vue3.dashboard' => true,
             'frontend.vue3.admin' => true,
@@ -42,7 +42,6 @@ class VueWorkflowPagesTest extends TestCase
                 'zip_code' => 'M5V 1A1', 'country' => 'CA',
             ]);
         }
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
     }
 
     private function props($response, string $page): array
@@ -53,10 +52,10 @@ class VueWorkflowPagesTest extends TestCase
         return json_decode($matches[1], true, 512, JSON_THROW_ON_ERROR);
     }
 
-    private function device(User $owner, string $serial, array $attributes = []): DeviceRegister
+    private function device(User $owner, string $serial, array $attributes = []): Device
     {
-        return DeviceRegister::create(array_merge([
-            'user_id' => $owner->id, 'hardware_id' => 1, 'serial_no' => $serial,
+        return Device::create(array_merge([
+            'user_id' => $owner->id, 'serial_no' => $serial,
             'alias' => $serial.' alias', 'sku' => 'SKU', 'order_no' => 'ORDER',
             'address_1' => '1 Device Street', 'city' => 'Vancouver', 'state' => 'BC',
             'zip_code' => 'V6B 1A1', 'country' => 'CA', 'latitude' => 0, 'longitude' => 0,
@@ -86,18 +85,17 @@ class VueWorkflowPagesTest extends TestCase
             ->assertDontSee('js/app.js', false);
     }
 
-    public function test_device_registration_payload_uses_profile_defaults_and_allowlisted_hardware(): void
+    public function test_device_creation_payload_uses_profile_defaults_and_allowlisted_hardware(): void
     {
         $props = $this->props($this->actingAs($this->owner)->withSession([
             '_old_input' => ['alias' => 'Retained alias', 'latitude' => '0', 'status_notification' => 1, 'user_id' => $this->other->id],
-        ])->get('/device-register'), 'device-register');
-        $this->assertTrue($props['registering']);
-        $this->assertSame(route('dataInsert'), $props['action']);
+        ])->get('/create-device'), 'create-device');
+        $this->assertTrue($props['creating']);
+        $this->assertSame(route('create-device.store'), $props['action']);
         $this->assertSame('Retained alias', $props['values']['alias']);
         $this->assertSame('0', $props['values']['latitude']);
         $this->assertSame('1 Example Street', $props['values']['address_1']);
         $this->assertSame('CA', $props['values']['country']);
-        $this->assertSame([['id' => 1, 'name' => 'Solar Tracker']], $props['hardwareOptions']);
         $this->assertArrayNotHasKey('user_id', $props['values']);
         $this->assertArrayNotHasKey('status_notification', $props['values']);
         $this->assertArrayNotHasKey('sms_notification', $props['values']);
@@ -111,10 +109,9 @@ class VueWorkflowPagesTest extends TestCase
             $props = $this->props($this->actingAs($user)->withSession([
                 '_old_input' => ['alias' => 'Retained', 'serial_no' => 'TAMPERED', 'latitude' => '', 'longitude' => ''],
             ])->get('/edit-device/'.$device->id), 'edit-device');
-            $this->assertFalse($props['registering']);
+            $this->assertFalse($props['creating']);
             $this->assertSame(route('device.update', $device->id), $props['action']);
             $this->assertSame('OWNED', $props['fixedIdentity']['serialNo']);
-            $this->assertSame('Solar Tracker', $props['fixedIdentity']['hardwareName']);
             $this->assertSame('Retained', $props['values']['alias']);
             $this->assertSame('', $props['values']['latitude']);
             $this->assertArrayNotHasKey('serial_no', $props['values']);
@@ -137,7 +134,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame('Saved device', $props['success']);
         $this->assertSame(route('all-devices'), $props['mapEndpoints']['all']);
         $this->assertSame(route('paginated-devices'), $props['mapEndpoints']['paginated']);
-        $this->assertSame(['id', 'hardwareName', 'alias', 'serial', 'sku', 'address', 'state', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
+        $this->assertSame(['id', 'alias', 'serial', 'sku', 'address', 'state', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
         $this->assertSame('OWNED-2', $props['devices'][0]['serial']);
         $this->assertSame('<SKU>', $props['devices'][0]['sku']);
         $this->assertSame('1 Device Street, Suite 2', $props['devices'][0]['address']);
@@ -235,12 +232,12 @@ class VueWorkflowPagesTest extends TestCase
 
     public function test_modern_pages_preserve_guest_and_unverified_redirects_and_flags_restore_blade(): void
     {
-        foreach (['/profile', '/device-register', '/dashboard', '/developer-workspace'] as $url) {
+        foreach (['/profile', '/create-device', '/dashboard', '/developer-workspace'] as $url) {
             $this->get($url)->assertRedirect('/login');
         }
         $this->owner->email_verified_at = null;
         $this->owner->save();
-        foreach (['/profile', '/device-register', '/dashboard'] as $url) {
+        foreach (['/profile', '/create-device', '/dashboard'] as $url) {
             $this->actingAs($this->owner)->get($url)->assertRedirect('/email/verify');
         }
         $this->owner->email_verified_at = now();

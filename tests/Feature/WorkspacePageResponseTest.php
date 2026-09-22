@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\User;
 use App\Support\FrontendPagePayload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +16,7 @@ class WorkspacePageResponseTest extends TestCase
     use UsesFrontendManifest;
 
     private User $owner;
-    private DeviceRegister $device;
+    private Device $device;
 
     protected function setUp(): void
     {
@@ -32,9 +32,8 @@ class WorkspacePageResponseTest extends TestCase
             'password' => 'never-serialize-password-hash', 'email_verified_at' => now(),
             'address_1' => '10 Test Street',
         ]);
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
-        $this->device = DeviceRegister::create([
-            'serial_no' => 'workspace-tracker', 'hardware_id' => 1, 'user_id' => $this->owner->id,
+        $this->device = Device::create([
+            'serial_no' => 'workspace-tracker', 'user_id' => $this->owner->id,
         ]);
     }
 
@@ -48,7 +47,7 @@ class WorkspacePageResponseTest extends TestCase
         $this->actingAs($this->owner);
         $paths = [
             '/dashboard?show=20&page=1' => 'dashboard', '/profile' => 'profile',
-            '/device-register' => 'device-register', '/edit-device/'.$this->device->id => 'edit-device',
+            '/create-device' => 'create-device', '/edit-device/'.$this->device->id => 'edit-device',
             '/device-info/'.$this->device->id => 'device-info',
         ];
         foreach ($paths as $url => $page) {

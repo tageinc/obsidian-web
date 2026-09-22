@@ -3,30 +3,29 @@ import { ref } from 'vue';
 import DeviceForm from '../devices/DeviceForm.vue';
 import FormModal from '../../shared/components/FormModal.vue';
 
-defineProps({ registration: { type: Object, required: true } });
+defineProps({ creation: { type: Object, required: true } });
 const emit = defineEmits(['close']);
 const pending = ref(false);
 </script>
 
 <template>
     <FormModal
-        id="register-device"
-        title="Register device"
+        id="create-device"
+        title="Create Device"
         description="Add your device details and installation address."
-        close-label="Close registration"
+        close-label="Close creation"
         :pending="pending"
         @close="emit('close')"
     >
         <template #default="{ close }">
             <DeviceForm
-                :csrf-token="registration.csrfToken"
-                :action="registration.action"
-                :values="registration.values"
-                :hardware-options="registration.hardwareOptions"
-                :errors="registration.errors"
-                :session-error="registration.sessionError"
-                registering
-                registration-modal
+                :csrf-token="creation.csrfToken"
+                :action="creation.action"
+                :values="creation.values"
+                :errors="creation.errors"
+                :session-error="creation.sessionError"
+                creating
+                creation-modal
                 @pending-change="pending = $event"
             >
                 <template #actions>

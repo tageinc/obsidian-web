@@ -6,7 +6,7 @@ use App\Jobs\SendAppUpdateMail;
 use App\Mail\AppUpdateMail;
 use App\Mail\LowVoltageMail;
 use App\Mail\TheftVandalismMail;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\User;
 use App\Services\AppUpdateDelivery;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
@@ -212,7 +212,7 @@ class AppUpdateMailTest extends TestCase
         $other = User::factory()->create();
         $devices = [];
         foreach (['valid', 'transferred', 'opted-out', 'deleted'] as $state) {
-            $devices[$state] = DeviceRegister::create([
+            $devices[$state] = Device::create([
                 'user_id' => $owner->id,
                 'serial_no' => 'mail-'.$state,
                 'status_notification' => true,

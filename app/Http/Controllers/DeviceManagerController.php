@@ -4,12 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\GeoCode;
 use App\Models\Api\SolarTrackerLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Models\Hardware;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -17,8 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class DeviceManagerController extends Controller
 {
-    // structure of controller 
-    // - index = data for table 
+    // structure of controller
+    // - index = data for table
     // - all devices data for all checkbox
     // - paginated is when NOT all is checkmarked
 
@@ -35,8 +34,7 @@ class DeviceManagerController extends Controller
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
         $devices = $this->ownedDevices($search)
-        //->with('hardware', 'license') // Load the license relationship
-        ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
+        ->select('id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
         ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
 
         // //Log::info('Initial Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
@@ -57,7 +55,7 @@ class DeviceManagerController extends Controller
                 $lastUpdated = Carbon::parse($geoCodeEntry->updated_at);
             } else {
                 $device->state = 'no geo data';
-                // If there is no GeoCode entry, you might want to use the DeviceRegister's updated_at or set a default value
+                // If there is no GeoCode entry, you might want to use the Device's updated_at or set a default value
                 $lastUpdated = Carbon::parse($device->updated_at); // or use Carbon::now() for a default value
             }
             // //Log::info('GeoCode Last Updated (before formatting):', ['serial_no' => $device->serial_no, 'last_updated' => $lastUpdated->toDateTimeString()]);
@@ -66,42 +64,38 @@ class DeviceManagerController extends Controller
             $device->last_updated = $lastUpdated->diffForHumans();
 
             // //Log::info('Before Modification:', [
-            //     'device_id' => $device->id, 
-            //     'initial_state' => $device->state, 
+            //     'device_id' => $device->id,
+            //     'initial_state' => $device->state,
             //     'initial_last_updated' => $device->last_updated
             // ]);
 
             // //Log::info('After Modification:', [
-            //     'device_id' => $device->id, 
-            //     'modified_state' => $device->state, 
+            //     'device_id' => $device->id,
+            //     'modified_state' => $device->state,
             //     'modified_last_updated' => $device->last_updated
             // ]);
         }
         //Log::info('controller Final Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
 
-        $registrationHardware = config('frontend.vue3.dashboard') && config('frontend.vue3.device_register')
-            ? Hardware::where('id', 1)->select('id', 'name')->get()
-            : null;
+        $creationEnabled = config('frontend.vue3.dashboard') && config('frontend.vue3.create_device');
 
         return view('device-manager', [
             'devices' => $devices, 'pagination_size' => $pagination_size, 'search' => $search,
-            'registrationHardware' => $registrationHardware,
+            'creationEnabled' => $creationEnabled,
         ]);
     }
 
 
-    // import this class loads in the values for the map when show IS checked 
+    // import this class loads in the values for the map when show IS checked
 
     public function allDevices(Request $request)
 {
     $search = $this->aliasSearch($request);
     $devices = $this->ownedDevices($search)
-             ->with('hardware')  // This fetches hardware details
-             ->get(['id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
+             ->get(['id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
 
     foreach ($devices as $device) {
-        // Check if the device uses a specific hardware type that requires checking the SolarTrackerLog
             // Fetching the geo status as before
             $geo_status = GeoCode::where('serial_no', $device->serial_no)
                 ->latest('updated_at')
@@ -119,7 +113,7 @@ class DeviceManagerController extends Controller
                 // If no GeoCode entry is found, indicate that the last updated time is unknown
                 $device->last_updated = 'Unknown';
             }
-        
+
     }
 
 // Convert the devices array to JSON
@@ -131,19 +125,18 @@ $devicesJson = $devices->toJson();
     return response()->json($devices);
 }
 
-    // import this class loads in the values for the map when show is NOT checked 
+    // import this class loads in the values for the map when show is NOT checked
     public function paginatedDevices(Request $request)
 {
     $search = $this->aliasSearch($request);
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
     $devices = $this->ownedDevices($search)
-             ->with('hardware')  // Fetch hardware details
-             ->select('id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
+             ->select('id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
              ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search]);
 
     foreach ($devices as $device) {
-        
+
             $geo_status = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->first(['status', 'updated_at']);
 
             // Set the device state from the GeoCode entry or use a default value
@@ -159,7 +152,7 @@ $devicesJson = $devices->toJson();
                 // If no GeoCode entry or updated_at is found, indicate that the last updated time is unknown
                 $device->last_updated = 'Unknown';
             }
-        
+
     }
 
     return response()->json($devices);
@@ -174,7 +167,7 @@ $devicesJson = $devices->toJson();
 
     private function ownedDevices(string $search): Builder
     {
-        $query = DeviceRegister::where('user_id', Auth::id())->where('hardware_id', 1);
+        $query = Device::where('user_id', Auth::id());
         if ($search !== '') {
             // Bound parameters and an explicit escape character make %, _ and ! literal.
             $literal = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
@@ -188,7 +181,7 @@ $devicesJson = $devices->toJson();
     public function delete($id)
     {
         // Find the device by ID
-        $device = DeviceRegister::find($id);
+        $device = Device::find($id);
 
         // Check if the device exists
         if (!$device) {
@@ -220,21 +213,20 @@ $devicesJson = $devices->toJson();
                 //Log::info('No user ID found');
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
-    
-            $devices = DeviceRegister::where('user_id', $user_id)->where('hardware_id', 1)
-                ->with('hardware')
+
+            $devices = Device::where('user_id', $user_id)
                 ->get([
-                    'id', 'hardware_id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude', 
+                    'id', 'serial_no', 'sku', 'alias', 'latitude', 'longitude',
                     'address_1', 'address_2', 'updated_at', 'status_notification', 'zip_code'
                 ]);
-    
+
             foreach ($devices as $device) {
                 $geo_status = GeoCode::where('serial_no', $device->serial_no)
                     ->latest('updated_at')
                     ->first();
-    
+
                 $device->state = $geo_status ? $geo_status->status : 'no geo data';
-    
+
                 if ($geo_status) {
                     $lastUpdated = Carbon::parse($geo_status->updated_at);
                     $device->last_updated = $lastUpdated->diffForHumans();
@@ -242,10 +234,10 @@ $devicesJson = $devices->toJson();
                     $device->last_updated = 'Unknown';
                 }
             }
-    
+
             // Log the devices JSON for debugging
             //Log::info('Devices JSON:', ['devices' => $devices]);
-    
+
             return response()->json($devices);
         } catch (\Exception $e) {
             Log::error('device.list_failed');
@@ -256,7 +248,7 @@ $devicesJson = $devices->toJson();
     public function deleteAPI($id)
     {
         // Find the device by ID
-        $device = DeviceRegister::find($id);
+        $device = Device::find($id);
 
         // Check if the device exists
         if (!$device) {

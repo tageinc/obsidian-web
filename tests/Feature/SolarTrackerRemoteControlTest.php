@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use App\Models\SolarTrackerRemoteControl;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,7 +14,7 @@ class SolarTrackerRemoteControlTest extends TestCase
 {
     use RefreshDatabase;
 
-    private DeviceRegister $device;
+    private Device $device;
 
     protected function setUp(): void
     {
@@ -23,9 +23,8 @@ class SolarTrackerRemoteControlTest extends TestCase
             'name' => 'Owner', 'email' => 'owner@example.test',
             'password' => 'test-hash', 'email_verified_at' => now(),
         ]);
-        DB::table('hardware')->insert(['id' => 1, 'name' => 'Solar Tracker', 'prefix' => 'SP1']);
-        $this->device = DeviceRegister::create([
-            'serial_no' => 'remote-test', 'hardware_id' => 1, 'user_id' => $user->id,
+        $this->device = Device::create([
+            'serial_no' => 'remote-test', 'user_id' => $user->id,
         ]);
         $this->actingAs($user);
     }

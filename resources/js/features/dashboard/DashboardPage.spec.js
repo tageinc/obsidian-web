@@ -56,7 +56,7 @@ function page(overrides = {}) {
                 ],
             },
             mapEndpoints: { all: '/all-devices', paginated: '/paginated-devices' },
-            links: { dashboard: '/dashboard', profile: '/profile', register: '/device-register' },
+            links: { dashboard: '/dashboard', profile: '/profile', create: '/create-device' },
             ...overrides,
         },
     });
@@ -70,7 +70,7 @@ afterEach(() => {
 });
 
 describe('dashboard workflow', () => {
-    it('shows escaped devices, explicit document actions, query pagination, and all-map checkbox', async () => {
+    it('shows escaped devices, explicit document actions, query pagination, without the all-map checkbox', async () => {
         const wrapper = page();
         expect(wrapper.find('img').exists()).toBe(false);
         expect(wrapper.get('th[scope="row"]').text()).toContain('<img');
@@ -78,9 +78,9 @@ describe('dashboard workflow', () => {
             '/dashboard?show=20&page=2',
         );
         expect(wrapper.get('a[data-document-action]').attributes('href')).toBe('/delete-device/1');
-        await wrapper.get('#show-all-devices').setValue(true);
+        expect(wrapper.find('#show-all-devices').exists()).toBe(false);
         const map = wrapper.getComponent({ name: 'DeviceMap' });
-        expect(map.props()).toMatchObject({ showAll: true, page: 2, perPage: 20 });
+        expect(map.props()).toMatchObject({ page: 2, perPage: 20 });
     });
 
     it('uses a native GET for page-size changes and displays empty/flash states', async () => {
@@ -97,7 +97,7 @@ describe('dashboard workflow', () => {
             success: 'Device removed',
             sessionError: 'Device unavailable',
         });
-        expect(wrapper.text()).toContain('No devices registered yet.');
+        expect(wrapper.text()).toContain('No devices created yet.');
         expect(wrapper.get('[role="status"]').text()).toBe('Device removed');
         expect(wrapper.get('[role="alert"]').text()).toBe('Device unavailable');
         const form = wrapper.get('form:not([role="search"])');
@@ -311,6 +311,6 @@ describe('dashboard workflow', () => {
             },
         });
         expect(wrapper.text()).toContain('No devices match “missing”');
-        expect(wrapper.text()).not.toContain('No devices registered yet');
+        expect(wrapper.text()).not.toContain('No devices created yet');
     });
 });

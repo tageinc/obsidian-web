@@ -51,10 +51,10 @@ class PublicFrontendTest extends TestCase
         $user->save();
         $props = $this->props($this->get('/thank-you'));
         $this->assertSame('thank-you', $props['mode']);
-        $this->assertSame(route('device-register'), $props['links']['registerDevice']);
+        $this->assertSame(route('create-device'), $props['links']['createDevice']);
         $this->assertSame(route('device-manager'), $props['links']['deviceManager']);
         config(['frontend.vue3.public_pages' => false]);
         $this->get('/thank-you')->assertOk()->assertDontSee('data-vue-page="public"', false)
-            ->assertSee('Register Another Device')->assertSee('View My Devices');
+            ->assertSee('Create Another Device')->assertSee('View My Devices');
     }
 }

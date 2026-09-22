@@ -21,19 +21,19 @@ describe('static browser pages', () => {
         wrapper.unmount();
     });
 
-    it('preserves registration confirmation and existing device URL links', () => {
+    it('preserves creation confirmation and existing device URL links', () => {
         const wrapper = mount(PublicPage, {
             props: {
                 mode: 'thank-you',
                 links: {
-                    registerDevice: '/device-register',
+                    createDevice: '/create-device',
                     deviceManager: '/device-manager',
                 },
             },
         });
-        expect(wrapper.get('h1').text()).toBe('Thank You for Registering Your Device!');
+        expect(wrapper.get('h1').text()).toBe('Thank You for Creating Your Device!');
         expect(wrapper.text()).toContain('Your device has been successfully registered.');
-        expect(wrapper.get('a[href="/device-register"]').text()).toBe('Register Another Device');
+        expect(wrapper.get('a[href="/create-device"]').text()).toBe('Create Another Device');
         expect(wrapper.get('a[href="/device-manager"]').text()).toBe('View My Devices');
         expect(wrapper.find('form').exists()).toBe(false);
         wrapper.unmount();

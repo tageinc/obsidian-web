@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\DeviceRegister;
+use App\Models\Device;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -14,9 +14,9 @@ class EnsureBrowserDeviceAccess
         $id = $request->route('id');
         $serial = $request->input('serial_no');
         $device = $id !== null
-            ? DeviceRegister::find($id)
+            ? Device::find($id)
             : (is_string($serial) && strlen($serial) <= 255
-                ? DeviceRegister::where('serial_no', $serial)->first()
+                ? Device::where('serial_no', $serial)->first()
                 : null);
 
         // Let the existing controllers retain missing-device and validation responses.

@@ -7,7 +7,7 @@
 @if ($usesVue)
     @include('frontend.mount', ['page' => 'public', 'props' => [
         'mode' => 'thank-you',
-        'links' => ['registerDevice' => route('device-register'), 'deviceManager' => route('device-manager')],
+        'links' => ['createDevice' => route('create-device'), 'deviceManager' => route('device-manager')],
     ]])
 @else
 
@@ -21,12 +21,12 @@
 </head>
 <body>
     <div class="container" style="text-align: center; padding: 50px;">
-        <h1>Thank You for Registering Your Device!</h1>
+        <h1>Thank You for Creating Your Device!</h1>
         <p>Your device has been successfully registered.</p>
-        
-        <!-- Register Another Device Button -->
-        <a href="{{ route('device-register') }}" class="btn btn-primary" style="margin-right: 10px;">Register Another Device</a>
-        
+
+        <!-- Create Another Device Button -->
+        <a href="{{ route('create-device') }}" class="btn btn-primary" style="margin-right: 10px;">Create Another Device</a>
+
         <!-- View My Devices Button -->
         <a href="{{ route('device-manager') }}" class="btn btn-secondary">View My Devices</a>
     </div>
