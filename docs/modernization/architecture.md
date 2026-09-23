@@ -110,10 +110,11 @@ Sources: [Vue recommendations](https://v3-migration.vuejs.org/recommendations),
 This transition is **Vue 3 alongside Blade**, with frozen legacy assets where
 needed, not a rewrite into one unrestricted SPA. Email templates stay Blade.
 
-`FRONTEND_VUE3_ENABLED` is the default-off master switch. Each page can override
-it with `FRONTEND_VUE3_PROFILE`, `FRONTEND_VUE3_DEVICE_REGISTER`,
+`FRONTEND_VUE3_ENABLED` is the master switch. The example environment files enable
+it; installations without this setting retain the legacy fallback. Each page can override
+it with `FRONTEND_VUE3_PROFILE`, `FRONTEND_VUE3_CREATE_DEVICE`,
 `FRONTEND_VUE3_DEVICE_EDIT`, `FRONTEND_VUE3_DASHBOARD`,
-`FRONTEND_VUE3_DEVICE_INFO`, `FRONTEND_VUE3_AUTH`, `FRONTEND_VUE3_ADMIN`,
+`FRONTEND_VUE3_VIEW_DEVICE`, `FRONTEND_VUE3_AUTH`, `FRONTEND_VUE3_ADMIN`,
 `FRONTEND_VUE3_PUBLIC_PAGES` or `FRONTEND_VUE3_WORKSPACE`.
 Navigation follows the document's Vue/legacy asset choice. The workspace
 must have all five destination flags enabled before client routing is used;
@@ -121,7 +122,9 @@ otherwise normal document navigation remains available. Flags select rendering
 only and never disable server ownership/admin/verification protections.
 The local app at `http://localhost:8080` has these frontend/workspace switches
 enabled in its ignored environment and passed the final browser checks.
-Committed defaults remain off; production enablement needs separate approval.
+Existing server environment files are not replaced on deployment. Follow the
+frontend configuration steps in `docs/github-actions-deployment.md` to enable
+Vue on installations created with the older default-off example.
 
 ## Routing and server contracts
 

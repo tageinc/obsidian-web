@@ -22,6 +22,15 @@ compose=(docker compose --project-name obsidian-web --env-file .env.docker)
 "${compose[@]}" up -d --wait --wait-timeout 180
 "${compose[@]}" exec -T --user www-data app php artisan migrate --force
 "${compose[@]}" exec -T --user www-data app php artisan view:clear
+# Report the actual rendering choice, not only the deployed commit/build.
+"${compose[@]}" exec -T app php -r '
+    require "vendor/autoload.php";
+    $app = require "bootstrap/app.php";
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    foreach (config("frontend.vue3") as $page => $enabled) {
+        echo "Frontend ".$page.": ".($enabled ? "Vue" : "legacy / disabled").PHP_EOL;
+    }
+'
 # Require a working Laravel login page, rather than merely a running Apache process.
 "${compose[@]}" exec -T app php -r '
     $body = @file_get_contents("http://127.0.0.1/login");

@@ -51,6 +51,42 @@ Paste that value into `APP_KEY`. Set the environment file's owner to `deploy` an
 permissions to 600. Keep credentials out of Git. Configure real SMTP settings if
 you need verification emails; the example's log mailer does not deliver email.
 
+## Frontend configuration on existing installations
+
+The same commit can render either the legacy Blade pages or the Vue components.
+`config/frontend.php` selects them using server environment flags. The old Docker
+example disabled Vue, while browser tests explicitly enable it. A dashboard with
+an inline Edit/Retire list under a small horizontal ellipsis is the legacy Blade
+dashboard; the Vue dashboard uses the positioned `DeviceActions.vue` popup.
+
+In `/opt/obsidian-web/shared/.env.docker`, set:
+
+```dotenv
+FRONTEND_VUE3_ENABLED=true
+FRONTEND_VUE3_WORKSPACE=true
+```
+
+Remove obsolete per-page `FRONTEND_VUE3_*=false` overrides, or set the intended
+pages to `true`. In particular, `FRONTEND_VUE3_DASHBOARD=false` overrides the
+master switch. Current page keys are `PROFILE`, `CREATE_DEVICE`, `DEVICE_EDIT`,
+`DASHBOARD`, `VIEW_DEVICE`, `AUTH`, `ADMIN`, and `PUBLIC_PAGES`.
+Keep the remaining server settings intact; do not replace the file with the example.
+
+Rerun **Deploy VPS**, or apply the environment change to the current release:
+
+```sh
+cd /opt/obsidian-web/current
+docker compose --project-name obsidian-web --env-file .env.docker up -d --force-recreate --no-deps app
+docker compose --project-name obsidian-web --env-file .env.docker exec -T --user www-data app php artisan config:clear
+docker compose --project-name obsidian-web --env-file .env.docker exec -T --user www-data app php artisan view:clear
+```
+
+A container restart alone does not load changed environment values; recreate it.
+Reload `/dashboard` and check that its HTML contains `data-vue-page="dashboard"`
+and `/build/assets/` asset URLs. Open Actions to verify the popup and Edit dialog.
+Deploy logs print the effective rendering flags so a successful build is not
+mistaken for confirmation that Vue is enabled.
+
 ## GitHub secrets
 
 In the repository, open **Settings → Secrets and variables → Actions** and add
