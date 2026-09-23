@@ -18,6 +18,8 @@ const props = defineProps({
     sessionError: { type: String, default: null },
     statusFilter: { type: Array, default: () => [] },
     statusOptions: { type: Array, default: () => [] },
+    stateFilter: { type: Array, default: () => [] },
+    stateOptions: { type: Array, default: () => [] },
     search: { type: String, default: '' },
     creation: { type: Object, default: null },
 });
@@ -84,6 +86,7 @@ const clearSearchUrl = computed(() => {
     const url = new URL(props.links.dashboard, window.location.origin);
     url.searchParams.delete('search');
     props.statusFilter.forEach((status) => url.searchParams.append('status[]', status));
+    props.stateFilter.forEach((state) => url.searchParams.append('state[]', state));
     url.searchParams.delete('page');
     url.searchParams.set('show', String(perPage.value));
     return url.pathname + url.search;
@@ -153,7 +156,12 @@ watch(
                             >Clear search</a
                         >
                         <div class="device-create-toolbar">
-                            <StatusFilter :value="statusFilter" :options="statusOptions" />
+                            <StatusFilter
+                                :value="statusFilter"
+                                :options="statusOptions"
+                                :state-value="stateFilter"
+                                :state-options="stateOptions"
+                            />
                             <button
                                 v-if="creation"
                                 ref="createButton"
@@ -304,6 +312,13 @@ watch(
                                 type="hidden"
                                 name="status[]"
                                 :value="status"
+                            />
+                            <input
+                                v-for="state in stateFilter"
+                                :key="state"
+                                type="hidden"
+                                name="state[]"
+                                :value="state"
                             />
                             <label for="devices-per-page"
                                 >Show<span class="visually-hidden"> devices per page</span>:</label

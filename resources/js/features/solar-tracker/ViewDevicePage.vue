@@ -1,5 +1,6 @@
 <script setup>
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue';
+import DeviceActions from '../dashboard/DeviceActions.vue';
 import InlineDeviceField from '../devices/InlineDeviceField.vue';
 const DeviceDetailsModal = defineAsyncComponent(() => import('../dashboard/DeviceDetailsModal.vue'));
 import HistoryCharts from './HistoryCharts.vue';
@@ -18,12 +19,18 @@ const props = defineProps({
 const fieldValues = ref({ ...props.values });
 const editingDevice = ref(props.editing?.initiallyOpen ?? false);
 watch(() => props.values, (values) => { fieldValues.value = { ...values }; });
-const fields = [
-    ['serial_no', 'Serial number'], ['sku', 'SKU'], ['order_no', 'Order number'], ['address_1', 'Address line 1'],
-    ['address_2', 'Address line 2'], ['city', 'City'], ['address_state', 'State / province / region'],
-    ['zip_code', 'Postal code'], ['country', 'Country'], ['latitude', 'Latitude'], ['longitude', 'Longitude'],
+const fieldGroups = [
+    { id: 'identifiers', fields: [['serial_no', 'Serial number'], ['sku', 'SKU'], ['order_no', 'Order number']] },
+    { id: 'address', fields: [
+        ['address_1', 'Address line 1'], ['address_2', 'Address line 2'], ['city', 'City'],
+        ['address_state', 'State / province / region'], ['zip_code', 'Postal code'], ['country', 'Country'],
+    ] },
+    { id: 'coordinates', fields: [['latitude', 'Latitude'], ['longitude', 'Longitude']] },
 ];
 function saved(values) { fieldValues.value = { ...fieldValues.value, ...values }; }
+function closeEdit() {
+    editingDevice.value = false;
+}
 function modalSaved() { window.location.assign(window.location.pathname); }
 
 const activeSection = ref('overview');
@@ -68,6 +75,11 @@ function navigateSection(event, index) {
             </ol>
         </nav>
         <header class="device-heading">
+            <div v-if="editing" class="device-page-actions">
+                <DeviceActions :csrf-token="csrfToken"
+                    :device="{ id: editing.id, name: fieldValues.name || device.name, serial: fieldValues.serial_no || device.serial, links: { edit: editing.url, retire: links.retire, reactivate: links.reactivate } }"
+                    :show-edit="false" />
+            </div>
             <div>
                 <p class="device-eyebrow">Solar tracker</p>
                 <h1 v-if="!embedded">
@@ -76,12 +88,14 @@ function navigateSection(event, index) {
                 </h1>
             </div>
                 <section class="device-header-details" aria-label="Device properties">
-                    <dl v-if="links.update" class="device-details">
-                        <div v-for="[field, label] in fields" :key="field">
+                    <template v-if="links.update">
+                    <dl v-for="group in fieldGroups" :key="group.id" class="device-details">
+                        <div v-for="[field, label] in group.fields" :key="field">
                             <dt>{{ label }}</dt>
-                            <dd><InlineDeviceField :field="field" :label="label" :value="fieldValues[field]" :numeric="['latitude', 'longitude'].includes(field)" :endpoint="links.update" :csrf-token="csrfToken" @saved="saved" /></dd>
+                            <dd><span v-if="field === 'serial_no'">{{ fieldValues.serial_no || device.serial }}</span><InlineDeviceField v-else :field="field" :label="label" :value="fieldValues[field]" :numeric="['latitude', 'longitude'].includes(field)" :endpoint="links.update" :csrf-token="csrfToken" @saved="saved" /></dd>
                         </div>
                     </dl>
+                    </template>
                     <dl v-else class="device-details">
                         <div><dt>Serial number</dt><dd>{{ device.serial }}</dd></div>
                         <div><dt>SKU</dt><dd>{{ device.details.SKU || '—' }}</dd></div>
@@ -91,7 +105,7 @@ function navigateSection(event, index) {
         </header>
         <DeviceDetailsModal v-if="editingDevice && editing" mode="edit"
             :device="{ id: editing.id, name: fieldValues.name, links: { edit: editing.url } }"
-            @close="editingDevice = false" @saved="modalSaved" />
+            @close="closeEdit" @saved="modalSaved" />
         <div class="device-tabs" role="tablist" aria-label="Device sections">
             <button
                 v-for="(section, index) in sections"
@@ -240,7 +254,16 @@ function navigateSection(event, index) {
 .device-page-embedded .device-eyebrow {
     margin-bottom: 0.4rem;
 }
+.device-page-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+.device-heading > div:first-of-type + div {
+    padding-right: 3rem;
+}
 .device-heading {
+    position: relative;
     display: block;
     justify-content: space-between;
     align-items: center;
@@ -389,17 +412,14 @@ function navigateSection(event, index) {
 .device-header-details {
     margin-top: 1.25rem;
 }
-.device-header-details h2,
-.device-header-details h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
 .device-details {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1rem 1.5rem;
     margin: 0;
+}
+.device-details + .device-details {
+    margin-top: 1.25rem;
 }
 .device-details > div {
     min-width: 0;
@@ -438,6 +458,16 @@ function navigateSection(event, index) {
 .control-guide p {
     font-size: 0.8rem;
     line-height: 1.65;
+}
+@media (max-width: 991px) {
+    .device-details {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575px) {
+    .device-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 @media (max-width: 767px) {
     .device-heading {

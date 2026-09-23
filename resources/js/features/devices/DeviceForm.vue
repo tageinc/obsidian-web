@@ -98,6 +98,7 @@ const identityFields = [
                         :label="field.label"
                         maxlength="255"
                         :required="creating || field.name === 'serial_no'"
+                        :readonly="!creating && field.name === 'serial_no'"
                         :errors="errors[field.name]"
                     />
                 </div>

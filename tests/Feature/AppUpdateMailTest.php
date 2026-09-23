@@ -223,7 +223,7 @@ class AppUpdateMailTest extends TestCase
         }
         $devices['transferred']->update(['user_id' => $other->id]);
         $devices['opted-out']->update(['status_notification' => false]);
-        $devices['deleted']->update(['state' => 'archived']);
+        $devices['deleted']->update(['state' => 'inactive']);
 
         foreach ($devices as $device) {
             $this->workOnce();

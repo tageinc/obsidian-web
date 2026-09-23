@@ -26,7 +26,7 @@ class EditDeviceController extends Controller
     {
         $device = $this->editableDevice($request, $id);
         $validated = $request->validate([
-            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('devices', 'serial_no')->ignore($device->id)],
+            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::in([$device->serial_no])],
             'sku' => 'sometimes|nullable|string|max:255',
             'order_no' => 'sometimes|nullable|string|max:255',
             'name' => 'required|string|max:255',
@@ -59,7 +59,7 @@ class EditDeviceController extends Controller
         $device = $this->editableDevice($request, $id);
         $rules = [
             'name' => 'sometimes|required|string|max:255',
-            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('devices', 'serial_no')->ignore($device->id)],
+            'serial_no' => ['sometimes', 'required', 'string', 'max:255', \Illuminate\Validation\Rule::in([$device->serial_no])],
             'sku' => 'sometimes|nullable|string|max:255',
             'order_no' => 'sometimes|nullable|string|max:255',
             'address_1' => 'sometimes|nullable|string|max:255',
@@ -80,17 +80,9 @@ class EditDeviceController extends Controller
     private function saveDeviceFields(Device $device, array $validated): void
     {
         DB::transaction(function () use ($device, $validated) {
-            $oldSerial = $device->serial_no;
+            unset($validated['serial_no']);
             $device->fill($validated);
             $coordinatesChanged = $device->isDirty(['latitude', 'longitude']);
-            if ($device->isDirty('serial_no')) {
-                foreach (['geocode', 'solar_tracker_logs', 'solar_tracker_remote_controls'] as $table) {
-                    if (DB::table($table)->where('serial_no', $device->serial_no)->exists()) {
-                        throw \Illuminate\Validation\ValidationException::withMessages(['serial_no' => 'This serial number already has device records.']);
-                    }
-                    DB::table($table)->where('serial_no', $oldSerial)->update(['serial_no' => $device->serial_no]);
-                }
-            }
             $device->save();
             if ($coordinatesChanged) {
                 $geocode = GeoCode::where('serial_no', $device->serial_no)->latest('updated_at')->first()

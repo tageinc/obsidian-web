@@ -1,17 +1,19 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import FormModal from '../../shared/components/FormModal.vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 const props = defineProps({
     device: { type: Object, required: true },
+    showEdit: { type: Boolean, default: true },
     csrfToken: { type: String, required: true },
 });
 const emit = defineEmits(['edit']);
 const open = ref(false);
-const confirmingArchive = ref(false);
 const trigger = ref(null);
 const menu = ref(null);
 const position = ref({ top: '0px', left: '0px' });
 const menuId = `device-actions-${props.device.id}`;
+const isReactivation = computed(() => Boolean(props.device.links.reactivate));
+const lifecycleAction = computed(() => (isReactivation.value ? 'Reactivate' : 'Retire'));
+const lifecycleUrl = computed(() => props.device.links.reactivate || props.device.links.retire);
 function close(restoreFocus = false) {
     open.value = false;
     if (restoreFocus) trigger.value?.focus({ preventScroll: true });
@@ -35,7 +37,7 @@ async function reveal(focusLast = null) {
     await nextTick();
     if (!open.value || !menu.value) return;
     if (focusLast !== null) {
-        const items = menu.value.querySelectorAll('a');
+        const items = menu.value.querySelectorAll('a, button');
         items[focusLast ? items.length - 1 : 0]?.focus();
     }
 }
@@ -58,14 +60,14 @@ function keydown(event) {
         close(true);
         return;
     }
-    const items = [...menu.value.querySelectorAll('a')];
+    const items = [...menu.value.querySelectorAll('a, button')];
     const index = items.indexOf(event.target);
     if (event.key === 'Tab') {
         if (event.shiftKey && index === 0) {
             event.preventDefault();
             close(true);
         } else if (!event.shiftKey && index === items.length - 1) {
-            // Return to the row before the browser advances to its next control.
+            // Return to the trigger before the browser advances to its next control.
             close(true);
         }
         return;
@@ -79,16 +81,6 @@ function keydown(event) {
               ? items.length - 1
               : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next]?.focus();
-}
-function confirmArchive(event) {
-    event.preventDefault();
-    close();
-    confirmingArchive.value = true;
-}
-async function cancelArchive() {
-    confirmingArchive.value = false;
-    await nextTick();
-    trigger.value?.focus({ preventScroll: true });
 }
 function edit(event) {
     emit('edit', event, trigger.value);
@@ -120,7 +112,7 @@ onBeforeUnmount(() => {
         @keydown.esc.prevent="close(true)"
         @focusout="leave"
     >
-        <span aria-hidden="true">⋯</span>
+        <span aria-hidden="true">⋮</span>
     </button>
     <Teleport to="body">
         <div
@@ -135,6 +127,7 @@ onBeforeUnmount(() => {
             @focusout="leave"
         >
             <a
+                v-if="showEdit && device.links.edit"
                 class="dropdown-item"
                 :href="device.links.edit"
                 :aria-label="`Edit ${device.name}`"
@@ -142,41 +135,17 @@ onBeforeUnmount(() => {
                 @click="edit"
                 >Edit</a
             >
-            <a
-                class="dropdown-item device-archive"
-                :href="device.links.archive"
-                :aria-label="`Archive ${device.name}`"
-                data-document-action
-                aria-haspopup="dialog"
-                @click="confirmArchive"
-                >Archive</a
-            >
+            <form v-if="lifecycleUrl" :action="lifecycleUrl" method="POST" data-document-action>
+                <input type="hidden" name="_token" :value="csrfToken" />
+                <button
+                    type="submit"
+                    class="dropdown-item"
+                    :class="{ 'device-retire': !isReactivation }"
+                    :aria-label="`${lifecycleAction} ${device.name}`"
+                    >{{ lifecycleAction }}</button
+                >
+            </form>
         </div>
-    </Teleport>
-    <Teleport to="body">
-        <FormModal
-            v-if="confirmingArchive"
-            :id="`archive-device-${device.id}`"
-            title="Archive device?"
-            :description="`Are you sure you want to archive ${device.name || device.serial}?`"
-            @close="cancelArchive"
-        >
-            <template #default="{ close: closeDialog }">
-                <p>
-                    The device will leave the active dashboard and map. Its details and sensor
-                    history will be preserved.
-                </p>
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-outline-secondary" @click="closeDialog">
-                        Cancel
-                    </button>
-                    <form :action="device.links.archive" method="POST" data-document-action>
-                        <input type="hidden" name="_token" :value="csrfToken" />
-                        <button type="submit" class="btn btn-primary">Archive device</button>
-                    </form>
-                </div>
-            </template>
-        </FormModal>
     </Teleport>
 </template>
 
@@ -198,7 +167,8 @@ onBeforeUnmount(() => {
     color: #111827;
 }
 .device-action-trigger:focus-visible,
-.device-action-menu a:focus-visible {
+.device-action-menu a:focus-visible,
+.device-action-menu button:focus-visible {
     outline: 2px solid #0d6efd;
     outline-offset: 2px;
 }
@@ -214,16 +184,21 @@ onBeforeUnmount(() => {
     box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
 }
 .device-action-menu .dropdown-item {
+    width: 100%;
     padding: 0.5rem 0.75rem;
+    border: 0;
     border-radius: 6px;
+    background: transparent;
     font-size: 0.875rem;
     font-weight: 500;
+    text-align: left;
 }
+.device-action-menu form { margin: 0; }
 .device-action-menu .dropdown-item:hover,
 .device-action-menu .dropdown-item:focus {
     background: #f3f4f6;
 }
-.device-archive {
+.device-retire {
     color: #b02a37;
 }
 </style>

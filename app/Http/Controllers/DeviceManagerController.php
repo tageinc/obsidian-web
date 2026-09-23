@@ -35,7 +35,10 @@ class DeviceManagerController extends Controller
 
         $devices = $this->ownedDevices($search)
         ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
-        ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
+        ->paginate($pagination_size)->appends([
+            'show' => $pagination_size, 'search' => $search,
+            'status' => $this->statusFilter(), 'state' => $this->stateFilter(),
+        ]);
 
         // //Log::info('Initial Devices State:', ['devices' => $devices->pluck('state', 'serial_no')->toArray()]);
 
@@ -85,6 +88,8 @@ class DeviceManagerController extends Controller
             'creationEnabled' => $creationEnabled,
             'statusFilter' => $this->statusFilter(),
             'statusOptions' => $this->ownedDevices('', false)->selectRaw($this->statusExpression().' AS operating_status')->get()->pluck('operating_status')->unique()->sort()->values()->all(),
+            'stateFilter' => $this->stateFilter(),
+            'stateOptions' => ['active', 'inactive'],
         ]);
     }
 
@@ -135,7 +140,10 @@ $devicesJson = $devices->toJson();
 
     $devices = $this->ownedDevices($search)
              ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
-             ->paginate($pagination_size)->appends(['show' => $pagination_size, 'search' => $search, 'status' => $this->statusFilter()]);
+             ->paginate($pagination_size)->appends([
+                 'show' => $pagination_size, 'search' => $search,
+                 'status' => $this->statusFilter(), 'state' => $this->stateFilter(),
+             ]);
 
     foreach ($devices as $device) {
 
@@ -177,6 +185,17 @@ $devicesJson = $devices->toJson();
         return array_values(array_unique(array_filter(array_map('trim', $validated['status']))));
     }
 
+    private function stateFilter(): array
+    {
+        $value = request()->input('state', []) ?? [];
+        if (is_string($value)) $value = $value === '' ? [] : [$value];
+        $validated = validator(['state' => $value], [
+            'state' => 'array|max:2', 'state.*' => 'in:active,inactive',
+        ])->validate();
+
+        return array_values(array_unique($validated['state']));
+    }
+
     private function statusExpression(): string
     {
         return "COALESCE((SELECT status FROM geocode WHERE geocode.serial_no = devices.serial_no ORDER BY updated_at DESC, id DESC LIMIT 1), 'no geo data')";
@@ -184,7 +203,9 @@ $devicesJson = $devices->toJson();
 
     private function ownedDevices(string $search, bool $filterStatus = true): Builder
     {
-        $query = Device::where('state', 'active')->where('user_id', Auth::id());
+        $query = Device::where('user_id', Auth::id());
+        $states = $this->stateFilter();
+        $query->whereIn('state', $states === [] ? ['active'] : $states);
         if ($filterStatus && $this->statusFilter() !== []) {
             $query->whereIn(\Illuminate\Support\Facades\DB::raw($this->statusExpression()), $this->statusFilter());
         }
@@ -198,17 +219,31 @@ $devicesJson = $devices->toJson();
     }
 
 
-    public function archive(Request $request, $id)
+    public function retire(Request $request, $id)
     {
         $device = Device::findOrFail($id);
         abort_unless((int) $device->user_id === (int) $request->user()->id, 403);
-        $device->state = 'archived';
+        $device->state = 'inactive';
         $device->save();
 
         if ($request->is('api/*') || $request->wantsJson()) {
-            return response()->json(['message' => 'Device archived successfully.', 'state' => $device->state]);
+            return response()->json(['message' => 'Device retired successfully.', 'state' => $device->state]);
         }
-        return redirect()->route('dashboard')->with('success', 'Device archived successfully.');
+        return redirect()->route('dashboard')->with('success', 'Device retired successfully.');
+    }
+
+    public function reactivate(Request $request, $id)
+    {
+        $device = Device::findOrFail($id);
+        abort_unless((int) $device->user_id === (int) $request->user()->id, 403);
+        $device->state = 'active';
+        $device->save();
+
+        if ($request->is('api/*') || $request->wantsJson()) {
+            return response()->json(['message' => 'Device reactivated successfully.', 'state' => $device->state]);
+        }
+
+        return redirect()->route('dashboard')->with('success', 'Device reactivated successfully.');
     }
 
     public function allDevicesAPI(Request $request)

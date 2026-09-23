@@ -12,7 +12,7 @@ return new class extends Migration
         // Both supported databases (MySQL 8 and SQLite) support native renaming.
         DB::statement('ALTER TABLE devices RENAME COLUMN state TO address_state');
         Schema::table('devices', function (Blueprint $table) {
-            $table->enum('state', ['active', 'archived'])->default('active')->index();
+            $table->enum('state', ['active', 'inactive'])->default('active')->index();
         });
     }
 

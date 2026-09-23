@@ -109,18 +109,18 @@ class DeviceFormsTest extends TestCase
         ];
 
         $this->put('/edit-device/'.$device->id, array_merge($changes, [
-            'serial_no' => 'different', 'sku' => 'different',
+            'serial_no' => $device->serial_no, 'sku' => 'different',
             'order_no' => 'different', 'user_id' => 999,
             'status_notification' => 0, 'sms_notification' => 0,
         ]))->assertRedirect('/edit-device/'.$device->id)->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('devices', array_merge($changes, [
-            'id' => $device->id, 'user_id' => $this->owner->id, 'serial_no' => 'different',
+            'id' => $device->id, 'user_id' => $this->owner->id, 'serial_no' => $device->serial_no,
             'sku' => 'different', 'order_no' => 'different',
             'status_notification' => true, 'sms_notification' => true,
         ]));
         $this->assertDatabaseHas('geocode', [
-            'serial_no' => 'different', 'latitude' => 45.5019,
+            'serial_no' => $device->serial_no, 'latitude' => 45.5019,
             'longitude' => -73.5674, 'status' => 'connected',
         ]);
     }

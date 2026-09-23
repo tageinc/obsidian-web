@@ -14,11 +14,11 @@ class Device extends Model
     protected static function booted()
     {
         static::deleting(function () {
-            throw new \LogicException('Devices cannot be deleted. Archive them instead.');
+            throw new \LogicException('Devices cannot be deleted. Retire them instead.');
         });
         static::saving(function (Device $device) {
-            if (! in_array($device->state, ['active', 'archived'], true)) {
-                throw new \InvalidArgumentException('Device state must be active or archived.');
+            if (! in_array($device->state, ['active', 'inactive'], true)) {
+                throw new \InvalidArgumentException('Device state must be active or inactive.');
             }
         });
     }

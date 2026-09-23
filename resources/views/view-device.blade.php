@@ -18,10 +18,23 @@
             'Updated' => $latestStatus->updated_at_pst ?: 'N/A', 'PS2' => $latestStatus->ps2,
             'PDS' => $latestStatus->pds, 'Temperature (°C)' => $latestStatus->temp],
         'remote' => $remoteControl, 'points' => $graph['points'], 'csrfToken' => csrf_token(),
-        'links' => ['update' => route('devices.update', $device->id), 'dashboard' => route('dashboard'), 'edit' => route('edit-device', $device->id), 'remote' => route('update-solar-tracker')],
+        'links' => ['retire' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'active') ? route('retireDevice', $device->id) : null, 'reactivate' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'inactive') ? route('reactivateDevice', $device->id) : null, 'update' => route('devices.update', $device->id), 'dashboard' => route('dashboard'), 'edit' => route('edit-device', $device->id), 'remote' => route('update-solar-tracker')],
     ]])
 @else
 <div class="container">
+    <div class="dropdown float-end">
+        <button type="button" class="btn btn-link text-secondary" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Device actions">⋮</button>
+        <div class="dropdown-menu dropdown-menu-end">
+            <a class="dropdown-item" href="{{ route('edit-device', $device->id) }}">Edit</a>
+            @if ((int) Auth::id() === (int) $device->user_id)
+                @if ($device->state === 'active')
+                    <form method="POST" action="{{ route('retireDevice', $device->id) }}">@csrf<button class="dropdown-item text-danger" type="submit">Retire</button></form>
+                @elseif ($device->state === 'inactive')
+                    <form method="POST" action="{{ route('reactivateDevice', $device->id) }}">@csrf<button class="dropdown-item" type="submit">Reactivate</button></form>
+                @endif
+            @endif
+        </div>
+    </div>
     <nav aria-label="Breadcrumb" class="mb-3">
         <ol class="list-unstyled d-flex flex-wrap small text-muted mb-0">
             <li><a href="{{ route('dashboard') }}" class="text-muted text-nowrap">Dashboard</a><span class="mx-2" aria-hidden="true">›</span></li>

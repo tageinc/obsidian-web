@@ -32,7 +32,7 @@ const device = (id, overrides = {}) => ({
     links: {
         view: `/devices/${id}`,
         edit: `/edit-device/${id}`,
-        archive: `/archive-device/${id}`,
+        retire: `/retire-device/${id}`,
     },
     ...overrides,
 });
@@ -79,7 +79,8 @@ describe('dashboard workflow', () => {
         expect(wrapper.get('a[aria-current="page"]').attributes('href')).toBe(
             '/dashboard?show=20&page=2',
         );
-        expect(wrapper.get('a[data-document-action]').attributes('href')).toBe('/archive-device/1');
+        expect(wrapper.get('form[data-document-action]').attributes('action')).toBe('/retire-device/1');
+        expect(wrapper.findAll('thead th').map((cell) => cell.text())).toContain('Actions');
         expect(wrapper.find('#show-all-devices').exists()).toBe(false);
         const map = wrapper.getComponent({ name: 'DeviceMap' });
         expect(map.props()).toMatchObject({ page: 2, perPage: 20 });
@@ -110,83 +111,6 @@ describe('dashboard workflow', () => {
         expect(Object.fromEntries(new FormData(form.element))).toEqual({ show: '30' });
     });
 
-    it('requires modal confirmation and restores focus on cancellation', async () => {
-        HTMLDialogElement.prototype.showModal = function () {
-            this.open = true;
-        };
-        HTMLDialogElement.prototype.close = function () {
-            this.open = false;
-            this.dispatchEvent(new Event('close'));
-        };
-        const confirm = vi.spyOn(window, 'confirm');
-        const wrapper = page();
-        const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
-        await trigger.trigger('click');
-        const remove = wrapper.get('a.device-archive');
-        const canceled = new MouseEvent('click', { cancelable: true });
-        remove.element.dispatchEvent(canceled);
-        await flushPromises();
-        expect(canceled.defaultPrevented).toBe(true);
-        expect(confirm).not.toHaveBeenCalled();
-        const dialog = wrapper.get('dialog');
-        expect(dialog.text()).toContain('Archive device?');
-        expect(dialog.find('img').exists()).toBe(false);
-        expect(dialog.get('form').attributes()).toMatchObject({
-            action: '/archive-device/1',
-            method: 'POST',
-        });
-        expect(dialog.get('input[name="_token"]').element.value).toBe('csrf-test-token');
-        expect(dialog.get('form').attributes()).toHaveProperty('data-document-action');
-        await dialog.get('button.btn-outline-secondary').trigger('click');
-        await flushPromises();
-        expect(wrapper.find('dialog').exists()).toBe(false);
-        expect(document.activeElement).toBe(trigger.element);
-        await trigger.trigger('click');
-        await remove.trigger('click');
-        await flushPromises();
-        await wrapper.get('dialog').trigger('cancel');
-        await flushPromises();
-        expect(wrapper.find('dialog').exists()).toBe(false);
-        expect(document.activeElement).toBe(trigger.element);
-    });
-    it('reveals row actions by keyboard and closes on Escape or an outside click', async () => {
-        const wrapper = page();
-        const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-        await trigger.trigger('keydown', { key: 'ArrowDown' });
-        await flushPromises();
-        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
-        expect(trigger.attributes('aria-expanded')).toBe('true');
-        expect(document.activeElement).toBe(edit.element);
-        await edit.trigger('keydown', { key: 'ArrowDown' });
-        const remove = wrapper.get('a[data-document-action]');
-        expect(document.activeElement).toBe(remove.element);
-        await remove.trigger('keydown', { key: 'Escape' });
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-        expect(document.activeElement).toBe(trigger.element);
-        await trigger.trigger('click');
-        document.body.click();
-        await wrapper.vm.$nextTick();
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-    });
-    it('focuses the first action on opening and returns to the row when tabbing out of the popup', async () => {
-        const wrapper = page();
-        const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
-        await trigger.trigger('click');
-        await flushPromises();
-        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
-        expect(document.activeElement).toBe(edit.element);
-        await edit.trigger('keydown', { key: 'Tab', shiftKey: true });
-        expect(document.activeElement).toBe(trigger.element);
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-        await trigger.trigger('keydown', { key: 'ArrowUp' });
-        await flushPromises();
-        const remove = wrapper.get('a[data-document-action]');
-        expect(document.activeElement).toBe(remove.element);
-        await remove.trigger('keydown', { key: 'Tab' });
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-        expect(document.activeElement).toBe(trigger.element);
-    });
     it('opens details from a row and collapses them with the labeled disclosure button', async () => {
         const wrapper = page({ devices: [device(1)] });
         const row = wrapper.get('.device-table-row');
@@ -260,13 +184,6 @@ describe('dashboard workflow', () => {
         name.element.addEventListener('click', (event) => event.preventDefault());
         await name.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('false');
-        await row.get('button[aria-controls="device-actions-1"]').trigger('click');
-        await flushPromises();
-        expect(toggle.attributes('aria-expanded')).toBe('false');
-        const edit = wrapper.get('#device-actions-1 a[href="/edit-device/1"]');
-        edit.element.addEventListener('click', (event) => event.preventDefault());
-        await edit.trigger('click');
-        expect(toggle.attributes('aria-expanded')).toBe('false');
         await row.trigger('click');
         await name.trigger('click');
         expect(toggle.attributes('aria-expanded')).toBe('true');
@@ -280,7 +197,7 @@ describe('dashboard workflow', () => {
             search: 'New name',
             show: '20',
         });
-        const sizeForm = wrapper.get('form:not([role="search"])');
+        const sizeForm = wrapper.get('form[action="/dashboard"]:not([role="search"])');
         expect(Object.fromEntries(new FormData(sizeForm.element))).toEqual({
             search: 'Roof',
             show: '20',
@@ -289,7 +206,7 @@ describe('dashboard workflow', () => {
         await wrapper.setProps({ search: 'Different' });
         expect(wrapper.get('#device-name-search').element.value).toBe('Different');
     });
-    it('navigates to the view page and opens edit in a modal, restoring the trigger', async () => {
+    it('navigates to the view page without dashboard action controls', async () => {
         const wrapper = page({ devices: [device(1)] });
         const name = wrapper.get('a.device-name');
         expect(name.attributes('href')).toBe('/devices/1');
@@ -298,17 +215,6 @@ describe('dashboard workflow', () => {
         await flushPromises();
         expect(event.defaultPrevented).toBe(false);
         expect(wrapper.findComponent({ name: 'DeviceDetailsModal' }).exists()).toBe(false);
-        const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
-        await trigger.trigger('click');
-        expect(wrapper.find('#device-actions-1 hr').exists()).toBe(false);
-        expect(wrapper.find('#device-actions-1 a[href="/devices/1"]').exists()).toBe(false);
-        await wrapper.get('#device-actions-1 a[href="/edit-device/1"]').trigger('click');
-        const modal = wrapper.getComponent({ name: 'DeviceDetailsModal' });
-        expect(modal.props('mode')).toBe('edit');
-        expect(trigger.attributes('aria-expanded')).toBe('false');
-        await modal.get('button').trigger('click');
-        await flushPromises();
-        expect(document.activeElement).toBe(trigger.element);
     });
     it('distinguishes no name matches from an account with no devices', () => {
         const wrapper = page({
@@ -326,4 +232,18 @@ describe('dashboard workflow', () => {
         expect(wrapper.text()).toContain('No devices match “missing”');
         expect(wrapper.text()).not.toContain('No devices created yet');
     });
+});
+
+it('opens the edit modal from table actions and restores focus on close', async () => {
+    const wrapper = page({ devices: [device(1)] });
+    const trigger = wrapper.get('.device-actions-cell button');
+    await trigger.trigger('click');
+    await flushPromises();
+    await wrapper.get('a[href="/edit-device/1"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.getComponent({ name: 'DeviceDetailsModal' }).props('mode')).toBe('edit');
+    await wrapper.get('[data-testid="device-modal"] button').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="device-modal"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
 });

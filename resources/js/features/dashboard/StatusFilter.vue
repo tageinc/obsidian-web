@@ -6,13 +6,22 @@ import 'tom-select/dist/css/tom-select.css';
 const props = defineProps({
     value: { type: Array, default: () => [] },
     options: { type: Array, default: () => [] },
+    stateValue: { type: Array, default: () => [] },
+    stateOptions: { type: Array, default: () => [] },
 });
 const root = ref(null);
 const container = ref(null);
+const stateContainer = ref(null);
 const trigger = ref(null);
 const open = ref(false);
 const applied = ref([...props.value]);
+const appliedState = ref([...props.stateValue]);
 let control;
+let stateControl;
+const stateOption = (value) => ({
+    value,
+    label: value.charAt(0).toUpperCase() + value.slice(1),
+});
 onMounted(() => {
     const select = document.createElement('select');
     select.multiple = true;
@@ -27,6 +36,19 @@ onMounted(() => {
         placeholder: 'Status...',
     });
     control.control_input.setAttribute('aria-label', 'Status');
+    const stateSelect = document.createElement('select');
+    stateSelect.multiple = true;
+    stateContainer.value.append(stateSelect);
+    stateControl = new TomSelect(stateSelect, {
+        options: props.stateOptions.map(stateOption),
+        items: [...props.stateValue],
+        valueField: 'value',
+        labelField: 'label',
+        searchField: ['label'],
+        plugins: ['remove_button'],
+        placeholder: 'State...',
+    });
+    stateControl.control_input.setAttribute('aria-label', 'State');
     document.addEventListener('pointerdown', outside);
 });
 function outside(event) {
@@ -34,7 +56,10 @@ function outside(event) {
 }
 function toggle() {
     open.value = !open.value;
-    if (open.value) control.setValue(applied.value, true);
+    if (open.value) {
+        control.setValue(applied.value, true);
+        stateControl.setValue(appliedState.value, true);
+    }
 }
 function close() {
     open.value = false;
@@ -42,8 +67,10 @@ function close() {
 }
 async function apply(clear = false) {
     applied.value = clear ? [] : [...control.items];
+    appliedState.value = clear ? [] : [...stateControl.items];
     if (clear) {
         control.clear(true);
+        stateControl.clear(true);
         const search = root.value.closest('form')?.querySelector('[name="search"]');
         if (search) {
             search.value = '';
@@ -62,6 +89,13 @@ watch(
     },
 );
 watch(
+    () => props.stateValue,
+    (value) => {
+        appliedState.value = [...value];
+        stateControl?.setValue(value, true);
+    },
+);
+watch(
     () => props.options,
     (options) => {
         if (!control) return;
@@ -71,9 +105,20 @@ watch(
         control.setValue(props.value, true);
     },
 );
+watch(
+    () => props.stateOptions,
+    (options) => {
+        if (!stateControl) return;
+        stateControl.clear(true);
+        stateControl.clearOptions();
+        stateControl.addOptions(options.map(stateOption));
+        stateControl.setValue(props.stateValue, true);
+    },
+);
 onBeforeUnmount(() => {
     document.removeEventListener('pointerdown', outside);
     control?.destroy();
+    stateControl?.destroy();
 });
 </script>
 
@@ -85,6 +130,13 @@ onBeforeUnmount(() => {
             type="hidden"
             name="status[]"
             :value="status"
+        />
+        <input
+            v-for="state in appliedState"
+            :key="state"
+            type="hidden"
+            name="state[]"
+            :value="state"
         />
         <button
             ref="trigger"
@@ -119,6 +171,8 @@ onBeforeUnmount(() => {
         >
             <label class="fw-bolder" @click="control?.focus()">Status</label>
             <div ref="container" v-once></div>
+            <label class="fw-bolder mt-2" @click="stateControl?.focus()">State</label>
+            <div ref="stateContainer" v-once></div>
             <div class="mt-2 d-flex gap-2">
                 <button type="button" class="btn btn-sm btn-primary" @click="apply()">Apply</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" @click="apply(true)">

@@ -33,8 +33,8 @@ test.beforeEach(async ({ context, page }) => {
     });
     // Fail closed even if a regression accidentally dispatches a motor command on mount.
     await page.route('**/update-solar-tracker', (route) => route.abort());
-    // Browser coverage cancels deletion; no regression may remove even a synthetic device.
-    await page.route('**/archive-device/*', (route) => route.abort());
+    // Browser coverage cancels retirement; no regression may change even a synthetic device.
+    await page.route('**/retire-device/*', (route) => route.abort());
 });
 
 async function login(page, role = 'owner') {
@@ -199,10 +199,10 @@ test('device actions stay usable and name search keeps the table and map in sync
     page,
     isMobile,
 }) => {
-    const deletionRequests = [];
+    const retirementRequests = [];
     page.on('request', (request) => {
-        if (new URL(request.url()).pathname.startsWith('/archive-device/')) {
-            deletionRequests.push(request.url());
+        if (new URL(request.url()).pathname.startsWith('/retire-device/')) {
+            retirementRequests.push(request.url());
         }
     });
     await login(page);
@@ -255,14 +255,15 @@ test('device actions stay usable and name search keeps the table and map in sync
     await expect(details).toHaveAttribute('aria-expanded', 'false');
     const menu = page.locator(`#${await actions.getAttribute('aria-controls')}`);
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('link')).toHaveCount(2);
+    await expect(menu.getByRole('link')).toHaveCount(1);
+    await expect(menu.getByRole('button')).toHaveCount(1);
     await expect(menu.getByRole('separator')).toHaveCount(0);
     await expect(
         menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
-        menu.getByRole('link', { name: 'Archive Browser simulator', exact: true }),
+        menu.getByRole('button', { name: 'Retire Browser simulator', exact: true }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(menu).not.toBeVisible();
@@ -283,11 +284,13 @@ test('device actions stay usable and name search keeps the table and map in sync
     expect(menuBounds.y).toBeGreaterThanOrEqual(0);
     expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
     expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(page.viewportSize().height);
-    for (const action of ['Edit', 'Delete']) {
-        const link = menu.getByRole('link', { name: `${action} Browser simulator`, exact: true });
-        await expect(link).toBeVisible();
+    for (const action of [
+        menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }),
+        menu.getByRole('button', { name: 'Retire Browser simulator', exact: true }),
+    ]) {
+        await expect(action).toBeVisible();
         expect(
-            await link.evaluate((element) => {
+            await action.evaluate((element) => {
                 const bounds = element.getBoundingClientRect();
                 const hit = document.elementFromPoint(
                     bounds.x + bounds.width / 2,
@@ -305,13 +308,8 @@ test('device actions stay usable and name search keeps the table and map in sync
     await page.getByRole('heading', { name: 'Device Manager', exact: true }).click();
     await expect(menu).not.toBeVisible();
     await actions.click();
-    await menu.getByRole('link', { name: 'Archive Browser simulator', exact: true }).click();
-    const deleteDialog = page.getByRole('dialog', { name: 'Archive device?', exact: true });
-    await checkModalKeyboardAndViewport(page, deleteDialog);
-    await deleteDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(deleteDialog).not.toBeVisible();
-    await expect(actions).toBeFocused();
-    expect(deletionRequests).toEqual([]);
+    await menu.getByRole('button', { name: 'Retire Browser simulator', exact: true }).click();
+    await expect.poll(() => retirementRequests.length).toBe(1);
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(
         page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
@@ -378,7 +376,7 @@ test('device actions stay usable and name search keeps the table and map in sync
     ).toBeVisible();
     await expect(page.getByText('Showing 1 of 1 device locations.')).toBeVisible();
     await checkAccessibility(page);
-    expect(deletionRequests).toEqual([]);
+    expect(retirementRequests).toHaveLength(1);
     const name = page
         .getByRole('rowheader', { name: 'Browser simulator', exact: true })
         .getByRole('link');

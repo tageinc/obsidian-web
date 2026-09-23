@@ -88,4 +88,6 @@ existing clients.
 
 Device viewing uses `GET /devices/{id}` (`devices.show`) for the full View Device page. Authenticated API clients use `GET /api/devices/{id}` (`api.devices.show`). Both enforce owner/developer access and return 404 for missing devices. The former device-info route has been removed.
 
-View Device supports inline editing with checkmark/save and X/cancel controls for name, serial, SKU, order, address, and coordinates. PATCH /devices/{id} validates changes and preserves serial-linked history. Status and lifecycle state cannot be changed through inline editing. The former edit-page URL redirects to View Device with its edit modal open.
+View Device supports inline editing with checkmark/save and X/cancel controls for name, SKU, order, address, and coordinates. Serial numbers are read-only after creation, including in the edit modal. PATCH /devices/{id} validates changes and preserves serial-linked history. Status, lifecycle state, and serial number cannot be changed through inline editing. The former edit-page URL redirects to View Device with its edit modal open.
+
+Device Manager includes an Actions column with Edit and Retire. Inactive devices show Reactivate instead, restoring them to the active dashboard and map. The View Device page's top-right menu provides the applicable lifecycle action immediately; lifecycle actions remain limited to the device owner.

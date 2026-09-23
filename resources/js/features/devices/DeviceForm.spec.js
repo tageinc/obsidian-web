@@ -56,6 +56,7 @@ describe('reusable device form', () => {
             longitude: '0',
         });
         expect(modal.find('[name="_method"]').exists()).toBe(false);
+        expect(modal.get('#serial_no').element.readOnly).toBe(false);
         expect(modal.findAll('button[type="submit"]')).toHaveLength(1);
     });
 
@@ -112,7 +113,7 @@ describe('reusable device form', () => {
         );
         const wrapper = form({ creating: false, asyncSubmit: true, action: '/update-device/1' });
         await wrapper.get('#name').setValue('Updated tracker');
-        await wrapper.get('#serial_no').setValue('TRACK-2');
+        expect(wrapper.get('#serial_no').element.readOnly).toBe(true);
         await wrapper.get('#sku').setValue('SP2');
         await wrapper.get('#order_no').setValue('ORD-2');
         const first = new Event('submit', { cancelable: true });
@@ -126,7 +127,7 @@ describe('reusable device form', () => {
             csrfToken: 'test-csrf',
             headers: { 'X-Obsidian-Modal': '1' },
             data: {
-                serial_no: 'TRACK-2',
+                serial_no: 'TRACK-1',
                 sku: 'SP2',
                 order_no: 'ORD-2',
                 name: 'Updated tracker',

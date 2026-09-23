@@ -78,7 +78,6 @@ it('shows missing telemetry explicitly instead of presenting placeholder zero re
     expect(wrapper.get('.device-metrics').text()).not.toContain('0');
     wrapper.unmount();
 });
-
 it('embeds device details without page navigation without a standalone edit link', async () => {
     const wrapper = mount(ViewDevicePage, { props: { ...props, embedded: true } });
     expect(wrapper.find('h1').exists()).toBe(false);
@@ -108,13 +107,36 @@ it('keeps standalone navigation and hides editing when the server supplies no ed
 });
 
 it('provides inline device fields without a dedicated edit link or editable status', () => {
-    const wrapper = mount(ViewDevicePage, { props: {
-        ...props, links: { ...props.links, update: '/devices/1' },
-        values: { name: 'Tracker', serial_no: 'TEST-1', sku: 'SP1' },
-    } });
-    expect(wrapper.findAllComponents({ name: 'InlineDeviceField' })).toHaveLength(12);
+    const wrapper = mount(ViewDevicePage, {
+        props: {
+            ...props,
+            links: { ...props.links, update: '/devices/1' },
+            values: { name: 'Tracker', serial_no: 'TEST-1', sku: 'SP1' },
+        },
+    });
+    expect(wrapper.findAllComponents({ name: 'InlineDeviceField' })).toHaveLength(11);
+    expect(wrapper.find('[aria-label="Edit Serial number"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="Edit status"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="Edit state"]').exists()).toBe(false);
     expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);
+    wrapper.unmount();
+});
+
+it('shows only Retire in the vertical page menu', async () => {
+    const wrapper = mount(ViewDevicePage, {
+        attachTo: document.body,
+        props: {
+            ...props,
+            editing: { id: 1, url: '/edit-device/1' },
+            links: { ...props.links, retire: '/retire-device/1' },
+        },
+        global: { stubs: { teleport: true } },
+    });
+    const trigger = wrapper.get('.device-page-actions button');
+    expect(trigger.text()).toBe('⋮');
+    await trigger.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);
+    expect(wrapper.get('button[aria-label="Retire Test tracker"]').text()).toBe('Retire');
     wrapper.unmount();
 });

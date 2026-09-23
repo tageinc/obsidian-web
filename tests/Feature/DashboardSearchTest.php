@@ -36,6 +36,7 @@ class DashboardSearchTest extends TestCase
         return Device::create([
             'serial_no' => 'search-'.(Device::count() + 1), 'name' => $name,
             'user_id' => ($owner ?? $this->owner)->id,
+            'state' => 'active',
             'latitude' => 33, 'longitude' => -117,
         ]);
     }
@@ -76,7 +77,7 @@ class DashboardSearchTest extends TestCase
         }
         $match = $this->device('Roof TARGET tracker');
         $this->device('Other TARGET tracker', $this->other);
-        $this->device('Archived TARGET tracker', $this->owner, 2);
+        $this->device('Inactive TARGET tracker', $this->owner, 2);
 
         $props = $this->dashboard('search=%20tArGeT%20&show=1');
         $this->assertSame('tArGeT', $props['search']);
@@ -84,6 +85,26 @@ class DashboardSearchTest extends TestCase
         $this->assertSame([$match->id], array_column($props['devices'], 'id'));
         $this->getJson($props['mapEndpoints']['all'])->assertOk()->assertJsonCount(2)->assertJsonPath('0.id', $match->id);
         $this->getJson($props['mapEndpoints']['paginated'].'&show=1')->assertOk()->assertJsonPath('total', 2)->assertJsonPath('data.0.id', $match->id);
+    }
+
+    public function test_state_filter_includes_inactive_devices_only_when_selected(): void
+    {
+        $active = $this->device('Active tracker');
+        $inactive = $this->device('Inactive tracker');
+        $inactive->update(['state' => 'inactive']);
+
+        $this->assertDatabaseHas('devices', ['id' => $active->id, 'state' => 'active']);
+        $defaultProps = $this->dashboard('');
+        $this->assertSame([$active->id], array_column($defaultProps['devices'], 'id'));
+
+        $props = $this->dashboard('state=inactive');
+        $this->assertSame(['inactive'], $props['stateFilter']);
+        $this->assertSame(['active', 'inactive'], $props['stateOptions']);
+        $this->assertSame([$inactive->id], array_column($props['devices'], 'id'));
+        $this->get($props['mapEndpoints']['all'])->assertOk()->assertJsonPath('0.id', $inactive->id);
+        $this->getJson('/paginated-devices?state[]=active&state[]=inactive')
+            ->assertOk()->assertJsonPath('total', 2);
+        $this->getJson('/paginated-devices?state=removed')->assertUnprocessable()->assertJsonValidationErrors('state.0');
     }
 
     public function test_search_treats_sql_wildcards_escape_characters_and_quotes_as_literal_name_text(): void
@@ -158,8 +179,8 @@ class DashboardSearchTest extends TestCase
             ->assertSee('aria-label="Actions for Legacy roof"', false)->assertSee('<details>', false)
             ->assertSee(route('devices.show', $device->id), false)
             ->assertSee(route('edit-device', $device->id), false)
-            ->assertSee(route('archiveDevice', $device->id), false)
-            ->assertSee('class="text-danger archive-link">Archive', false);
+            ->assertSee(route('retireDevice', $device->id), false)
+            ->assertSee('>Retire</button>', false);
         $this->assertStringContainsString("encodeURIComponent(\"roof\")", $response->getContent());
         $this->get('/dashboard?search=no-match')->assertOk()->assertSee('No devices match this name search.')->assertDontSee('No devices registered yet.');
         $this->actingAs($this->other)->get('/dashboard')->assertOk()->assertSee('No devices registered yet.')->assertDontSee('No devices match this name search.');
