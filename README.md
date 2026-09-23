@@ -5,6 +5,8 @@ The purpose of this software application is to manage Internet-Of-Things devices
 
 For automated VPS deployments, follow [GitHub Actions setup](docs/github-actions-deployment.md).
 
+For a local test email inbox, follow [Mailpit setup](docs/mailpit.md).
+
 Requires Docker Engine with Docker Compose v2 or newer (Docker Desktop on Windows).
 The image uses PHP 8.3 and Apache, serves only `public/`, and installs production
 Composer dependencies. It uses the compiled CSS/JS already committed in `public/`;

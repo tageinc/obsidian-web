@@ -71,7 +71,8 @@ updated scheduler. The existing deployment script already runs migrations
 under the scheduler lock. No additional service or production provisioning is
 needed. This change does not itself deploy or send a broadcast.
 
-For local Docker development, use the existing log mailer and run the scheduler
+With `APP_ENV=local`, [Mailpit](mailpit.md) automatically captures email instead
+of the configured provider. Start its local service and run the scheduler
 as described in [scheduler setup](scheduler.md). For one bounded mail-only run:
 
 ```sh

@@ -13,7 +13,8 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'smtp'),
+    // Local development captures mail; other environments keep their configured transport.
+    'default' => env('APP_ENV') === 'local' ? 'mailpit' : env('MAIL_MAILER', 'smtp'),
 
     /*
     |--------------------------------------------------------------------------
@@ -34,6 +35,16 @@ return [
     */
 
     'mailers' => [
+        'mailpit' => [
+            'transport' => 'smtp',
+            'host' => env('MAILPIT_HOST', '127.0.0.1'),
+            'port' => env('MAILPIT_PORT', 1026),
+            'encryption' => null,
+            'username' => null,
+            'password' => null,
+            'timeout' => 20,
+            'auth_mode' => null,
+        ],
         'smtp' => [
             'transport' => 'smtp',
             'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
