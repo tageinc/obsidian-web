@@ -7,11 +7,19 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\UsesFrontendManifest;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->useFrontendManifest();
+    }
 
     public function test_dashboard_renders_the_device_manager_with_only_the_users_devices(): void
     {

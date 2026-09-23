@@ -7,17 +7,20 @@ use App\Models\GeoCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\UsesFrontendManifest;
 use Tests\TestCase;
 
 class DeviceFormsTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $owner;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         $this->owner = User::create([
             'name' => 'Device owner', 'email' => 'device-owner@example.test',
             'password' => 'test-hash', 'email_verified_at' => now(),

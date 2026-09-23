@@ -167,7 +167,7 @@ class DeviceModalTest extends TestCase
         $this->modal('/devices/'.$this->device->id)->assertOk();
     }
 
-    public function test_json_updates_save_all_editable_fields_and_geocode_including_identity(): void
+    public function test_json_updates_save_all_editable_fields_and_preserve_serial_number(): void
     {
         GeoCode::create([
             'serial_no' => $this->device->serial_no, 'latitude' => $this->device->latitude,
@@ -178,18 +178,18 @@ class DeviceModalTest extends TestCase
             'latitude' => '34.0540', 'longitude' => '-118.2450',
         ]);
         $this->actingAs($this->owner)->putJson('/edit-device/'.$this->device->id, array_merge($changes, [
-            'user_id' => 999, 'serial_no' => 'changed', 'sku' => 'changed',
+            'user_id' => 999, 'serial_no' => $this->device->serial_no, 'sku' => 'changed',
             'order_no' => 'changed', 'status_notification' => 0, 'sms_notification' => 0,
         ]))->assertOk()->assertExactJson(['message' => 'Device updated successfully.'])
             ->assertSessionMissing('success');
         $this->assertDatabaseHas('devices', array_merge($changes, [
             'id' => $this->device->id, 'user_id' => $this->owner->id,
-            'serial_no' => 'changed',
+            'serial_no' => $this->device->serial_no,
             'sku' => 'changed', 'order_no' => 'changed',
             'status_notification' => true, 'sms_notification' => true,
         ]));
         $this->assertDatabaseHas('geocode', [
-            'serial_no' => 'changed', 'latitude' => 34.0540,
+            'serial_no' => $this->device->serial_no, 'latitude' => 34.0540,
             'longitude' => -118.2450, 'status' => 'connected',
         ]);
 

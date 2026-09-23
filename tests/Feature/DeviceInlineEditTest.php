@@ -5,11 +5,19 @@ use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\UsesFrontendManifest;
 use Tests\TestCase;
 
 class DeviceInlineEditTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->useFrontendManifest();
+    }
 
     public function test_inline_updates_preserve_history_and_reject_protected_fields(): void
     {
