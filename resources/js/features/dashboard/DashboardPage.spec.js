@@ -79,7 +79,9 @@ describe('dashboard workflow', () => {
         expect(wrapper.get('a[aria-current="page"]').attributes('href')).toBe(
             '/dashboard?show=20&page=2',
         );
-        expect(wrapper.get('form[data-document-action]').attributes('action')).toBe('/retire-device/1');
+        expect(wrapper.get('form[data-document-action]').attributes('action')).toBe(
+            '/retire-device/1',
+        );
         expect(wrapper.findAll('thead th').map((cell) => cell.text())).toContain('Actions');
         expect(wrapper.find('#show-all-devices').exists()).toBe(false);
         const map = wrapper.getComponent({ name: 'DeviceMap' });

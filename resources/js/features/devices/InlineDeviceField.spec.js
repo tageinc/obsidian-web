@@ -4,7 +4,13 @@ import InlineDeviceField from './InlineDeviceField.vue';
 import { requestJson } from '../../shared/api/client.js';
 vi.mock('../../shared/api/client.js', () => ({ requestJson: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
-const props = { label: 'SKU', field: 'sku', value: 'SP1', endpoint: '/devices/1', csrfToken: 'token' };
+const props = {
+    label: 'SKU',
+    field: 'sku',
+    value: 'SP1',
+    endpoint: '/devices/1',
+    csrfToken: 'token',
+};
 it('cancels changes without saving and saves only the edited field', async () => {
     const wrapper = mount(InlineDeviceField, { props });
     await wrapper.get('button').trigger('click');
@@ -17,7 +23,11 @@ it('cancels changes without saving and saves only the edited field', async () =>
     requestJson.mockResolvedValue({ values: { sku: 'SP3' } });
     await wrapper.get('form').trigger('submit');
     await flushPromises();
-    expect(requestJson).toHaveBeenCalledWith('/devices/1', { method: 'PATCH', csrfToken: 'token', data: { sku: 'SP3' } });
+    expect(requestJson).toHaveBeenCalledWith('/devices/1', {
+        method: 'PATCH',
+        csrfToken: 'token',
+        data: { sku: 'SP3' },
+    });
     expect(wrapper.emitted('saved')[0]).toEqual([{ sku: 'SP3' }]);
     wrapper.unmount();
 });

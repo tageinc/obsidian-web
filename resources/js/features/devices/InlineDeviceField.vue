@@ -36,7 +36,8 @@ async function save() {
     error.value = '';
     try {
         const result = await requestJson(props.endpoint, {
-            method: 'PATCH', csrfToken: props.csrfToken,
+            method: 'PATCH',
+            csrfToken: props.csrfToken,
             data: { [props.field]: draft.value === '' ? null : draft.value },
         });
         emit('saved', result.values);
@@ -51,25 +52,95 @@ async function save() {
 </script>
 <template>
     <span class="inline-device-field">
-        <button v-if="!editing" ref="trigger" type="button" class="field-read"
-            :aria-label="`Edit ${label}`" @click="start">{{ value || value === 0 ? value : '—' }}</button>
+        <button
+            v-if="!editing"
+            ref="trigger"
+            type="button"
+            class="field-read"
+            :aria-label="`Edit ${label}`"
+            @click="start"
+        >
+            {{ value || value === 0 ? value : '—' }}
+        </button>
         <form v-else class="field-editor" @submit.prevent="save" @keydown.esc.prevent="cancel">
-            <input ref="input" v-model="draft" :aria-label="label" :type="numeric ? 'number' : 'text'"
-                step="any" class="form-control" :disabled="pending" :aria-invalid="Boolean(error)"
-                :aria-describedby="error ? `error-${field}` : undefined" />
-            <button type="submit" class="field-action text-success" :disabled="pending" :aria-label="`Save ${label}`">✓</button>
-            <button type="button" class="field-action text-secondary" :disabled="pending" :aria-label="`Cancel ${label}`" @click="cancel">×</button>
+            <input
+                ref="input"
+                v-model="draft"
+                :aria-label="label"
+                :type="numeric ? 'number' : 'text'"
+                step="any"
+                class="form-control"
+                :disabled="pending"
+                :aria-invalid="Boolean(error)"
+                :aria-describedby="error ? `error-${field}` : undefined"
+            />
+            <button
+                type="submit"
+                class="field-action text-success"
+                :disabled="pending"
+                :aria-label="`Save ${label}`"
+            >
+                ✓
+            </button>
+            <button
+                type="button"
+                class="field-action text-secondary"
+                :disabled="pending"
+                :aria-label="`Cancel ${label}`"
+                @click="cancel"
+            >
+                ×
+            </button>
             <span v-if="pending" role="status">Saving…</span>
-            <span v-if="error" :id="`error-${field}`" role="alert" class="text-danger field-error">{{ error }}</span>
+            <span
+                v-if="error"
+                :id="`error-${field}`"
+                role="alert"
+                class="text-danger field-error"
+                >{{ error }}</span
+            >
         </form>
     </span>
 </template>
 <style scoped>
-.inline-device-field { display: block; }
-.field-read { text-align: left; font: inherit; color: inherit; background: none; border: 0; padding: .25rem .5rem; margin-left: -.5rem; border-radius: 4px; cursor: text; }
-.field-read:hover { background: #eef0f4; box-shadow: inset 2px 0 #cbd5e1; }
-.field-editor { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; }
-.field-editor input { flex: 1; min-width: 80px; width: 0; font: inherit; }
-.field-action { background: transparent; border: 0; padding: .25rem .5rem; font-size: 1.25rem; }
-.field-error { flex-basis: 100%; font-size: .875rem; }
+.inline-device-field {
+    display: block;
+}
+.field-read {
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: 4px;
+    cursor: text;
+}
+.field-read:hover {
+    background: #eef0f4;
+    box-shadow: inset 2px 0 #cbd5e1;
+}
+.field-editor {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+.field-editor input {
+    flex: 1;
+    min-width: 80px;
+    width: 0;
+    font: inherit;
+}
+.field-action {
+    background: transparent;
+    border: 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 1.25rem;
+}
+.field-error {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+}
 </style>

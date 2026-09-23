@@ -12,7 +12,12 @@ const props = defineProps({
 });
 const feedback = ref(null);
 const successDismissed = ref(false);
-watch(() => props.success, () => { successDismissed.value = false; });
+watch(
+    () => props.success,
+    () => {
+        successDismissed.value = false;
+    },
+);
 const messages = computed(() =>
     Object.entries(props.errors).flatMap(([field, errors]) =>
         errors.map((message) => ({ field, message })),
@@ -24,9 +29,18 @@ onMounted(() => {
 </script>
 
 <template>
-    <div v-if="success && !successDismissed" class="alert alert-success alert-dismissible" role="status">
+    <div
+        v-if="success && !successDismissed"
+        class="alert alert-success alert-dismissible"
+        role="status"
+    >
         {{ success }}
-        <button type="button" class="btn-close" aria-label="Dismiss notification" @click="successDismissed = true"></button>
+        <button
+            type="button"
+            class="btn-close"
+            aria-label="Dismiss notification"
+            @click="successDismissed = true"
+        ></button>
     </div>
     <div v-if="sessionError" class="alert alert-danger" role="alert">{{ sessionError }}</div>
     <div

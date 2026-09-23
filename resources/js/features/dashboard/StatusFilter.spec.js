@@ -9,8 +9,10 @@ it('keeps multiselect changes as drafts until Apply, discards on reopen, and cle
     const wrapper = mount(StatusFilter, {
         attachTo: form,
         props: {
-            value: ['sleep'], options: ['offline', 'sleep'],
-            stateValue: ['active'], stateOptions: ['active', 'inactive'],
+            value: ['sleep'],
+            options: ['offline', 'sleep'],
+            stateValue: ['active'],
+            stateOptions: ['active', 'inactive'],
         },
     });
     const select = wrapper.get('select').element;

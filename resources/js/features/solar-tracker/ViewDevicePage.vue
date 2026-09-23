@@ -2,7 +2,9 @@
 import { computed, defineAsyncComponent, nextTick, ref, watch } from 'vue';
 import DeviceActions from '../dashboard/DeviceActions.vue';
 import InlineDeviceField from '../devices/InlineDeviceField.vue';
-const DeviceDetailsModal = defineAsyncComponent(() => import('../dashboard/DeviceDetailsModal.vue'));
+const DeviceDetailsModal = defineAsyncComponent(
+    () => import('../dashboard/DeviceDetailsModal.vue'),
+);
 import HistoryCharts from './HistoryCharts.vue';
 import RemoteControl from './RemoteControl.vue';
 const props = defineProps({
@@ -18,20 +20,49 @@ const props = defineProps({
 });
 const fieldValues = ref({ ...props.values });
 const editingDevice = ref(props.editing?.initiallyOpen ?? false);
-watch(() => props.values, (values) => { fieldValues.value = { ...values }; });
+watch(
+    () => props.values,
+    (values) => {
+        fieldValues.value = { ...values };
+    },
+);
 const fieldGroups = [
-    { id: 'identifiers', fields: [['serial_no', 'Serial number'], ['sku', 'SKU'], ['order_no', 'Order number']] },
-    { id: 'address', fields: [
-        ['address_1', 'Address line 1'], ['address_2', 'Address line 2'], ['city', 'City'],
-        ['address_state', 'State / province / region'], ['zip_code', 'Postal code'], ['country', 'Country'],
-    ] },
-    { id: 'coordinates', fields: [['latitude', 'Latitude'], ['longitude', 'Longitude']] },
+    {
+        id: 'identifiers',
+        fields: [
+            ['serial_no', 'Serial number'],
+            ['sku', 'SKU'],
+            ['order_no', 'Order number'],
+        ],
+    },
+    {
+        id: 'address',
+        fields: [
+            ['address_1', 'Address line 1'],
+            ['address_2', 'Address line 2'],
+            ['city', 'City'],
+            ['address_state', 'State / province / region'],
+            ['zip_code', 'Postal code'],
+            ['country', 'Country'],
+        ],
+    },
+    {
+        id: 'coordinates',
+        fields: [
+            ['latitude', 'Latitude'],
+            ['longitude', 'Longitude'],
+        ],
+    },
 ];
-function saved(values) { fieldValues.value = { ...fieldValues.value, ...values }; }
+function saved(values) {
+    fieldValues.value = { ...fieldValues.value, ...values };
+}
 function closeEdit() {
     editingDevice.value = false;
 }
-function modalSaved() { window.location.assign(window.location.pathname); }
+function modalSaved() {
+    window.location.assign(window.location.pathname);
+}
 
 const activeSection = ref('overview');
 const historyPanel = ref(null);
@@ -76,36 +107,82 @@ function navigateSection(event, index) {
         </nav>
         <header class="device-heading">
             <div v-if="editing" class="device-page-actions">
-                <DeviceActions :csrf-token="csrfToken"
-                    :device="{ id: editing.id, name: fieldValues.name || device.name, serial: fieldValues.serial_no || device.serial, links: { edit: editing.url, retire: links.retire, reactivate: links.reactivate } }"
-                    :show-edit="false" />
+                <DeviceActions
+                    :csrf-token="csrfToken"
+                    :device="{
+                        id: editing.id,
+                        name: fieldValues.name || device.name,
+                        serial: fieldValues.serial_no || device.serial,
+                        links: {
+                            edit: editing.url,
+                            retire: links.retire,
+                            reactivate: links.reactivate,
+                        },
+                    }"
+                    :show-edit="false"
+                />
             </div>
             <div>
                 <p class="device-eyebrow">Solar tracker</p>
                 <h1 v-if="!embedded">
-                    <InlineDeviceField v-if="links.update" label="Device name" field="name" :value="fieldValues.name" :endpoint="links.update" :csrf-token="csrfToken" @saved="saved" />
+                    <InlineDeviceField
+                        v-if="links.update"
+                        label="Device name"
+                        field="name"
+                        :value="fieldValues.name"
+                        :endpoint="links.update"
+                        :csrf-token="csrfToken"
+                        @saved="saved"
+                    />
                     <template v-else>{{ device.name || 'View Device' }}</template>
                 </h1>
             </div>
-                <section class="device-header-details" aria-label="Device properties">
-                    <template v-if="links.update">
+            <section class="device-header-details" aria-label="Device properties">
+                <template v-if="links.update">
                     <dl v-for="group in fieldGroups" :key="group.id" class="device-details">
                         <div v-for="[field, label] in group.fields" :key="field">
                             <dt>{{ label }}</dt>
-                            <dd><span v-if="field === 'serial_no'">{{ fieldValues.serial_no || device.serial }}</span><InlineDeviceField v-else :field="field" :label="label" :value="fieldValues[field]" :numeric="['latitude', 'longitude'].includes(field)" :endpoint="links.update" :csrf-token="csrfToken" @saved="saved" /></dd>
+                            <dd>
+                                <span v-if="field === 'serial_no'">{{
+                                    fieldValues.serial_no || device.serial
+                                }}</span
+                                ><InlineDeviceField
+                                    v-else
+                                    :field="field"
+                                    :label="label"
+                                    :value="fieldValues[field]"
+                                    :numeric="['latitude', 'longitude'].includes(field)"
+                                    :endpoint="links.update"
+                                    :csrf-token="csrfToken"
+                                    @saved="saved"
+                                />
+                            </dd>
                         </div>
                     </dl>
-                    </template>
-                    <dl v-else class="device-details">
-                        <div><dt>Serial number</dt><dd>{{ device.serial }}</dd></div>
-                        <div><dt>SKU</dt><dd>{{ device.details.SKU || '—' }}</dd></div>
-                        <div><dt>Location</dt><dd>{{ device.details.Address || 'No address added' }}</dd></div>
-                    </dl>
-                </section>
+                </template>
+                <dl v-else class="device-details">
+                    <div>
+                        <dt>Serial number</dt>
+                        <dd>{{ device.serial }}</dd>
+                    </div>
+                    <div>
+                        <dt>SKU</dt>
+                        <dd>{{ device.details.SKU || '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt>Location</dt>
+                        <dd>{{ device.details.Address || 'No address added' }}</dd>
+                    </div>
+                </dl>
+            </section>
         </header>
-        <DeviceDetailsModal v-if="editingDevice && editing" mode="edit"
+        <DeviceDetailsModal
+            v-if="editingDevice && editing"
+            mode="edit"
             :device="{ id: editing.id, name: fieldValues.name, links: { edit: editing.url } }"
-            @close="closeEdit" @saved="modalSaved" />
+            @close="closeEdit"
+            @saved="modalSaved"
+        />
         <div class="device-tabs" role="tablist" aria-label="Device sections">
             <button
                 v-for="(section, index) in sections"

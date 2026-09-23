@@ -142,8 +142,9 @@ onBeforeUnmount(() => {
                     class="dropdown-item"
                     :class="{ 'device-retire': !isReactivation }"
                     :aria-label="`${lifecycleAction} ${device.name}`"
-                    >{{ lifecycleAction }}</button
                 >
+                    {{ lifecycleAction }}
+                </button>
             </form>
         </div>
     </Teleport>
@@ -193,7 +194,9 @@ onBeforeUnmount(() => {
     font-weight: 500;
     text-align: left;
 }
-.device-action-menu form { margin: 0; }
+.device-action-menu form {
+    margin: 0;
+}
 .device-action-menu .dropdown-item:hover,
 .device-action-menu .dropdown-item:focus {
     background: #f3f4f6;

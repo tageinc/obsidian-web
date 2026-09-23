@@ -14,10 +14,7 @@ import FormFeedback from '../shared/components/FormFeedback.vue';
 const fixtures = [];
 const Page = { props: ['label'], template: '<div><h1>{{ label }}</h1><p>Page content</p></div>' };
 const components = Object.fromEntries(
-    ['dashboard', 'profile', 'edit-device', 'view-device'].map((page) => [
-        page,
-        Page,
-    ]),
+    ['dashboard', 'profile', 'edit-device', 'view-device'].map((page) => [page, Page]),
 );
 const envelope = (page, url, label = page) => ({ page, url, props: { label } });
 
