@@ -30,6 +30,7 @@ COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
 WORKDIR /var/www/html
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
+RUN php scripts/verify-frontend-assets.php
 ENV COMPOSER_ALLOW_SUPERUSER=1
 RUN mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \

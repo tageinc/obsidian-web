@@ -53,6 +53,10 @@ you need verification emails; the example's log mailer does not deliver email.
 
 ## Frontend configuration on existing installations
 
+For SSH diagnostics, enabling Vue, compiling assets, and checking the result, see
+[Fixing Vue in production](fixing-vue-production.md). Deployment verifies the
+compiled asset manifest and files before replacing the running app.
+
 The same commit can render either the legacy Blade pages or the Vue components.
 `config/frontend.php` selects them using server environment flags. The old Docker
 example disabled Vue, while browser tests explicitly enable it. A dashboard with

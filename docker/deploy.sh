@@ -18,8 +18,12 @@ ln -sfn /opt/obsidian-web/shared/.env.docker .env.docker
 rm -f release.tar.gz
 compose=(docker compose --project-name obsidian-web --env-file .env.docker)
 "${compose[@]}" config --quiet
+echo 'Building production image, including npm ci and npm run build in the frontend stage.'
 "${compose[@]}" build --pull
+# Check the built image before replacing the running app. No database is needed.
+"${compose[@]}" run --rm --no-deps --entrypoint php app scripts/verify-frontend-assets.php
 "${compose[@]}" up -d --wait --wait-timeout 180
+"${compose[@]}" exec -T --user www-data app php artisan config:clear
 "${compose[@]}" exec -T --user www-data app php artisan migrate --force
 "${compose[@]}" exec -T --user www-data app php artisan view:clear
 # Report the actual rendering choice, not only the deployed commit/build.
