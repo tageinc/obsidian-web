@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\TelemetryDuplicateDetector;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Api\SolarTrackerLog;
 use App\Models\Device;
-use Illuminate\Support\Facades\Log;
 
 
 class DeviceLogController extends Controller
@@ -25,7 +27,7 @@ class DeviceLogController extends Controller
         if ($validator->fails()) {
             return $this->invalidPayload();
         }
-        $data = $request->data;
+        $data = (string) $request->data;
 		$json = json_decode($data, true);
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($json) || substr(ltrim($data), 0, 1) !== '{') {
             return $this->invalidPayload();
@@ -36,10 +38,19 @@ class DeviceLogController extends Controller
             if (!$this->validTelemetry($json)) {
                 return $this->invalidPayload();
             }
+            // Bounded duplicate detection: reject identical payloads arriving
+            // within the dedup window so the device can observe the 409 and
+            // avoid a false-positive "success" for its network retry.
+            if ($this->isDuplicate($serial_no, $data)) {
+                return response()->json([
+                    'msg' => 'duplicate',
+                    'retry_after' => Config::get('devices.telemetry_freshness_seconds', 600),
+                ], 409);
+            }
             self::logSolarTrackerData($json, $serial_no);
             return self::SUCCESS_RESPONSE;
 		}else{
-			return self::DEVICE_NOT_REGISTERED;
+			return response()->json(['msg' => 'device is not registered'], 422);
 		}
     }
 
@@ -127,6 +138,26 @@ class DeviceLogController extends Controller
         $log->state = $state;
         $log->serial_no = $serial_no;
         $log->save();
+    }
+
+    /**
+     * Check whether identical telemetry (same serial_no + data payload) arrived
+     * within the dedup window. Returns false if Redis is unavailable so the code
+     * path remains backward-compatible.
+     */
+    private function isDuplicate(string $serialNo, string $data): bool
+    {
+        try {
+            return app(TelemetryDuplicateDetector::class)
+                ->checkAndMark($serialNo, md5($data), Config::get('devices.telemetry_freshness_seconds', 600));
+        } catch (\Throwable $e) {
+            // Redis unavailable — log and fall through to prevent outage.
+            Log::error('device.dedup_unavailable', [
+                'serial_hash' => hash('sha256', $serialNo),
+                'exception_class' => $e::class,
+            ]);
+            return false;
+        }
     }
 
 }
