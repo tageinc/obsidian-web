@@ -9,4 +9,5 @@ public/build/
 playwright-report/
 test-results/
 DevOpsObsidian.txt
-Backups/
+databases
+backups/

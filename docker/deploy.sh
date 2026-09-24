@@ -35,10 +35,13 @@ echo 'Building production image, including npm ci and npm run build in the front
         echo "Frontend ".$page.": ".($enabled ? "Vue" : "legacy / disabled").PHP_EOL;
     }
 '
-# Require a working Laravel login page, rather than merely a running Apache process.
+# Check the login HTML; Vue renders its password input in the browser.
 "${compose[@]}" exec -T app php -r '
     $body = @file_get_contents("http://127.0.0.1/login");
-    if ($body === false || strpos($body, "name=\"password\"") === false) {
+    if ($body === false || (
+        strpos($body, "name=\"password\"") === false &&
+        strpos($body, "data-vue-page=\"auth\"") === false
+    )) {
         fwrite(STDERR, "Login smoke check failed\n"); exit(1);
     }
 '

@@ -6,6 +6,11 @@ the login page, and installs one host cron entry for Laravel's scheduler. It run
 on pushes to `main` or manually from the Actions tab.
 Concurrent deployments are serialized. No GitHub credentials are stored on the VPS.
 
+The login smoke check accepts either the legacy password input or the Vue auth
+mount in the `/login` response. It does not execute JavaScript; verify the rendered
+Vue login form in a browser. Compiled assets are checked separately before the
+app is replaced.
+
 ## Prepare the VPS once
 
 Install Docker Engine and the Compose plugin for your VPS operating system.
