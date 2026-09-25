@@ -1,12 +1,98 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { normalizePoints, filterRange, rangeLabel, chartOptions } from './timeSeries';
+import { normalizePoints, rangeLabel, chartOptions, formatTimestamp } from './timeSeries';
+
+import {
+    lastDay,
+    datetimeInput,
+    parseDatetime,
+    calendarRange,
+    shiftRange,
+    pointsInRange,
+} from './historyRange';
 
 const props = defineProps({
     points: { type: Array, default: () => [] },
     active: { type: Boolean, default: true },
 });
-const hours = ref(0);
+const initialRange = lastDay();
+const defaultRange = ref(initialRange);
+const view = ref('day');
+const range = ref(initialRange);
+const from = ref(datetimeInput(initialRange.start));
+const to = ref(datetimeInput(initialRange.end));
+const selectedDate = ref(datetimeInput(initialRange.end).slice(0, 10));
+const rangeError = ref('');
+const customView = computed(() => view.value === 'custom');
+const periodNavigation = computed(() => !customView.value && view.value !== 'all');
+const hasRangeFilters = computed(
+    () =>
+        view.value !== 'day' ||
+        !!rangeError.value ||
+        range.value.start !== defaultRange.value.start ||
+        range.value.end !== defaultRange.value.end,
+);
+const rangeSummary = computed(
+    () => `${formatTimestamp(range.value.start)} \u2013 ${formatTimestamp(range.value.end)}`,
+);
+function setRange(value) {
+    range.value = value;
+    from.value = datetimeInput(value.start);
+    to.value = datetimeInput(value.end);
+    selectedDate.value = datetimeInput(value.start).slice(0, 10);
+    rangeError.value = '';
+}
+function chooseView() {
+    if (view.value === 'custom') {
+        editRange();
+        return;
+    }
+    rangeError.value = '';
+    if (view.value === 'day') resetRange();
+    else if (view.value === 'all') {
+        if (normalized.value.length)
+            setRange({
+                start: normalized.value[0].epoch_ms,
+                end: normalized.value.at(-1).epoch_ms,
+            });
+    } else setRange(calendarRange(view.value, range.value.end));
+}
+function editPeriod() {
+    const anchor = parseDatetime(
+        view.value === 'day' ? to.value : `${selectedDate.value}T12:00:00`,
+        'end',
+    );
+    rangeError.value = anchor === null ? 'Enter a valid date and time in Pacific Time.' : '';
+    if (rangeError.value) return;
+    setRange(view.value === 'day' ? lastDay(anchor) : calendarRange(view.value, anchor));
+}
+function editRange() {
+    view.value = 'custom';
+    const start = parseDatetime(from.value);
+    const end = parseDatetime(to.value, 'end');
+    rangeError.value =
+        start === null || end === null
+            ? 'Enter valid From and To datetimes in Pacific Time. Skipped daylight-saving times are not valid.'
+            : start > end
+              ? 'From datetime must be before or equal to To datetime.'
+              : '';
+    if (!rangeError.value && (range.value.start !== start || range.value.end !== end)) {
+        range.value = { start, end };
+    }
+}
+function shift(direction) {
+    setRange(shiftRange(range.value, view.value, direction));
+}
+function resetRange() {
+    view.value = 'day';
+    defaultRange.value = lastDay();
+    setRange(defaultRange.value);
+}
+function goToday() {
+    if (!periodNavigation.value) return;
+    if (view.value === 'day') resetRange();
+    else setRange(calendarRange(view.value, Date.now()));
+}
 const metric = ref('temperature');
 const canvas = ref(null);
 const state = ref('ready');
@@ -24,6 +110,16 @@ const metrics = {
             ['ps2', 'PS2', '#6f42c1'],
         ],
     },
+    pds: {
+        title: 'PDS',
+        unit: 'Reported reading',
+        series: [['pds', 'PDS', '#087e8b']],
+    },
+    ps_avg: {
+        title: 'PS average',
+        unit: 'Reported average',
+        series: [['ps_avg', 'PS average', '#7c3e94']],
+    },
     motor: {
         title: 'Motor speed',
         unit: 'Reported speed',
@@ -32,7 +128,9 @@ const metrics = {
 };
 const selected = computed(() => metrics[metric.value]);
 const normalized = computed(() => normalizePoints(props.points));
-const visible = computed(() => filterRange(normalized.value, hours.value));
+const visible = computed(() =>
+    rangeError.value ? [] : pointsInRange(normalized.value, range.value),
+);
 let chart;
 let Chart;
 let alive = true;
@@ -54,7 +152,10 @@ async function draw() {
         Chart ||= (await import('chart.js/auto')).default;
         await nextTick();
         if (!alive || current !== revision || !props.active) return;
-        chart = new Chart(canvas.value, chartOptions(visible.value, selected.value.series));
+        chart = new Chart(
+            canvas.value,
+            chartOptions(visible.value, selected.value.series, range.value),
+        );
         state.value = 'ready';
     } catch {
         if (alive && current === revision) {
@@ -82,26 +183,154 @@ onBeforeUnmount(() => {
             <span class="history-badge">Raw data · Pacific Time</span>
         </header>
         <div class="history-surface">
-            <div class="history-toolbar">
-                <div class="history-metric">
-                    <label for="history-metric">Measurement</label>
-                    <select id="history-metric" v-model="metric" class="form-select">
-                        <option v-for="(value, key) in metrics" :key="key" :value="key">
-                            {{ value.title }}
-                        </option>
-                    </select>
+            <div class="history-toolbar" role="group" aria-label="Graph time range">
+                <div class="history-controls-header">
+                    <div>
+                        <h3>Time period</h3>
+                        <p class="history-range-display" aria-live="polite">
+                            {{ rangeError ? 'Invalid time range' : rangeSummary }}
+                        </p>
+                    </div>
+                    <div class="history-date-nav">
+                        <button
+                            type="button"
+                            class="history-nav-icon"
+                            aria-label="Previous time range"
+                            title="Previous time range"
+                            :disabled="!periodNavigation || !!rangeError"
+                            @click="shift(-1)"
+                        >
+                            <svg viewBox="0 0 20 20" aria-hidden="true">
+                                <path d="m12 4-6 6 6 6" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="history-nav-icon"
+                            aria-label="Next time range"
+                            title="Next time range"
+                            :disabled="!periodNavigation || !!rangeError"
+                            @click="shift(1)"
+                        >
+                            <svg viewBox="0 0 20 20" aria-hidden="true">
+                                <path d="m8 4 6 6-6 6" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            :disabled="!periodNavigation"
+                            @click="goToday"
+                        >
+                            Today
+                        </button>
+                    </div>
                 </div>
-                <div class="history-range" role="group" aria-label="Graph time range">
-                    <button
-                        v-for="range in [1, 12, 24, 0]"
-                        :key="range"
-                        type="button"
-                        :aria-pressed="hours === range"
-                        @click="hours = range"
-                    >
-                        {{ range ? range + ' hour' + (range === 1 ? '' : 's') : 'All' }}
-                    </button>
+                <div class="history-filter-group">
+                    <div class="history-filter-title">Filters</div>
+                    <div class="history-filter-row">
+                        <div class="history-filter-field">
+                            <label for="history-view">View</label>
+                            <select
+                                id="history-view"
+                                v-model="view"
+                                class="form-select form-select-sm"
+                                @change="chooseView"
+                            >
+                                <option value="day">24 hours</option>
+                                <option value="week">Week</option>
+                                <option value="month">Month</option>
+                                <option value="all" :disabled="!normalized.length">
+                                    Available history
+                                </option>
+                                <option value="custom">Custom span</option>
+                            </select>
+                        </div>
+                        <div v-if="view === 'day'" class="history-filter-field">
+                            <label for="history-ending">Ending at</label>
+                            <input
+                                id="history-ending"
+                                v-model="to"
+                                type="datetime-local"
+                                step="1"
+                                class="form-control form-control-sm"
+                                aria-describedby="history-timezone history-range-error"
+                                :aria-invalid="!!rangeError"
+                                @input="editPeriod"
+                            />
+                        </div>
+                        <div
+                            v-else-if="view === 'week' || view === 'month'"
+                            class="history-filter-field"
+                        >
+                            <label for="history-period-date">{{
+                                view === 'week' ? 'Week' : 'Month'
+                            }}</label>
+                            <input
+                                id="history-period-date"
+                                v-model="selectedDate"
+                                type="date"
+                                class="form-control form-control-sm"
+                                aria-describedby="history-timezone history-range-error"
+                                :aria-invalid="!!rangeError"
+                                @input="editPeriod"
+                            />
+                        </div>
+                        <template v-else-if="customView">
+                            <div class="history-filter-field">
+                                <label for="history-from">From</label>
+                                <input
+                                    id="history-from"
+                                    v-model="from"
+                                    type="datetime-local"
+                                    step="1"
+                                    class="form-control form-control-sm"
+                                    aria-describedby="history-timezone history-range-error"
+                                    :aria-invalid="!!rangeError"
+                                    @input="editRange"
+                                />
+                            </div>
+                            <div class="history-filter-field">
+                                <label for="history-to">To</label>
+                                <input
+                                    id="history-to"
+                                    v-model="to"
+                                    type="datetime-local"
+                                    step="1"
+                                    class="form-control form-control-sm"
+                                    aria-describedby="history-timezone history-range-error"
+                                    :aria-invalid="!!rangeError"
+                                    @input="editRange"
+                                />
+                            </div>
+                        </template>
+                    </div>
+                    <div class="history-filter-row">
+                        <div class="history-filter-field history-metric">
+                            <label for="history-metric">Measurement</label>
+                            <select
+                                id="history-metric"
+                                v-model="metric"
+                                class="form-select form-select-sm"
+                            >
+                                <option v-for="(value, key) in metrics" :key="key" :value="key">
+                                    {{ value.title }}
+                                </option>
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-link btn-sm history-clear"
+                            :disabled="!hasRangeFilters"
+                            title="Reset to the last 24 hours"
+                            @click="resetRange"
+                        >
+                            Clear
+                        </button>
+                    </div>
                 </div>
+                <small id="history-timezone">Pacific Time (PST/PDT)</small>
+                <p id="history-range-error" class="text-danger" role="alert">{{ rangeError }}</p>
             </div>
             <div class="history-plot" :aria-busy="state === 'loading'">
                 <div class="plot-heading">
@@ -110,7 +339,7 @@ onBeforeUnmount(() => {
                     </h3>
                     <p aria-live="polite">{{ visible.length }} raw readings</p>
                 </div>
-                <p v-if="!visible.length" class="history-empty" role="status">
+                <p v-if="!rangeError && !visible.length" class="history-empty" role="status">
                     No telemetry was recorded for this time range.
                 </p>
                 <p v-if="state === 'loading'" role="status">Loading chart…</p>
@@ -133,12 +362,16 @@ onBeforeUnmount(() => {
                 </div>
             </div>
             <footer class="history-footer">
-                <p>{{ rangeLabel(visible) }}</p>
+                <p v-if="!rangeError">Selected range: {{ rangeSummary }} (Pacific Time)</p>
+                <p>Recorded readings: {{ rangeLabel(visible) }}</p>
                 <p>
                     Points show raw readings. Dashed lines fit all valid readings in the selected
                     range; a trend needs at least two distinct timestamps.
                 </p>
-                <p>Ranges end at the latest reading. Missing measurements are omitted.</p>
+                <p>
+                    The default is the last 24 hours ending now. Ranges filter the latest 9,000
+                    available readings. Missing measurements are omitted.
+                </p>
             </footer>
         </div>
     </section>
@@ -178,46 +411,119 @@ onBeforeUnmount(() => {
 }
 .history-toolbar {
     display: flex;
-    justify-content: space-between;
-    align-items: end;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid #e0e6ee;
 }
-.history-metric {
-    min-width: 200px;
-}
-.history-metric label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #5c6879;
-    display: block;
-    margin-bottom: 0.4rem;
-}
-.history-metric select {
-    font-size: 0.9rem;
-}
-.history-range {
+.history-controls-header {
     display: flex;
-    padding: 0.2rem;
-    background: #f0f3f7;
-    border: 1px solid #e0e6ee;
-    border-radius: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
 }
-.history-range button {
-    border: 0;
-    background: none;
-    color: #526176;
-    font-size: 0.8rem;
+.history-controls-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+}
+.history-range-display {
+    margin: 0;
+    font-size: 0.85rem;
     font-weight: 600;
-    padding: 0.5rem 0.8rem;
-    border-radius: 0.3rem;
+    color: #35445b;
 }
-.history-range button[aria-pressed='true'] {
+.history-date-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.history-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 0.3rem;
+    background: transparent;
+    color: #526176;
+}
+.history-nav-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.history-nav-icon:hover:not(:disabled) {
+    background: #eaf0f8;
     color: #084298;
-    background: #fff;
-    box-shadow: 0 1px 4px #17253d20;
+}
+.history-nav-icon:focus-visible {
+    outline: 2px solid #275bb5;
+    outline-offset: 2px;
+}
+.history-nav-icon:disabled {
+    opacity: 0.4;
+}
+.history-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+}
+.history-filter-title {
+    color: #5c6879;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+}
+.history-filter-row {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.history-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 150px;
+    max-width: 100%;
+}
+.history-filter-field label {
+    color: #5c6879;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.history-filter-field input {
+    min-width: 0;
+    max-width: 100%;
+}
+.history-metric {
+    min-width: 250px;
+}
+.history-clear {
+    padding-left: 0;
+    padding-right: 0;
+    text-decoration: none;
+}
+#history-timezone {
+    font-size: 0.75rem;
+    color: #5c6879;
+}
+#history-range-error {
+    margin: 0;
+    font-size: 0.8rem;
+}
+#history-range-error:empty {
+    display: none;
 }
 .history-plot {
     padding: 1.5rem;
@@ -267,21 +573,35 @@ onBeforeUnmount(() => {
 .history-footer p + p {
     margin-top: 0.3rem;
 }
-@media (max-width: 575px) {
+@media (max-width: 767px) {
+    .history-controls-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .history-date-nav {
+        width: 100%;
+    }
+    .history-filter-row {
+        align-items: stretch;
+    }
+    .history-filter-field {
+        width: 100%;
+        min-width: 0;
+    }
+    .history-date-nav button,
+    .history-filter-field input,
+    .history-filter-field select {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    .history-clear {
+        align-self: flex-start;
+        min-height: 44px;
+    }
     .history-toolbar,
     .history-plot,
     .history-footer {
         padding: 1rem;
-    }
-    .history-metric {
-        width: 100%;
-    }
-    .history-range {
-        width: 100%;
-        justify-content: space-between;
-    }
-    .history-range button {
-        padding: 0.5rem 0.6rem;
     }
     .chart-container {
         height: 280px;

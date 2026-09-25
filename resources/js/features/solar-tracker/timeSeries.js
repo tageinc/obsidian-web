@@ -19,7 +19,10 @@ export function normalizePoints(points) {
                 epoch_ms: epoch,
                 index,
                 ...Object.fromEntries(
-                    ['temp', 'ps1', 'ps2', 'motor_speed'].map((key) => [key, numeric(point[key])]),
+                    ['temp', 'ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed'].map((key) => [
+                        key,
+                        numeric(point[key]),
+                    ]),
                 ),
             };
         })
@@ -90,10 +93,10 @@ export function linearRegression(data) {
     }));
     return endpoints.every((point) => Number.isFinite(point.y)) ? endpoints : [];
 }
-export function chartOptions(points, series) {
-    const label = axisFormatter(points);
-    const first = points[0]?.epoch_ms;
-    const last = points.at(-1)?.epoch_ms;
+export function chartOptions(points, series, range = null) {
+    const first = range?.start ?? points[0]?.epoch_ms;
+    const last = range?.end ?? points.at(-1)?.epoch_ms;
+    const label = axisFormatter(range ? [{ epoch_ms: first }, { epoch_ms: last }] : points);
     const min = first === last ? first - 1800000 : first;
     const max = first === last ? last + 1800000 : last;
     const readings = series.map(([field, title, color]) => ({

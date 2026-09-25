@@ -55,15 +55,29 @@ class SolarTrackerGraphDataTest extends TestCase
     {
         $this->insertDeviceLogs([
             'serial_no' => 'SP1', 'temp' => 21.123456, 'ps1' => 0, 'ps2' => 52.789,
-            'ps_avg' => 999, 'motor_speed' => null, 'updated_at' => '2026-09-21 07:00:00',
+            'ps_avg' => 999, 'pds' => -3.73267, 'motor_speed' => null, 'updated_at' => '2026-09-21 07:00:00',
         ]);
         $point = app(SolarTrackerGraphData::class)->forSerial('SP1')['points'][0];
         $this->assertSame(21.123456, $point['temp']);
         $this->assertSame(0.0, $point['ps1']);
         $this->assertSame(52.789, $point['ps2']);
         $this->assertNull($point['motor_speed']);
-        $this->assertArrayNotHasKey('ps_avg', $point);
+        $this->assertSame(999.0, $point['ps_avg']);
+        $this->assertSame(-3.73267, $point['pds']);
         $this->assertSame('2026-09-21T00:00:00-07:00', $point['timestamp']);
+    }
+
+    public function test_it_preserves_missing_and_zero_average_and_pds_readings(): void
+    {
+        $this->insertDeviceLogs([
+            ['serial_no' => 'SP1', 'ps1' => 10, 'ps2' => 20, 'updated_at' => '2026-09-21 07:00:00'],
+            ['serial_no' => 'SP1', 'ps_avg' => null, 'pds' => null, 'updated_at' => '2026-09-21 08:00:00'],
+            ['serial_no' => 'SP1', 'ps_avg' => 0, 'pds' => 0, 'updated_at' => '2026-09-21 09:00:00'],
+        ]);
+
+        $points = app(SolarTrackerGraphData::class)->forSerial('SP1')['points'];
+        $this->assertSame([null, null, 0.0], array_column($points, 'ps_avg'));
+        $this->assertSame([null, null, 0.0], array_column($points, 'pds'));
     }
 
     public function test_limit_keeps_latest_raw_readings_in_chronological_order_for_only_this_device(): void
@@ -87,13 +101,16 @@ class SolarTrackerGraphDataTest extends TestCase
         });
         DB::table('devices')->insert(['id' => 1, 'serial_no' => 'SP1', 'hardware_id' => 1]);
         $this->insertDeviceLogs([
-            'serial_no' => 'SP1', 'temp' => 12.5, 'updated_at' => '2026-09-21 01:00:00',
+            'serial_no' => 'SP1', 'temp' => 12.5, 'ps_avg' => 42.5, 'pds' => -1.25,
+            'updated_at' => '2026-09-21 01:00:00',
         ]);
         $response = app(ViewDeviceController::class)->getDeviceData(1);
         $data = $response->getData(true);
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(['graph'], array_keys($data));
         $this->assertEquals(12.5, $data['graph']['points'][0]['temp']);
+        $this->assertEquals(42.5, $data['graph']['points'][0]['ps_avg']);
+        $this->assertEquals(-1.25, $data['graph']['points'][0]['pds']);
     }
     private function insertDeviceLogs(array $rows): void
     {

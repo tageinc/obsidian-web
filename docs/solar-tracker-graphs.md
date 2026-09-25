@@ -7,8 +7,26 @@ motor speed, confirmed control mode, sensor readings, and device details. The
 reading timestamp makes freshness explicit; devices without telemetry show
 missing values rather than placeholder zero readings.
 
-History shows one selected measurement at a time (temperature, panel sensors,
-or motor speed), with the existing 1-hour, 12-hour, 24-hour, and all-data ranges.
+History shows one selected measurement at a time: temperature, panel sensors
+(PS1 and PS2), PDS, PS average, or motor speed. PDS and PS average use the
+recorded `pds` and `ps_avg` values; the reported average is not recalculated
+from PS1 and PS2. Each new measurement has the same raw scatter points and
+independent linear trend, and missing values remain absent rather than zero.
+
+The time-period controls follow TAGCSOFT's Project Manager Labor tab: the range
+heading and compact previous/next/Today controls sit above the Filters rows.
+View and its period selector occupy the first row; Measurement and Clear occupy
+the second. The default is the last 24 elapsed hours ending now, with a single
+Ending at datetime. Week and Month show one date selector. Custom span shows
+Pacific-time From and To datetimes, while Available history uses all loaded
+readings without date inputs. Weeks start Monday; months follow the calendar.
+Previous/next advances a whole period; Today returns to the current period
+without changing the View. These navigation controls are disabled for Custom
+span and Available history. Clear resets the range to the last 24 hours ending
+now and preserves the chosen measurement. Invalid or reversed dates show
+validation instead of a chart. Date entry supports seconds; skipped Pacific
+spring-forward times are rejected, and repeated fall-back boundary times include
+both occurrences (earlier From, later To).
 Its chart is created only while History is visible and released when leaving;
 measurement and range selections survive section changes. Control has its own
 section, with the same automatic/remote switch and manual command behavior.
@@ -31,14 +49,17 @@ All chart labels use the `America/Los_Angeles` timezone. Axis ticks show a
 12-hour clock with AM/PM. Multi-day tick labels and tooltips also include the
 date, while tooltips include the Pacific timezone abbreviation (PST or PDT).
 This keeps the two 1:30 AM readings at the daylight-saving fall transition
-distinguishable. Range controls filter by elapsed time from the newest reading,
-not by a count of samples or an integer hour-offset label.
+distinguishable. The Vue datetime controls filter inclusively by the selected instants, and the
+chart axis spans those bounds even when readings are sparse. Reloading resets
+the range to the last 24 hours ending now. Calendar views follow Pacific time,
+including daylight-saving changes. The legacy fallback retains its relative
+ranges ending at the latest reading.
 
 Charts display the most recent 9,000 individual telemetry rows in chronological
 order, with record ID as the tie-breaker. Every reading retains its original
 timestamp and value, including duplicate timestamps; no averaging, bucketing,
-resampling, or curve smoothing is applied. The sensor graph plots PS1 and PS2
-separately rather than the device-reported `ps_avg`. Temperature and motor speed
+resampling, or curve smoothing is applied. The Panel sensors plot shows PS1 and PS2 separately; the PS average plot
+shows the device-reported `ps_avg`. Temperature and motor speed
 also use their raw recorded values. Each reading is a scatter point; readings
 are not connected. Missing metric values remain null, are omitted from the plot
 and the fit, and are never presented as zero. Empty
@@ -71,7 +92,7 @@ checks cover measurement/range controls and accessible chart descriptions.
 
 Graph responses return only `graph` with `points`; the legacy `tempAverages`,
 `psAverages`, and `motorAvgs` arrays have been removed. Each point includes the
-source record `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, and
+source record `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, `ps_avg`, `pds`, and
 `motor_speed`. The existing current-status fields (including the device-reported
 `ps_avg`) remain available independently of the graph.
 

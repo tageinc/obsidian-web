@@ -36,6 +36,8 @@ class SolarTrackerGraphData
                     'temp' => $this->reading($log->temp),
                     'ps1' => $this->reading($log->ps1),
                     'ps2' => $this->reading($log->ps2),
+                    'ps_avg' => $this->reading($log->ps_avg),
+                    'pds' => $this->reading($log->pds),
                     'motor_speed' => $this->reading($log->motor_speed),
                 ];
             })

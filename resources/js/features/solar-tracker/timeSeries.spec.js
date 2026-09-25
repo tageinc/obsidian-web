@@ -37,6 +37,49 @@ describe('raw solar tracker time series', () => {
         expect(points.map((p) => p.id)).toEqual([1, 2, 3]);
         expect(points.map((p) => p.temp)).toEqual([null, 3.5, null]);
     });
+    it('plots recorded PDS and PS_average values without deriving missing readings from photosensors', () => {
+        const points = normalizePoints([
+            { id: 1, epoch_ms: 1000, ps1: 10, ps2: 20, ps_avg: '99.125', pds: '-3.73267' },
+            { id: 2, epoch_ms: 2000, ps1: 10, ps2: 20 },
+            { id: 3, epoch_ms: 3000, ps_avg: null, pds: null },
+            { id: 4, epoch_ms: 4000, ps_avg: '', pds: 'invalid' },
+            { id: 5, epoch_ms: 5000, ps_avg: 0, pds: 0 },
+        ]);
+        expect(points.map((point) => point.ps_avg)).toEqual([99.125, null, null, null, 0]);
+        expect(points.map((point) => point.pds)).toEqual([-3.73267, null, null, null, 0]);
+
+        const chart = chartOptions(points, [
+            ['ps_avg', 'PS_average', 'blue'],
+            ['pds', 'PDS', 'red'],
+        ]);
+        expect(chart.data.datasets.map((dataset) => dataset.label)).toEqual([
+            'PS_average',
+            'PDS',
+            'PS_average — linear trend',
+            'PDS — linear trend',
+        ]);
+        expect(chart.data.datasets[0].data.map((point) => point.y)).toEqual([
+            99.125,
+            null,
+            null,
+            null,
+            0,
+        ]);
+        expect(chart.data.datasets[1].data.map((point) => point.y)).toEqual([
+            -3.73267,
+            null,
+            null,
+            null,
+            0,
+        ]);
+        expect(chart.data.datasets[2].data).toEqual([
+            { x: 1000, y: 99.125 },
+            { x: 5000, y: 0 },
+        ]);
+        expect(chart.data.datasets[3].data.map((point) => point.x)).toEqual([1000, 5000]);
+        expect(chart.data.datasets[3].data[0].y).toBeCloseTo(-3.73267, 12);
+        expect(chart.data.datasets[3].data[1].y).toBeCloseTo(0, 12);
+    });
     it('formats noon and midnight with AM/PM in Pacific Time regardless of browser timezone', () => {
         expect(formatTime(Date.parse('2026-01-01T20:00:00Z'))).toBe('12:00 PM');
         expect(formatTime(Date.parse('2026-01-01T08:00:00Z'))).toBe('12:00 AM');
