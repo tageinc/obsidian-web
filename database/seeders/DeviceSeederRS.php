@@ -49,9 +49,9 @@ class DeviceSeederRS extends Seeder
                 'status' => null, 'created_at' => now(), 'updated_at' => now(),
             ]);
             // Replace only this seeder's history, keeping duplicate timestamps in the CSV.
-            DB::table('solar_tracker_logs')->where('serial_no', self::SERIAL)->delete();
+            DB::table('device_logs')->where('serial_no', self::SERIAL)->delete();
             foreach (array_chunk($rows, 250) as $chunk) {
-                DB::table('solar_tracker_logs')->insert($chunk);
+                DB::table('device_logs')->insert(array_map(fn ($row) => (new \App\Models\Api\DeviceLog)->forceFill($row)->getAttributes(), $chunk));
             }
         });
         $this->command?->info(count($rows).' recorded readings imported for Real Scenario.');

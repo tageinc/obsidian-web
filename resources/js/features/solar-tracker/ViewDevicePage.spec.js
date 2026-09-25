@@ -122,7 +122,7 @@ it('provides inline device fields without a dedicated edit link or editable stat
     wrapper.unmount();
 });
 
-it('shows only Retire in the vertical page menu', async () => {
+it('shows only Inactivate in the vertical page menu', async () => {
     const wrapper = mount(ViewDevicePage, {
         attachTo: document.body,
         props: {
@@ -137,6 +137,6 @@ it('shows only Retire in the vertical page menu', async () => {
     await trigger.trigger('click');
     await flushPromises();
     expect(wrapper.find('a[href="/edit-device/1"]').exists()).toBe(false);
-    expect(wrapper.get('button[aria-label="Retire Test tracker"]').text()).toBe('Retire');
+    expect(wrapper.get('button[aria-label="Inactivate Test tracker"]').text()).toBe('Inactivate');
     wrapper.unmount();
 });

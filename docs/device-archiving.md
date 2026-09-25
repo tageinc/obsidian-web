@@ -7,10 +7,10 @@ for the installation region; user profile addresses still use `state`.
 
 Device list responses expose `state` for lifecycle and `status` for operational
 values such as `sleep` or `offline`. Operational status comes from geocode/telemetry;
-the original telemetry protocol and its stored `solar_tracker_logs.state` field
+the original telemetry protocol and its stored `device_logs.data.state` field
 are unchanged.
 
-Owners retire using `POST /retire-device/{id}` (session and CSRF protected) or
+Owners inactivate devices using `POST /retire-device/{id}` (session and CSRF protected) or
 `POST /api/device/{id}/retire` (authenticated API). Inactive records, coordinates,
 and telemetry remain stored, but active lists/maps and device status notifications
 exclude them. The old browser and API delete endpoints are removed; model deletion

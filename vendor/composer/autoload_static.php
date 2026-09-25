@@ -183,7 +183,6 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         'A' => 
         array (
             'Asm89\\Stack\\' => 12,
-        'App\\Models\\Api\\SolarTrackerLog' => __DIR__ . '/../..' . '/app/Models/Api/SolarTrackerLog.php',
             'App\\' => 4,
         ),
     );
@@ -505,9 +504,11 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         ),
         'Database\\Seeders\\' => 
         array (
+            0 => __DIR__ . '/../..' . '/database/seeders',
         ),
         'Database\\Factories\\' => 
         array (
+            0 => __DIR__ . '/../..' . '/database/factories',
         ),
         'Cron\\' => 
         array (
@@ -600,6 +601,7 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         'App\\Mail\\TheftVandalismMail' => __DIR__ . '/../..' . '/app/Mail/TheftVandalismMail.php',
         'App\\Mail\\UserInvitation' => __DIR__ . '/../..' . '/app/Mail/UserInvitation.php',
         'App\\Models\\ApiToken' => __DIR__ . '/../..' . '/app/Models/ApiToken.php',
+        'App\\Models\\Api\\DeviceLog' => __DIR__ . '/../..' . '/app/Models/Api/DeviceLog.php',
         'App\\Models\\Company' => __DIR__ . '/../..' . '/app/Models/Company.php',
         'App\\Models\\Concerns\\InvalidatesSoftwareVersionCache' => __DIR__ . '/../..' . '/app/Models/Concerns/InvalidatesSoftwareVersionCache.php',
         'App\\Models\\Config' => __DIR__ . '/../..' . '/app/Models/Config.php',
@@ -746,6 +748,7 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         'Database\\Factories\\CompanyFactory' => __DIR__ . '/../..' . '/database/factories/CompanyFactory.php',
         'Database\\Factories\\ConfigVersionsFactory' => __DIR__ . '/../..' . '/database/factories/ConfigVersionsFactory.php',
         'Database\\Factories\\DeviceFactory' => __DIR__ . '/../..' . '/database/factories/DeviceFactory.php',
+        'Database\\Factories\\DeviceLogFactory' => __DIR__ . '/../..' . '/database/factories/DeviceLogFactory.php',
         'Database\\Factories\\FirmwareVersionsFactory' => __DIR__ . '/../..' . '/database/factories/FirmwareVersionsFactory.php',
         'Database\\Factories\\GeoCodeFactory' => __DIR__ . '/../..' . '/database/factories/GeoCodeFactory.php',
         'Database\\Factories\\SolarTrackerRemoteControlFactory' => __DIR__ . '/../..' . '/database/factories/SolarTrackerRemoteControlFactory.php',
@@ -754,6 +757,7 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         'Database\\Seeders\\DatabaseSeeder' => __DIR__ . '/../..' . '/database/seeders/DatabaseSeeder.php',
         'Database\\Seeders\\DeveloperSeeder' => __DIR__ . '/../..' . '/database/seeders/DeveloperSeeder.php',
         'Database\\Seeders\\DevelopmentDataSeeder' => __DIR__ . '/../..' . '/database/seeders/DevelopmentDataSeeder.php',
+        'Database\\Seeders\\DeviceLogSeeder' => __DIR__ . '/../..' . '/database/seeders/DeviceLogSeeder.php',
         'Database\\Seeders\\DeviceSeederRS' => __DIR__ . '/../..' . '/database/seeders/DeviceSeederRS.php',
         'Database\\Seeders\\FirmwareAndConfigurationSeeder' => __DIR__ . '/../..' . '/database/seeders/FirmwareAndConfigurationSeeder.php',
         'Database\\Seeders\\UserSeeder' => __DIR__ . '/../..' . '/database/seeders/UserSeeder.php',
@@ -6203,6 +6207,8 @@ class ComposerStaticInit3dc43118726cb22088f40413fdcd6fa9
         'Tests\\Feature\\DeviceCreationLoggingTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceCreationLoggingTest.php',
         'Tests\\Feature\\DeviceFormsTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceFormsTest.php',
         'Tests\\Feature\\DeviceInlineEditTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceInlineEditTest.php',
+        'Tests\\Feature\\DeviceLogMigrationTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceLogMigrationTest.php',
+        'Tests\\Feature\\DeviceLogSeederTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceLogSeederTest.php',
         'Tests\\Feature\\DeviceModalTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceModalTest.php',
         'Tests\\Feature\\DeviceNameMigrationTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceNameMigrationTest.php',
         'Tests\\Feature\\DeviceSeederRSTest' => __DIR__ . '/../..' . '/tests/Feature/DeviceSeederRSTest.php',

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use App\Models\Device;
 use App\Models\SolarTrackerRemoteControl;
 use App\Services\SolarTrackerGraphData;
@@ -67,7 +67,7 @@ class ViewDeviceController extends Controller
         if (!$device) {
             return response()->json(['error' => 'Device not found'], 404);
         }
-        $log = SolarTrackerLog::where('serial_no', $device->serial_no)->latest('updated_at')->first();
+        $log = DeviceLog::where('serial_no', $device->serial_no)->latest('updated_at')->first();
         if (!$log) {
             return response()->json(['error' => 'No matching data found'], 404);
         }
@@ -133,7 +133,7 @@ class ViewDeviceController extends Controller
 
     private function statusPayload($serialNo)
     {
-        $status = SolarTrackerLog::where('serial_no', $serialNo)->latest('updated_at')->first();
+        $status = DeviceLog::where('serial_no', $serialNo)->latest('updated_at')->first();
         if (!$status) {
             $status = (object) [
                 'cts' => 0, 'state' => 0, 'updated_at_pst' => 0, 'ps1' => 0,

@@ -121,7 +121,10 @@ class VueWorkflowPagesTest extends TestCase
     public function test_dashboard_payload_paginates_own_devices_and_preserves_query_and_flash_contracts(): void
     {
         $this->device($this->owner, 'OWNED-1');
-        $this->device($this->owner, 'OWNED-2', ['sku' => '  <SKU>  ', 'address_1' => '  1 Device Street  ', 'address_2' => ' Suite 2 ']);
+        $this->device($this->owner, 'OWNED-2', [
+            'sku' => '  <SKU>  ', 'address_1' => '  1 Device Street  ', 'address_2' => ' Suite 2 ',
+            'country' => ' CA ', 'city' => ' Vancouver ', 'address_state' => ' BC ', 'zip_code' => ' V6B 1A1 ',
+        ]);
         $this->device($this->other, 'OTHER-PRIVATE');
         $response = $this->actingAs($this->owner)->withSession(['success' => 'Saved device'])->get('/dashboard?show=1&page=2');
         $props = $this->props($response, 'dashboard');
@@ -136,7 +139,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame(['id', 'name', 'serial', 'sku', 'address', 'state', 'status', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
         $this->assertSame('OWNED-2', $props['devices'][0]['serial']);
         $this->assertSame('<SKU>', $props['devices'][0]['sku']);
-        $this->assertSame('1 Device Street, Suite 2', $props['devices'][0]['address']);
+        $this->assertSame('1 Device Street, Suite 2, Vancouver, BC, V6B 1A1, CA', $props['devices'][0]['address']);
         $response->assertDontSee('<SKU>', false);
         foreach ($props['pagination']['links'] as $link) {
             if ($link['url']) $this->assertStringContainsString('show=1', $link['url']);
@@ -150,8 +153,14 @@ class VueWorkflowPagesTest extends TestCase
 
     public function test_dashboard_detail_fields_use_null_for_missing_text_and_preserve_zero_values(): void
     {
-        $this->device($this->owner, 'MISSING', ['sku' => null, 'address_1' => null, 'address_2' => '   ']);
-        $this->device($this->owner, '0', ['sku' => '0', 'address_1' => '', 'address_2' => '0']);
+        $this->device($this->owner, 'MISSING', [
+            'sku' => null, 'address_1' => null, 'address_2' => '   ', 'country' => null,
+            'city' => null, 'address_state' => null, 'zip_code' => null,
+        ]);
+        $this->device($this->owner, '0', [
+            'sku' => '0', 'address_1' => '', 'address_2' => '0', 'country' => '',
+            'city' => '', 'address_state' => '', 'zip_code' => '',
+        ]);
         $props = $this->props($this->actingAs($this->owner)->get('/dashboard'), 'dashboard');
         $this->assertSame('MISSING', $props['devices'][0]['serial']);
         $this->assertNull($props['devices'][0]['sku']);

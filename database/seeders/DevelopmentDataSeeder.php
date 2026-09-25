@@ -55,11 +55,11 @@ class DevelopmentDataSeeder extends Seeder
                 $reportedAt = $status === 'offline'
                     ? now()->subSeconds((int) config('devices.telemetry_freshness_seconds', 600) + 60)
                     : now();
-                DB::table('solar_tracker_logs')->updateOrInsert(['serial_no' => $serial], [
+                \App\Models\Api\DeviceLog::unguarded(fn () => \App\Models\Api\DeviceLog::updateOrCreate(['serial_no' => $serial], [
                     'ps1' => 0, 'ps2' => 0, 'ps_avg' => 0, 'pds' => 0,
                     'motor_speed' => 0, 'temp' => 20, 'cts' => 0, 'state' => $status,
                     'created_at' => $reportedAt, 'updated_at' => $reportedAt,
-                ]);
+                ]));
             }
         });
     }

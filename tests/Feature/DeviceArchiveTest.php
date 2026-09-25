@@ -18,13 +18,13 @@ class DeviceArchiveTest extends TestCase
         $owner = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $owner->id, 'address_state' => 'CA']);
         GeoCode::create(['serial_no' => $device->serial_no, 'status' => 'sleep']);
-        DB::table('solar_tracker_logs')->insert(['serial_no' => $device->serial_no, 'temp' => 23]);
+        $this->insertDeviceLogs(['serial_no' => $device->serial_no, 'temp' => 23]);
         $this->assertSame('active', $device->state);
         $this->actingAs($owner)->post('/retire-device/'.$device->id)->assertRedirect('/dashboard');
         $this->assertSame('inactive', $device->fresh()->state);
         $this->assertSame('CA', $device->fresh()->address_state);
         $this->assertDatabaseHas('geocode', ['serial_no' => $device->serial_no, 'status' => 'sleep']);
-        $this->assertDatabaseHas('solar_tracker_logs', ['serial_no' => $device->serial_no, 'temp' => 23]);
+        $this->assertDatabaseHas('device_logs', ['serial_no' => $device->serial_no, 'data->temp' => 23]);
         $this->get('/all-devices')->assertOk()->assertExactJson([]);
         $this->get('/paginated-devices')->assertOk()->assertJsonCount(0, 'data');
         $this->post('/retire-device/'.$device->id)->assertRedirect('/dashboard');
@@ -92,5 +92,12 @@ class DeviceArchiveTest extends TestCase
         GeoCode::create(['serial_no' => $device->serial_no, 'status' => 'sleep']);
         $this->actingAs($owner)->get('/all-devices')->assertOk()
             ->assertJsonPath('0.state', 'active')->assertJsonPath('0.status', 'sleep');
+    }
+    private function insertDeviceLogs(array $rows): void
+    {
+        foreach (isset($rows['serial_no']) ? [$rows] : $rows as $row) {
+            $log = (new \App\Models\Api\DeviceLog)->forceFill($row);
+            DB::table('device_logs')->insert($log->getAttributes());
+        }
     }
 }

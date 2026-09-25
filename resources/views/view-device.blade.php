@@ -28,7 +28,7 @@
             <a class="dropdown-item" href="{{ route('edit-device', $device->id) }}">Edit</a>
             @if ((int) Auth::id() === (int) $device->user_id)
                 @if ($device->state === 'active')
-                    <form method="POST" action="{{ route('retireDevice', $device->id) }}">@csrf<button class="dropdown-item text-danger" type="submit">Retire</button></form>
+                    <form method="POST" action="{{ route('retireDevice', $device->id) }}">@csrf<button class="dropdown-item text-danger" type="submit">Inactivate</button></form>
                 @elseif ($device->state === 'inactive')
                     <form method="POST" action="{{ route('reactivateDevice', $device->id) }}">@csrf<button class="dropdown-item" type="submit">Reactivate</button></form>
                 @endif

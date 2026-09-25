@@ -91,6 +91,17 @@ const clearSearchUrl = computed(() => {
     url.searchParams.set('show', String(perPage.value));
     return url.pathname + url.search;
 });
+const inactiveDevicesVisible = computed(() => props.stateFilter.includes('inactive'));
+const inactiveDevicesUrl = computed(() => {
+    const url = new URL(props.links.dashboard, window.location.origin);
+    if (props.search) url.searchParams.set('search', props.search);
+    props.statusFilter.forEach((status) => url.searchParams.append('status[]', status));
+    url.searchParams.set('show', String(perPage.value));
+    ['active', ...(inactiveDevicesVisible.value ? [] : ['inactive'])].forEach((state) =>
+        url.searchParams.append('state[]', state),
+    );
+    return url.pathname + url.search;
+});
 watch(
     () => props.pagination.perPage,
     (value) => {
@@ -348,13 +359,18 @@ watch(
                                 </li>
                             </ul>
                         </nav>
-                        <p class="device-result-count">
-                            {{
-                                pagination.total
-                                    ? `Showing ${pagination.from}–${pagination.to} of ${pagination.total} devices`
-                                    : '0 devices'
-                            }}
-                        </p>
+                        <div class="device-footer-summary">
+                            <a class="device-inactive-toggle" :href="inactiveDevicesUrl">
+                                {{ inactiveDevicesVisible ? 'Hide inactive' : 'Show inactive' }}
+                            </a>
+                            <p class="device-result-count">
+                                {{
+                                    pagination.total
+                                        ? `Showing ${pagination.from}–${pagination.to} of ${pagination.total} devices`
+                                        : '0 devices'
+                                }}
+                            </p>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -386,6 +402,10 @@ watch(
 }
 .device-manager {
     margin-top: 1rem;
+    padding: 1.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    background: #fff;
     color: #111827;
 }
 .device-search {
@@ -437,7 +457,7 @@ watch(
 }
 .device-table thead th {
     padding: 0.75rem 0.5rem;
-    background: #f7f9fa;
+    background: #fff;
     color: #6b7280;
     font-size: 0.75rem;
     font-weight: 600;
@@ -528,7 +548,7 @@ watch(
     padding: 1rem;
     border-left: 3px solid #e5e7eb;
     border-right: 3px solid #e5e7eb;
-    background: #f8fafc;
+    background: #fff;
 }
 .device-details {
     display: grid;
@@ -613,10 +633,26 @@ watch(
     background: #f7f9fa;
 }
 .device-result-count {
-    margin: 0 0 0 auto;
+    margin: 0;
     color: #6b7280;
 }
+.device-footer-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+.device-inactive-toggle {
+    color: #dc3545;
+    text-decoration: underline;
+}
+.device-inactive-toggle:hover {
+    color: #a52834;
+}
 @media (max-width: 768px) {
+    .device-manager {
+        padding: 1rem;
+    }
     .device-search-field {
         width: 100%;
     }
@@ -684,7 +720,14 @@ watch(
     }
     .device-result-count {
         width: 100%;
-        margin: 0;
+    }
+    .device-footer-summary {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+    .device-footer-summary .device-result-count {
+        width: auto;
     }
 }
 </style>

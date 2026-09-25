@@ -394,6 +394,21 @@ A missing version or missing stored file returns **404**.
 
 Return to **Developer Workspace → Tools → External API Keys** to inspect a key.
 
+Use **Search** to find a name or key prefix across the entire key list. Open
+**Filters** to select one or more statuses (**Active**, **Expired**, **Revoked**),
+choose **No expiration** or **Has expiration**, and set a creation date range.
+Creation date filters include both selected dates and use UTC. Select
+**Apply filters** to apply the selections; dismissing the panel discards drafts.
+Selections within a filter match any selected value, while different filters
+are combined.
+
+Remove an individual filter chip or select **Clear filters** to start again.
+Use **Sort by** for creation order, name, expiration, or last use, and **Rows per
+page** to choose 10, 20, 50, or 100 results. Keys without an expiration or last use
+appear last for the corresponding sort. Applied searches and filters remain in
+the page URL when you reload. Creating or revoking a key refreshes the filtered
+results; a revoked key disappears when only **Active** keys are selected.
+
 | Column | Meaning |
 | --- | --- |
 | Name | The integration label supplied at creation |

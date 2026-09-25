@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use App\Models\Device;
 use Illuminate\Support\Facades\Log;
 
@@ -36,7 +35,7 @@ class DeviceLogController extends Controller
             if (!$this->validTelemetry($json)) {
                 return $this->invalidPayload();
             }
-            self::logSolarTrackerData($json, $serial_no);
+            $this->storeDeviceLog($json, $serial_no);
             return self::SUCCESS_RESPONSE;
 		}else{
 			return self::DEVICE_NOT_REGISTERED;
@@ -73,60 +72,17 @@ class DeviceLogController extends Controller
         return $hasValue;
     }
 
-    // Logs the solar tracker data
-    private function logSolarTrackerData($json, $serial_no)
+    private function storeDeviceLog(array $data, string $serialNo): void
     {
-        if (isset($json['ps1'])) {
-            $ps1 = (float) $json['ps1'];
-        } else {
-            $ps1 = null;
+        // Retain extension fields while preserving the existing numeric normalization.
+        foreach (['ps1', 'ps2', 'ps_avg', 'pds', 'motor_speed', 'temp'] as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = (float) $data[$field];
+            }
         }
-        if (isset($json['ps2'])) {
-            $ps2 = (float) $json['ps2'];
-        } else {
-            $ps2 = null;
+        if (isset($data['cts'])) {
+            $data['cts'] = (int) $data['cts'];
         }
-        if (isset($json['ps_avg'])) {
-            $ps_avg = (float) $json['ps_avg'];
-        } else {
-            $ps_avg = null;
-        }
-        if (isset($json['pds'])) {
-            $pds = (float) $json['pds'];
-        } else {
-            $pds = null;
-        }
-        if (isset($json['motor_speed'])) {
-            $motor_speed = (float) $json['motor_speed'];
-        } else {
-            $motor_speed = null;
-        }
-        if (isset($json['temp'])) {
-            $temp = (float) $json['temp'];
-        } else {
-            $temp = null;
-        }
-        if (isset($json['cts'])) {
-            $cts = (int) $json['cts'];
-        } else {
-            $cts = null;
-        }
-        if (isset($json['state'])) {
-            $state = (string) $json['state'];
-        } else {
-            $state = null;
-        }
-        $log = new SolarTrackerLog;
-        $log->ps1 = $ps1;
-        $log->ps2 = $ps2;
-        $log->ps_avg = $ps_avg;
-        $log->pds = $pds;
-        $log->motor_speed = $motor_speed;
-        $log->temp = $temp;
-        $log->cts = $cts;
-        $log->state = $state;
-        $log->serial_no = $serial_no;
-        $log->save();
+        DeviceLog::create(['serial_no' => $serialNo, 'data' => $data]);
     }
-
 }

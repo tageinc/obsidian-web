@@ -6,7 +6,6 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'App\\Models\\Api\\SolarTrackerLog' => $baseDir . '/app/Models/Api/SolarTrackerLog.php',
     'App\\Console\\Commands\\AuditDeviceTelemetry' => $baseDir . '/app/Console/Commands/AuditDeviceTelemetry.php',
     'App\\Console\\Commands\\DeactivateSmsNotifications' => $baseDir . '/app/Console/Commands/DeactivateSmsNotifications.php',
     'App\\Console\\Commands\\ProcessAppUpdateMail' => $baseDir . '/app/Console/Commands/ProcessAppUpdateMail.php',
@@ -67,6 +66,7 @@ return array(
     'App\\Mail\\TheftVandalismMail' => $baseDir . '/app/Mail/TheftVandalismMail.php',
     'App\\Mail\\UserInvitation' => $baseDir . '/app/Mail/UserInvitation.php',
     'App\\Models\\ApiToken' => $baseDir . '/app/Models/ApiToken.php',
+    'App\\Models\\Api\\DeviceLog' => $baseDir . '/app/Models/Api/DeviceLog.php',
     'App\\Models\\Company' => $baseDir . '/app/Models/Company.php',
     'App\\Models\\Concerns\\InvalidatesSoftwareVersionCache' => $baseDir . '/app/Models/Concerns/InvalidatesSoftwareVersionCache.php',
     'App\\Models\\Config' => $baseDir . '/app/Models/Config.php',
@@ -213,6 +213,7 @@ return array(
     'Database\\Factories\\CompanyFactory' => $baseDir . '/database/factories/CompanyFactory.php',
     'Database\\Factories\\ConfigVersionsFactory' => $baseDir . '/database/factories/ConfigVersionsFactory.php',
     'Database\\Factories\\DeviceFactory' => $baseDir . '/database/factories/DeviceFactory.php',
+    'Database\\Factories\\DeviceLogFactory' => $baseDir . '/database/factories/DeviceLogFactory.php',
     'Database\\Factories\\FirmwareVersionsFactory' => $baseDir . '/database/factories/FirmwareVersionsFactory.php',
     'Database\\Factories\\GeoCodeFactory' => $baseDir . '/database/factories/GeoCodeFactory.php',
     'Database\\Factories\\SolarTrackerRemoteControlFactory' => $baseDir . '/database/factories/SolarTrackerRemoteControlFactory.php',
@@ -221,6 +222,7 @@ return array(
     'Database\\Seeders\\DatabaseSeeder' => $baseDir . '/database/seeders/DatabaseSeeder.php',
     'Database\\Seeders\\DeveloperSeeder' => $baseDir . '/database/seeders/DeveloperSeeder.php',
     'Database\\Seeders\\DevelopmentDataSeeder' => $baseDir . '/database/seeders/DevelopmentDataSeeder.php',
+    'Database\\Seeders\\DeviceLogSeeder' => $baseDir . '/database/seeders/DeviceLogSeeder.php',
     'Database\\Seeders\\DeviceSeederRS' => $baseDir . '/database/seeders/DeviceSeederRS.php',
     'Database\\Seeders\\FirmwareAndConfigurationSeeder' => $baseDir . '/database/seeders/FirmwareAndConfigurationSeeder.php',
     'Database\\Seeders\\UserSeeder' => $baseDir . '/database/seeders/UserSeeder.php',
@@ -5670,6 +5672,8 @@ return array(
     'Tests\\Feature\\DeviceCreationLoggingTest' => $baseDir . '/tests/Feature/DeviceCreationLoggingTest.php',
     'Tests\\Feature\\DeviceFormsTest' => $baseDir . '/tests/Feature/DeviceFormsTest.php',
     'Tests\\Feature\\DeviceInlineEditTest' => $baseDir . '/tests/Feature/DeviceInlineEditTest.php',
+    'Tests\\Feature\\DeviceLogMigrationTest' => $baseDir . '/tests/Feature/DeviceLogMigrationTest.php',
+    'Tests\\Feature\\DeviceLogSeederTest' => $baseDir . '/tests/Feature/DeviceLogSeederTest.php',
     'Tests\\Feature\\DeviceModalTest' => $baseDir . '/tests/Feature/DeviceModalTest.php',
     'Tests\\Feature\\DeviceNameMigrationTest' => $baseDir . '/tests/Feature/DeviceNameMigrationTest.php',
     'Tests\\Feature\\DeviceSeederRSTest' => $baseDir . '/tests/Feature/DeviceSeederRSTest.php',

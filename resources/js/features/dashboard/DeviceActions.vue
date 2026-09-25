@@ -12,7 +12,7 @@ const menu = ref(null);
 const position = ref({ top: '0px', left: '0px' });
 const menuId = `device-actions-${props.device.id}`;
 const isReactivation = computed(() => Boolean(props.device.links.reactivate));
-const lifecycleAction = computed(() => (isReactivation.value ? 'Reactivate' : 'Retire'));
+const lifecycleAction = computed(() => (isReactivation.value ? 'Reactivate' : 'Inactivate'));
 const lifecycleUrl = computed(() => props.device.links.reactivate || props.device.links.retire);
 function close(restoreFocus = false) {
     open.value = false;
@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
                 <button
                     type="submit"
                     class="dropdown-item"
-                    :class="{ 'device-retire': !isReactivation }"
+                    :class="{ 'device-inactivate': !isReactivation }"
                     :aria-label="`${lifecycleAction} ${device.name}`"
                 >
                     {{ lifecycleAction }}
@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
 .device-action-menu .dropdown-item:focus {
     background: #f3f4f6;
 }
-.device-retire {
+.device-inactivate {
     color: #b02a37;
 }
 </style>

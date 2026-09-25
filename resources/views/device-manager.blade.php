@@ -27,6 +27,8 @@
             $serial = $dashboardText($device->serial_no);
             $address = implode(', ', array_filter([
                 $dashboardText($device->address_1), $dashboardText($device->address_2),
+                $dashboardText($device->city), $dashboardText($device->address_state),
+                $dashboardText($device->zip_code), $dashboardText($device->country),
             ], fn ($line) => $line !== null));
             return [
                 'id' => $device->id,
@@ -184,7 +186,7 @@
                                 <div class="d-flex flex-column align-items-start gap-2 p-2">
                                     <a href="{{ route('edit-device', $device->id) }}" class="text-primary">Edit</a>
                                     @if ($device->state === 'active')
-                                        <form method="POST" action="{{ route('retireDevice', $device->id) }}">@csrf<button class="btn btn-link text-danger p-0" type="submit">Retire</button></form>
+                                        <form method="POST" action="{{ route('retireDevice', $device->id) }}">@csrf<button class="btn btn-link text-danger p-0" type="submit">Inactivate</button></form>
                                     @elseif ($device->state === 'inactive')
                                         <form method="POST" action="{{ route('reactivateDevice', $device->id) }}">@csrf<button class="btn btn-link text-primary p-0" type="submit">Reactivate</button></form>
                                     @endif
@@ -204,6 +206,10 @@
                     <!-- Show Devices Features -->
                     <div class="row mt-4">
                         <div class="col-md-12">
+                            @php
+                                $inactiveVisible = in_array('inactive', $stateFilter, true);
+                                $inactiveToggleState = $inactiveVisible ? ['active'] : ['active', 'inactive'];
+                            @endphp
                             <form action="{{ route('dashboard') }}" method="GET">
                                 <input type="hidden" name="search" value="{{ $search }}">
                                 @foreach ($statusFilter as $status)<input type="hidden" name="status[]" value="{{ $status }}">@endforeach
@@ -219,6 +225,11 @@
                                 </select>
                             </form>
                             {{ $devices->appends(['show' => $pagination_size, 'search' => $search, 'status' => $statusFilter, 'state' => $stateFilter])->links() }}
+                            <div class="text-end mt-2">
+                                <a class="text-danger text-decoration-underline" href="{{ route('dashboard', ['search' => $search ?: null, 'show' => $pagination_size, 'status' => $statusFilter, 'state' => $inactiveToggleState]) }}">
+                                    {{ $inactiveVisible ? 'Hide inactive' : 'Show inactive' }}
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -298,7 +309,7 @@
                             const popup = document.createElement('div');
                             [
                                 ['Name', device.name || ''],
-                                ['Address', (device.address_1 || 'No Address') + ', ' + (device.address_2 || '')],
+                                ['Address', [device.address_1, device.address_2, device.city, device.address_state, device.zip_code, device.country].filter(Boolean).join(', ') || 'No Address'],
                                 ['Last Updated', device.last_updated || 'No data'],
                             ].forEach(function ([label, value]) {
                                 const heading = document.createElement('strong');

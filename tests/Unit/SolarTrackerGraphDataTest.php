@@ -20,13 +20,14 @@ class SolarTrackerGraphDataTest extends TestCase
             $table->float('ps1')->nullable(); $table->float('ps2')->nullable();
             $table->float('ps_avg')->nullable(); $table->float('motor_speed')->nullable(); $table->timestamps();
         });
+        (require database_path('migrations/2026_09_24_000000_convert_solar_tracker_logs_to_device_logs.php'))->up();
     }
 
     public function test_it_sorts_readings_and_uses_pacific_timestamps_for_duplicate_samples(): void
     {
         $later = Carbon::parse('2026-11-01 09:30:00', 'UTC'); // 1:30 AM PST after DST ends
         $earlier = Carbon::parse('2026-11-01 08:30:00', 'UTC'); // 1:30 AM PDT before DST ends
-        DB::table('solar_tracker_logs')->insert([
+        $this->insertDeviceLogs([
             ['serial_no' => 'SP1', 'temp' => 20, 'updated_at' => $later, 'created_at' => $later],
             ['serial_no' => 'SP1', 'temp' => 10, 'updated_at' => $earlier, 'created_at' => $earlier],
             ['serial_no' => 'SP1', 'temp' => 30, 'updated_at' => $later, 'created_at' => $later],
@@ -52,7 +53,7 @@ class SolarTrackerGraphDataTest extends TestCase
 
     public function test_it_preserves_raw_sensor_values_zero_null_and_precision(): void
     {
-        DB::table('solar_tracker_logs')->insert([
+        $this->insertDeviceLogs([
             'serial_no' => 'SP1', 'temp' => 21.123456, 'ps1' => 0, 'ps2' => 52.789,
             'ps_avg' => 999, 'motor_speed' => null, 'updated_at' => '2026-09-21 07:00:00',
         ]);
@@ -67,7 +68,7 @@ class SolarTrackerGraphDataTest extends TestCase
 
     public function test_limit_keeps_latest_raw_readings_in_chronological_order_for_only_this_device(): void
     {
-        DB::table('solar_tracker_logs')->insert([
+        $this->insertDeviceLogs([
             ['serial_no' => 'SP1', 'temp' => 10, 'updated_at' => '2026-09-21 01:00:00'],
             ['serial_no' => 'SP1', 'temp' => 20, 'updated_at' => '2026-09-21 02:00:00'],
             ['serial_no' => 'SP1', 'temp' => 30, 'updated_at' => '2026-09-21 02:00:00'],
@@ -85,7 +86,7 @@ class SolarTrackerGraphDataTest extends TestCase
             $table->id(); $table->string('serial_no'); $table->integer('hardware_id');
         });
         DB::table('devices')->insert(['id' => 1, 'serial_no' => 'SP1', 'hardware_id' => 1]);
-        DB::table('solar_tracker_logs')->insert([
+        $this->insertDeviceLogs([
             'serial_no' => 'SP1', 'temp' => 12.5, 'updated_at' => '2026-09-21 01:00:00',
         ]);
         $response = app(ViewDeviceController::class)->getDeviceData(1);
@@ -93,5 +94,12 @@ class SolarTrackerGraphDataTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame(['graph'], array_keys($data));
         $this->assertEquals(12.5, $data['graph']['points'][0]['temp']);
+    }
+    private function insertDeviceLogs(array $rows): void
+    {
+        foreach (isset($rows['serial_no']) ? [$rows] : $rows as $row) {
+            $log = (new \App\Models\Api\DeviceLog)->forceFill($row);
+            DB::table('device_logs')->insert($log->getAttributes());
+        }
     }
 }

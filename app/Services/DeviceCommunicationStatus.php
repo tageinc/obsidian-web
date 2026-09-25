@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 
 class DeviceCommunicationStatus
 {
     public function latest($device)
     {
-        return SolarTrackerLog::where('serial_no', $device->serial_no)->latest('created_at')->first();
+        return DeviceLog::where('serial_no', $device->serial_no)->latest('created_at')->first();
     }
 
     public function isFresh($log): bool

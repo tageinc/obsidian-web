@@ -24,7 +24,7 @@ afterEach(() => {
     document.body.innerHTML = '';
     vi.restoreAllMocks();
 });
-it('submits Retire directly from the action menu', async () => {
+it('submits Inactivate directly from the action menu', async () => {
     const wrapper = page();
     const trigger = wrapper.get('button[aria-controls="device-actions-1"]');
     await trigger.trigger('click');
@@ -34,7 +34,7 @@ it('submits Retire directly from the action menu', async () => {
         method: 'POST',
     });
     expect(form.get('input[name="_token"]').element.value).toBe('csrf-test-token');
-    expect(form.get('button').text()).toBe('Retire');
+    expect(form.get('button').text()).toBe('Inactivate');
     expect(wrapper.find('dialog').exists()).toBe(false);
 });
 it('reveals page actions by keyboard and closes on Escape or an outside click', async () => {

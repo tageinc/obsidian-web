@@ -1,5 +1,6 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import WorkspaceFilters from './WorkspaceFilters.vue';
 import FormModal from '../../shared/components/FormModal.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 import { requestJson } from '../../shared/api/client.js';
@@ -14,6 +15,60 @@ const modalError = ref(null);
 const errors = ref({});
 const page = ref(1);
 const lastPage = ref(1);
+const total = ref(0);
+const range = ref({ from: null, to: null });
+const initialQuery = new URLSearchParams(window.location.search);
+const filters = ref({
+    search: initialQuery.get('keys_search') || '',
+    statuses: initialQuery.getAll('keys_statuses[]'),
+    expiration: initialQuery.getAll('keys_expiration[]'),
+    from: initialQuery.get('keys_from') || '',
+    to: initialQuery.get('keys_to') || '',
+    sort: initialQuery.get('keys_sort') || 'newest',
+});
+const search = ref(filters.value.search);
+const searchForm = ref(null);
+const perPage = ref(Number(initialQuery.get('keys_per_page')) || 20);
+const filterFields = [
+    {
+        key: 'statuses',
+        label: 'Status',
+        placeholder: 'All statuses',
+        options: ['Active', 'Expired', 'Revoked'].map((value) => ({ value, label: value })),
+    },
+    {
+        key: 'expiration',
+        label: 'Expiration',
+        placeholder: 'Any expiration',
+        options: [
+            { value: 'never', label: 'No expiration' },
+            { value: 'dated', label: 'Has expiration' },
+        ],
+    },
+];
+const chips = computed(() => [
+    ...(filters.value.search
+        ? [{ field: 'search', label: `Search: ${filters.value.search}` }]
+        : []),
+    ...filters.value.statuses.map((value) => ({
+        field: 'statuses',
+        value,
+        label: `Status: ${value}`,
+    })),
+    ...filters.value.expiration.map((value) => ({
+        field: 'expiration',
+        value,
+        label: `Expiration: ${value === 'never' ? 'No expiration' : 'Has expiration'}`,
+    })),
+    ...(filters.value.from ? [{ field: 'from', label: `From: ${filters.value.from}` }] : []),
+    ...(filters.value.to ? [{ field: 'to', label: `To: ${filters.value.to}` }] : []),
+]);
+const filterCount = computed(() => chips.value.filter((chip) => chip.field !== 'search').length);
+const resultRange = computed(() =>
+    rows.value.length
+        ? `Showing ${range.value.from}–${range.value.to} of ${total.value} keys`
+        : `0 of ${total.value} keys`,
+);
 const showCreate = ref(false);
 const revokeKey = ref(null);
 const name = ref('');
@@ -24,24 +79,102 @@ const secretInput = ref(null);
 const createButton = ref(null);
 let returnFocus;
 const lifetime = new AbortController();
-onBeforeUnmount(() => lifetime.abort());
-onMounted(() => load());
+let listController;
+let listRequest = 0;
+onBeforeUnmount(() => {
+    lifetime.abort();
+    listController?.abort();
+    listRequest++;
+});
+onMounted(() => load(Number(initialQuery.get('keys_page')) || 1));
 
-async function load(number = 1) {
+function query(number) {
+    const params = new URLSearchParams({ page: number, per_page: perPage.value });
+    for (const [field, value] of Object.entries(filters.value)) {
+        if (Array.isArray(value)) value.forEach((item) => params.append(`${field}[]`, item));
+        else if (value) params.set(field, value);
+    }
+    return params;
+}
+function rememberQuery() {
+    const url = new URL(window.location.href);
+    for (const key of [...url.searchParams.keys()]) {
+        if (key.startsWith('keys_')) url.searchParams.delete(key);
+    }
+    for (const [key, value] of query(page.value)) url.searchParams.append(`keys_${key}`, value);
+    url.searchParams.set('section', 'api-keys');
+    window.history.replaceState(window.history.state, '', url);
+}
+
+async function load(number = 1, focusTarget = null) {
+    listController?.abort();
+    listController = new AbortController();
+    const request = ++listRequest;
     loading.value = true;
     error.value = null;
+    page.value = number;
     try {
         const url = new URL(props.endpoint, window.location.origin);
-        url.searchParams.set('page', number);
-        const result = await requestJson(url.href, { signal: lifetime.signal });
+        url.search = query(number).toString();
+        const result = await requestJson(url.href, { signal: listController.signal });
+        if (request !== listRequest) return;
         rows.value = result.data;
         page.value = result.current_page;
         lastPage.value = result.last_page;
+        total.value = result.total;
+        range.value = { from: result.from, to: result.to };
+        perPage.value = result.per_page;
+        if (result.filters) filters.value = result.filters;
+        rememberQuery();
     } catch (failure) {
-        if (failure.name !== 'AbortError') error.value = failure.message;
+        if (request !== listRequest || failure.name === 'AbortError') return;
+        error.value =
+            Object.values(failure.fieldErrors || {})
+                .flat()
+                .join(' ') || failure.message;
+        rows.value = [];
+        total.value = 0;
     } finally {
-        loading.value = false;
+        if (request === listRequest) {
+            loading.value = false;
+            await nextTick();
+            // Disabling a focused control while loading moves browser focus to the body.
+            if (
+                request === listRequest &&
+                focusTarget &&
+                document.activeElement === document.body
+            ) {
+                const target =
+                    focusTarget.isConnected && !focusTarget.disabled
+                        ? focusTarget
+                        : searchForm.value?.querySelector('input[type="search"]');
+                if (target && !target.disabled) target.focus();
+            }
+        }
     }
+}
+function submit() {
+    filters.value.search = search.value.trim();
+    load(1, document.activeElement);
+}
+function apply(value) {
+    filters.value = { ...filters.value, ...value, search: search.value.trim() };
+    load(1, searchForm.value?.querySelector('.release-filter-trigger'));
+}
+function clear() {
+    search.value = '';
+    filters.value = { search: '', statuses: [], expiration: [], from: '', to: '', sort: 'newest' };
+    perPage.value = [10, 20, 50, 100].includes(perPage.value) ? perPage.value : 20;
+    load(1, searchForm.value?.querySelector('input[type="search"]'));
+}
+function remove(chip) {
+    if (Array.isArray(filters.value[chip.field])) {
+        filters.value[chip.field] = filters.value[chip.field].filter(
+            (value) => value !== chip.value,
+        );
+    } else filters.value[chip.field] = '';
+    if (chip.field === 'search') search.value = '';
+    load(1, searchForm.value?.querySelector('input[type="search"]'));
 }
 function openCreate() {
     name.value = '';
@@ -109,15 +242,12 @@ async function revoke() {
     pending.value = true;
     modalError.value = null;
     try {
-        const result = await requestJson(
-            `${props.endpoint.replace(/\/$/, '')}/${revokeKey.value.id}/revoke`,
-            {
-                method: 'POST',
-                signal: lifetime.signal,
-            },
-        );
-        rows.value = rows.value.map((row) => (row.id === result.data.id ? result.data : row));
+        await requestJson(`${props.endpoint.replace(/\/$/, '')}/${revokeKey.value.id}/revoke`, {
+            method: 'POST',
+            signal: lifetime.signal,
+        });
         message.value = 'API key revoked. Requests using it will now be rejected.';
+        await load(page.value);
         await closeRevoke();
     } catch (failure) {
         if (failure.name !== 'AbortError') modalError.value = failure.message;
@@ -154,24 +284,125 @@ function date(value) {
             Use a Bearer key with <code>/api/external/v1</code>. Keys belong to the configured
             developer.
         </p>
-        <p v-if="loading" role="status">Loading API keys…</p>
+        <form
+            ref="searchForm"
+            class="api-key-search"
+            aria-label="Find API keys"
+            @submit.prevent="submit"
+        >
+            <div class="release-toolbar">
+                <div class="release-search-group">
+                    <div class="release-search-field">
+                        <svg
+                            width="17"
+                            height="17"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.7"
+                            aria-hidden="true"
+                        >
+                            <circle cx="10.5" cy="10.5" r="6.5" />
+                            <path d="m16 16 4.5 4.5" />
+                        </svg>
+                        <input
+                            id="api-keys-search"
+                            v-model="search"
+                            type="search"
+                            class="form-control"
+                            aria-label="Search API keys"
+                            placeholder="Search name or key prefix…"
+                            maxlength="255"
+                            :disabled="pending || loading"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        class="btn btn-outline-secondary release-search-button"
+                        :disabled="pending || loading"
+                    >
+                        Search
+                    </button>
+                </div>
+                <WorkspaceFilters
+                    kind="api-keys"
+                    title="API key"
+                    heading="Filter API keys"
+                    date-label="Created"
+                    date-help="Creation dates use UTC."
+                    :fields="filterFields"
+                    :filters="filters"
+                    :count="filterCount"
+                    :disabled="pending || loading"
+                    @apply="apply"
+                    @clear="clear"
+                />
+                <div class="release-sort">
+                    <label for="api-keys-sort">Sort by</label>
+                    <select
+                        id="api-keys-sort"
+                        v-model="filters.sort"
+                        class="form-select form-select-sm"
+                        aria-label="Sort API keys"
+                        :disabled="pending || loading"
+                        @change="submit"
+                    >
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="name_asc">Name: A–Z</option>
+                        <option value="expires_asc">Expiring first</option>
+                        <option value="last_used_desc">Recently used</option>
+                    </select>
+                </div>
+            </div>
+            <div
+                v-if="chips.length || error"
+                class="release-active-filters"
+                aria-label="Active API key filters"
+            >
+                <button
+                    v-for="chip in chips"
+                    :key="`${chip.field}-${chip.value || ''}`"
+                    type="button"
+                    class="release-filter-chip"
+                    :aria-label="`Remove ${chip.label}`"
+                    :disabled="pending || loading"
+                    @click="remove(chip)"
+                >
+                    <span>{{ chip.label }}</span
+                    ><span aria-hidden="true">×</span>
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-link btn-sm release-clear"
+                    :disabled="pending || loading"
+                    @click="clear"
+                >
+                    Clear filters
+                </button>
+            </div>
+        </form>
+        <p v-if="loading" role="status" class="small text-secondary">Loading API keys…</p>
         <button
             v-if="error"
             type="button"
             class="btn btn-outline-secondary btn-sm mb-3"
             :disabled="loading"
-            @click="load(page)"
+            @click="load(page, $event.currentTarget)"
         >
             Retry
         </button>
         <div
-            class="table-responsive"
+            class="table-responsive release-table-container"
             role="region"
             aria-label="External API keys"
             tabindex="0"
             :aria-busy="loading"
         >
-            <table class="table table-hover align-middle small">
+            <table class="table align-middle developer-history mb-0">
+                <caption class="visually-hidden">
+                    External API keys
+                </caption>
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -189,7 +420,13 @@ function date(value) {
                         <td>
                             <code>{{ key.prefix }}…</code>
                         </td>
-                        <td>{{ key.status }}</td>
+                        <td>
+                            <span
+                                class="key-status"
+                                :class="`key-status-${key.status.toLowerCase()}`"
+                                >{{ key.status }}</span
+                            >
+                        </td>
                         <td>{{ date(key.created_at) }}</td>
                         <td>{{ date(key.last_used_at) }}</td>
                         <td>{{ date(key.expires_at) }}</td>
@@ -198,7 +435,7 @@ function date(value) {
                                 type="button"
                                 class="btn btn-outline-danger btn-sm"
                                 :aria-label="`Revoke ${key.name}`"
-                                :disabled="key.status === 'Revoked' || pending"
+                                :disabled="key.status === 'Revoked' || pending || loading"
                                 @click="openRevoke(key, $event)"
                             >
                                 Revoke
@@ -206,36 +443,65 @@ function date(value) {
                         </td>
                     </tr>
                     <tr v-if="!loading && !error && !rows.length">
-                        <td colspan="7" class="py-4 text-center text-secondary">
-                            No API keys have been created yet.
+                        <td colspan="7" class="release-empty">
+                            <strong>{{
+                                chips.length
+                                    ? 'No API keys found.'
+                                    : 'No API keys have been created yet.'
+                            }}</strong>
+                            <span>{{
+                                chips.length
+                                    ? 'Try adjusting your search or filters.'
+                                    : 'Create a key to connect an integration.'
+                            }}</span>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <nav
-            v-if="lastPage > 1"
-            class="d-flex align-items-center gap-3 mt-3"
-            aria-label="API key pages"
-        >
-            <button
-                type="button"
-                class="btn btn-outline-secondary btn-sm"
-                :disabled="page === 1 || loading"
-                @click="load(page - 1)"
+        <div class="release-footer">
+            <span class="release-range" role="status">{{
+                loading ? 'Loading results…' : error ? 'Results unavailable' : resultRange
+            }}</span>
+            <div class="release-page-size">
+                <label for="api-keys-per-page" class="visually-hidden">API keys per page</label>
+                <span aria-hidden="true">Rows per page</span>
+                <select
+                    id="api-keys-per-page"
+                    v-model.number="perPage"
+                    class="form-select form-select-sm w-auto"
+                    :disabled="pending || loading"
+                    @change="submit"
+                >
+                    <option v-for="size in [10, 20, 50, 100]" :key="size" :value="size">
+                        {{ size }}
+                    </option>
+                </select>
+            </div>
+            <nav
+                v-if="lastPage > 1 && !error"
+                class="d-flex align-items-center gap-2"
+                aria-label="API key pages"
             >
-                Previous
-            </button>
-            <span class="small">Page {{ page }} of {{ lastPage }}</span>
-            <button
-                type="button"
-                class="btn btn-outline-secondary btn-sm"
-                :disabled="page === lastPage || loading"
-                @click="load(page + 1)"
-            >
-                Next
-            </button>
-        </nav>
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    :disabled="page === 1 || loading || pending"
+                    @click="load(page - 1, $event.currentTarget)"
+                >
+                    Previous
+                </button>
+                <span class="small">Page {{ page }} of {{ lastPage }}</span>
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    :disabled="page === lastPage || loading || pending"
+                    @click="load(page + 1, $event.currentTarget)"
+                >
+                    Next
+                </button>
+            </nav>
+        </div>
         <FormModal
             v-if="showCreate"
             id="create-api-key-dialog"
@@ -347,6 +613,7 @@ function date(value) {
     </section>
 </template>
 
+<style scoped src="./workspace-tables.css"></style>
 <style scoped>
 th,
 td {
@@ -358,7 +625,27 @@ td {
     overflow-wrap: anywhere;
 }
 thead th {
-    background: var(--bs-tertiary-bg);
     white-space: nowrap;
+}
+.key-status {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f0f3f7;
+    color: #47566d;
+}
+.key-status-active {
+    background: #e8f5ee;
+    color: #216044;
+}
+.key-status-expired {
+    background: #fff3df;
+    color: #79500e;
+}
+.key-status-revoked {
+    background: #fcecef;
+    color: #913447;
 }
 </style>

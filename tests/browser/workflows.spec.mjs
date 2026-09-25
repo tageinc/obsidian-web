@@ -66,7 +66,9 @@ test('dashboard details and edit modal use the current fields', async ({ page })
     await details.click();
     await expect(page.getByText('BROWSER-SIMULATOR-1', { exact: true })).toBeVisible();
     await expect(page.getByText('FIXTURE', { exact: true })).toBeVisible();
-    await expect(page.getByText('1 Fixture Street', { exact: true })).toBeVisible();
+    await expect(
+        page.getByText('1 Fixture Street, Test City, CA, 90001, US', { exact: true }),
+    ).toBeVisible();
 
     const menu = await actionsMenu(page);
     await menu.getByRole('link', { name: 'Edit Browser simulator', exact: true }).click();
@@ -83,19 +85,19 @@ test('dashboard details and edit modal use the current fields', async ({ page })
     await dialog.getByRole('button', { name: 'Close device', exact: true }).click();
 });
 
-test('Retire and Reactivate immediately change the device state', async ({ page }) => {
+test('Inactivate and Reactivate immediately change the device state', async ({ page }) => {
     await login(page);
 
     let menu = await actionsMenu(page);
     await Promise.all([
         page.waitForURL(/\/dashboard$/),
-        menu.getByRole('button', { name: 'Retire Browser simulator', exact: true }).click(),
+        menu.getByRole('button', { name: 'Inactivate Browser simulator', exact: true }).click(),
     ]);
     await expect(
         page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
     ).toHaveCount(0);
 
-    await page.goto('/dashboard?state%5B%5D=inactive');
+    await page.getByRole('link', { name: 'Show inactive', exact: true }).click();
     await expect(
         page.getByRole('rowheader', { name: 'Browser simulator', exact: true }),
     ).toBeVisible();

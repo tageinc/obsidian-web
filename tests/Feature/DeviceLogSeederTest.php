@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use Carbon\CarbonImmutable;
 use Database\Seeders\DevelopmentDataSeeder;
-use Database\Seeders\SolarTrackerLogSeeder;
+use Database\Seeders\DeviceLogSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-class SolarTrackerLogSeederTest extends TestCase
+class DeviceLogSeederTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -27,9 +27,9 @@ class SolarTrackerLogSeederTest extends TestCase
             'name' => 'Andre', 'email' => UserSeeder::EMAIL, 'password' => 'existing-hash',
         ]);
         $this->seed(DevelopmentDataSeeder::class);
-        DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->delete();
-        $this->seed(SolarTrackerLogSeeder::class);
-        $logs = DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->orderBy('updated_at')->get();
+        DB::table('device_logs')->where('serial_no', '202600000001')->delete();
+        $this->seed(DeviceLogSeeder::class);
+        $logs = \App\Models\Api\DeviceLog::query()->where('serial_no', '202600000001')->orderBy('updated_at')->get()->map(fn ($log) => (object) array_merge($log->getRawOriginal(), $log->data));
         $this->assertCount(2017, $logs);
         $this->assertSame('2026-10-26 12:00:00', $logs->first()->updated_at);
         $this->assertSame('2026-11-02 12:00:00', $logs->last()->updated_at);
@@ -43,17 +43,17 @@ class SolarTrackerLogSeederTest extends TestCase
                 $this->assertSame(300, strtotime($log->updated_at.' UTC') - strtotime($logs[$index - 1]->updated_at.' UTC'));
             }
         }
-        $this->seed(SolarTrackerLogSeeder::class);
-        $this->assertSame(2017, DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->count());
+        $this->seed(DeviceLogSeeder::class);
+        $this->assertSame(2017, DB::table('device_logs')->where('serial_no', '202600000001')->count());
         $this->assertSame(15, DB::table('devices')->count());
-        $this->assertEquals($logs->first(), DB::table('solar_tracker_logs')->where('serial_no', '202600000001')->orderBy('updated_at')->first());
+        $this->assertSame($logs->first()->data, DB::table('device_logs')->where('serial_no', '202600000001')->orderBy('updated_at')->value('data'));
         $this->assertSame('existing-hash', DB::table('users')->value('password'));
     }
 
     public function test_telemetry_seeding_is_disabled_in_production(): void
     {
         $this->app->instance('env', 'production');
-        $this->artisan('db:seed', ['--class' => SolarTrackerLogSeeder::class, '--force' => true])->assertExitCode(0);
-        $this->assertSame(0, DB::table('solar_tracker_logs')->count());
+        $this->artisan('db:seed', ['--class' => DeviceLogSeeder::class, '--force' => true])->assertExitCode(0);
+        $this->assertSame(0, DB::table('device_logs')->count());
     }
 }

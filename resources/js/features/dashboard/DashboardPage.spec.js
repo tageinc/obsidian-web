@@ -113,6 +113,22 @@ describe('dashboard workflow', () => {
         expect(Object.fromEntries(new FormData(form.element))).toEqual({ show: '30' });
     });
 
+    it('provides an underlined link that includes inactive devices with active devices', () => {
+        const wrapper = page();
+        const toggle = wrapper.get('.device-inactive-toggle');
+        expect(toggle.element.parentElement.classList.contains('device-footer-summary')).toBe(true);
+        expect(toggle.text()).toBe('Show inactive');
+        expect(toggle.attributes('href')).toContain('show=20');
+        expect(toggle.attributes('href')).toContain('state%5B%5D=active');
+        expect(toggle.attributes('href')).toContain('state%5B%5D=inactive');
+
+        const allStates = page({ stateFilter: ['active', 'inactive'] });
+        expect(allStates.get('.device-inactive-toggle').text()).toBe('Hide inactive');
+        expect(allStates.get('.device-inactive-toggle').attributes('href')).toContain(
+            'state%5B%5D=active',
+        );
+    });
+
     it('opens details from a row and collapses them with the labeled disclosure button', async () => {
         const wrapper = page({ devices: [device(1)] });
         const row = wrapper.get('.device-table-row');

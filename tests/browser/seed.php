@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use App\Models\Device;
 use App\Models\GeoCode;
 use App\Models\SolarTrackerRemoteControl;
@@ -36,7 +36,7 @@ $device = Device::create([
 GeoCode::create(['serial_no' => $device->serial_no, 'latitude' => $device->latitude, 'longitude' => $device->longitude, 'status' => 'online']);
 SolarTrackerRemoteControl::create(['serial_no' => $device->serial_no, 'mode' => 0, 'motor_speed' => 0]);
 foreach ([0, 1, 4, 12, 24, 30] as $index => $hours) {
-    $log = new SolarTrackerLog([
+    $log = new DeviceLog([
         'serial_no' => $device->serial_no, 'ps1' => 12 + $index, 'ps2' => 22 + $index,
         'ps_avg' => 99, 'temp' => 20 + $index, 'motor_speed' => 0, 'state' => 'solar-track', 'cts' => 1,
     ]);
@@ -59,6 +59,23 @@ foreach (['firmware_versions' => 'firmware', 'config_versions' => 'configuration
             'updated_at' => $uploaded,
         ]);
     }
+}
+$developerId = User::where('email', config('app.developer_email'))->value('id');
+for ($index = 1; $index <= 24; $index++) {
+    $created = sprintf('2024-01-%02d 12:00:00', $index);
+    $state = $index % 4;
+    DB::table('external_api_keys')->insert([
+        'user_id' => $developerId,
+        'name' => sprintf('Fixture integration %02d', $index),
+        'prefix' => sprintf('fixture-key-%04d', $index),
+        // These invalid-format values cannot authenticate as external API keys.
+        'token_hash' => hash('sha256', 'browser-fixture-key-'.$index),
+        'expires_at' => $state === 2 ? '2099-01-01 00:00:00' : ($state === 3 ? '2000-01-01 00:00:00' : null),
+        'revoked_at' => $state === 0 ? $created : null,
+        'last_used_at' => $index % 3 === 0 ? sprintf('2024-01-%02d 14:00:00', $index) : null,
+        'created_at' => $created,
+        'updated_at' => $created,
+    ]);
 }
 fwrite(STDOUT, "Isolated browser fixtures ready.\n");
 } catch (Throwable $error) {

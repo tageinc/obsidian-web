@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 
 class AuditDeviceTelemetry extends Command
 {
@@ -15,7 +15,7 @@ class AuditDeviceTelemetry extends Command
     public function handle()
     {
         $failed = false;
-        foreach ([new SolarTrackerLog] as $model) {
+        foreach ([new DeviceLog] as $model) {
             $table = $model->getTable();
             try {
                 if (!Schema::hasTable($table)) {
@@ -23,7 +23,7 @@ class AuditDeviceTelemetry extends Command
                     $failed = true;
                     continue;
                 }
-                $required = array_merge(['id', 'created_at', 'updated_at'], $model->getFillable());
+                $required = ['id', 'serial_no', 'data', 'created_at', 'updated_at'];
                 $missing = array_diff($required, Schema::getColumnListing($table));
                 $indexes = $this->indexes($table);
                 $serialIndex = false;

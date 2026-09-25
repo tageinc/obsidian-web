@@ -22,6 +22,6 @@ operator-owned reference and must not be reconstructed from application models.
 ## Current device behavior
 
 Devices no longer have a hardware assignment. Every registered device uses
-`solar_tracker_logs` for telemetry and status. Payloads containing only retired
+`device_logs` for telemetry and status. Payloads containing only retired
 Energy Monitor fields are rejected as invalid telemetry. The historical Energy
 Monitor tables remain untouched; their writers and aggregators remain retired.

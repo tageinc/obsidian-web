@@ -60,11 +60,16 @@ describe('device map data', () => {
             hardware: { name: '<script>bad</script>' },
             name: '<img src=x>',
             address_1: '<b>address</b>',
+            address_2: 'Suite 2',
+            country: 'CA',
+            city: 'Toronto',
+            address_state: 'ON',
+            zip_code: 'M5V 1A1',
             last_updated: '<svg>',
         });
         expect(popup.querySelector('img,script,b,svg')).toBeNull();
         expect(popup.textContent).not.toContain('Hardware');
-        expect(popup.textContent).toContain('<b>address</b>');
+        expect(popup.textContent).toContain('<b>address</b>, Suite 2, Toronto, ON, M5V 1A1, CA');
     });
 });
 

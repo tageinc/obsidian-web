@@ -97,5 +97,5 @@ In local/testing environments, `php artisan db:seed --class=DevelopmentDataSeede
 creates or refreshes 15 devices for `andre.troncoso@tezca.net`, with random names,
 worldwide coordinates, and matching statuses. `FirmwareAndConfigurationSeeder`
 creates downloadable SP1 development fixtures; its firmware is not flashable.
-`SolarTrackerLogSeeder` remains available for seven days of sample graph history
+`DeviceLogSeeder` remains available for seven days of sample graph history
 for the first development device.

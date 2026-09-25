@@ -59,7 +59,14 @@ export function devicePopup(device) {
         ['Name', device.name ?? 'Unnamed device'],
         [
             'Address',
-            [device.address_1 || 'No Address', device.address_2].filter(Boolean).join(', '),
+            [
+                device.address_1,
+                device.address_2,
+                device.city,
+                device.address_state,
+                device.zip_code,
+                device.country,
+            ].filter(Boolean).join(', ') || 'No Address',
         ],
         ['Last Updated', device.last_updated || 'No data'],
     ];

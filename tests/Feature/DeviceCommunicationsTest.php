@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\LowVoltageMail;
 use App\Jobs\SendAppUpdateMail;
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use App\Models\Device;
 use Carbon\Carbon;
 use Database\Seeders\DeveloperSeeder;
@@ -48,6 +48,7 @@ class DeviceCommunicationsTest extends TestCase
             $table->string('state')->nullable();
             $table->timestamps();
         });
+        (require database_path('migrations/2026_09_24_000000_convert_solar_tracker_logs_to_device_logs.php'))->up();
         Schema::create('geocode', function (Blueprint $table) {
             $table->id();
             $table->string('serial_no');
@@ -86,7 +87,48 @@ class DeviceCommunicationsTest extends TestCase
             ->assertOk()->assertExactJson(['msg' => 'success']);
         $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => '{}'])->assertStatus(422);
 
-        $this->assertSame(1, SolarTrackerLog::count());
+        $this->assertSame(1, DeviceLog::count());
+    }
+
+    public function test_json_telemetry_preserves_extensions_and_legacy_status_fields(): void
+    {
+        DB::table('devices')->insert(['serial_no' => 'solar']);
+        $payload = ['ps1' => '0', 'temp' => null, 'state' => 'online', 'extension' => ['voltage' => 12.34567], 'firmware_version' => '001.020', 'config_version' => '003.004'];
+        $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => json_encode($payload)])
+            ->assertOk()->assertExactJson(['msg' => 'success']);
+        $log = DeviceLog::firstOrFail();
+        $this->assertEquals(0, $log->data['ps1']);
+        $this->assertNull($log->data['temp']);
+        $this->assertSame($payload['extension'], $log->data['extension']);
+        $this->assertSame('001.020', $log->data['firmware_version']);
+        $this->assertSame('003.004', $log->data['config_version']);
+        $this->assertSame('online', $log->state);
+        $response = app(\App\Http\Controllers\ViewDeviceController::class)->getLatestStatusJson('solar');
+        $this->assertSame('online', $response->getData(true)['latestStatus']['state']);
+        $this->assertEquals(0, $response->getData(true)['latestStatus']['ps1']);
+        $this->artisan('device:audit-telemetry')->assertExitCode(0);
+    }
+
+    public function test_device_payload_preserves_firmware_and_zero_config_version(): void
+    {
+        DB::table('devices')->insert(['serial_no' => 'solar']);
+        $payload = [
+            'ps1' => '65.200000', 'ps2' => '68.500000', 'ps_avg' => '66.850000',
+            'pds' => '3.300000', 'motor_speed' => '5.511000', 'temp' => '28.400000',
+            'cts' => '0', 'state' => 'solar track',
+            'firmware_version' => '43', 'config_version' => '0',
+        ];
+
+        $this->postJson('/api/log', ['serial_no' => 'solar', 'data' => json_encode($payload)])
+            ->assertOk()->assertExactJson(['msg' => 'success']);
+
+        $stored = json_decode(DB::table('device_logs')->value('data'), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame([
+            'ps1' => 65.2, 'ps2' => 68.5, 'ps_avg' => 66.85,
+            'pds' => 3.3, 'motor_speed' => 5.511, 'temp' => 28.4,
+            'cts' => 0, 'state' => 'solar track',
+            'firmware_version' => '43', 'config_version' => '0',
+        ], $stored);
     }
 
     public function test_retired_energy_monitor_telemetry_is_not_written(): void
@@ -96,7 +138,7 @@ class DeviceCommunicationsTest extends TestCase
         $this->postJson('/api/log', ['serial_no' => 'retired', 'data' => '{"v_batt":12.5}'])
             ->assertStatus(422)->assertExactJson(['msg' => 'invalid telemetry']);
 
-        $this->assertSame(0, SolarTrackerLog::count());
+        $this->assertSame(0, DeviceLog::count());
     }
 
     public function test_billing_and_license_routes_are_removed_and_device_access_has_no_license_gate(): void
@@ -184,7 +226,7 @@ class DeviceCommunicationsTest extends TestCase
             'status_notification' => true, 'sms_notification' => true, 'address_1' => '1 Main St',
         ]);
         DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline', 'latitude' => 1, 'longitude' => 2]);
-        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
+        DeviceLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
 
         $this->artisan('device:check-status')->assertExitCode(0);
 
@@ -206,7 +248,7 @@ class DeviceCommunicationsTest extends TestCase
             'status_notification' => true, 'address_1' => '1 Main St',
         ]);
         DB::table('geocode')->insert(['serial_no' => 'solar', 'status' => 'offline']);
-        SolarTrackerLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
+        DeviceLog::create(['serial_no' => 'solar', 'state' => 'low voltage']);
         $this->mock(\App\Services\AppUpdateDelivery::class, function ($mock) {
             $mock->shouldReceive('queue')->once()->andThrow(new \RuntimeException('Queue unavailable'));
         });

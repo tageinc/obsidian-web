@@ -78,7 +78,7 @@ source record `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, and
 ## Local sample history
 
 `DevelopmentDataSeeder` creates the demo Solar Tracker for
-`andre.troncoso@tezca.net` and runs `SolarTrackerLogSeeder`. This adds seven days
+`andre.troncoso@tezca.net` and runs `DeviceLogSeeder`. This adds seven days
 of randomized readings at five-minute UTC intervals (2,017 samples), with
 Pacific day/night sensor and temperature patterns plus varying motor speeds.
 These are synthetic readings for device `202600000001` only. Existing readings

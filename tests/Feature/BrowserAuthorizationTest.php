@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use App\Models\ConfigVersions;
 use App\Models\Device;
 use App\Models\FirmwareVersions;
@@ -35,7 +35,7 @@ class BrowserAuthorizationTest extends TestCase
         $this->device = Device::create([
             'serial_no' => 'browser-owned', 'user_id' => $this->owner->id,
         ]);
-        SolarTrackerLog::create(['serial_no' => $this->device->serial_no, 'ps1' => 10]);
+        DeviceLog::create(['serial_no' => $this->device->serial_no, 'ps1' => 10]);
     }
 
     public function test_device_page_graph_and_both_refresh_urls_require_owner_or_developer(): void

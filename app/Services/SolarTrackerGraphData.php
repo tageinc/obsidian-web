@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 
 /** Returns individual solar tracker readings without aggregation or resampling. */
 class SolarTrackerGraphData
@@ -15,12 +15,12 @@ class SolarTrackerGraphData
      */
     public function forSerial(string $serialNo, int $limit = 9000): array
     {
-        $logs = SolarTrackerLog::where('serial_no', $serialNo)
+        $logs = DeviceLog::where('serial_no', $serialNo)
             ->whereNotNull('updated_at')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit($limit)
-            ->get(['id', 'updated_at', 'temp', 'ps1', 'ps2', 'motor_speed'])
+            ->get(['id', 'updated_at', 'data'])
             ->reverse();
 
         // Preserve duplicate instants as separate readings, ordered by their IDs.

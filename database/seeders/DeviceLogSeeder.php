@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /** Randomized telemetry for the dedicated local demo device only. */
-class SolarTrackerLogSeeder extends Seeder
+class DeviceLogSeeder extends Seeder
 {
     public const DAYS = 7;
     public const INTERVAL_MINUTES = 5;
@@ -15,7 +15,7 @@ class SolarTrackerLogSeeder extends Seeder
     public function run(): void
     {
         if (! app()->environment(['local', 'testing'])) {
-            $this->command?->warn('SolarTrackerLogSeeder is restricted to local and testing environments.');
+            $this->command?->warn('DeviceLogSeeder is restricted to local and testing environments.');
             return;
         }
 
@@ -28,7 +28,7 @@ class SolarTrackerLogSeeder extends Seeder
         $end = CarbonImmutable::now('UTC')->startOfMinute();
         $end = $end->subMinutes($end->minute % self::INTERVAL_MINUTES);
         $start = $end->subDays(self::DAYS);
-        $existing = DB::table('solar_tracker_logs')->where('serial_no', $serial)
+        $existing = DB::table('device_logs')->where('serial_no', $serial)
             ->whereBetween('updated_at', [$start, $end])->pluck('updated_at')
             ->mapWithKeys(fn ($timestamp) => [(string) $timestamp => true])->all();
 
@@ -63,7 +63,7 @@ class SolarTrackerLogSeeder extends Seeder
 
         DB::transaction(function () use ($rows) {
             foreach (array_chunk($rows, 250) as $chunk) {
-                DB::table('solar_tracker_logs')->insert($chunk);
+                DB::table('device_logs')->insert(array_map(fn ($row) => (new \App\Models\Api\DeviceLog)->forceFill($row)->getAttributes(), $chunk));
             }
         });
         $this->command?->info(count($rows).' randomized readings added to the development Solar Tracker (7 days, every 5 minutes).');

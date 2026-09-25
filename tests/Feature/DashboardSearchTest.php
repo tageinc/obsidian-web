@@ -180,7 +180,7 @@ class DashboardSearchTest extends TestCase
             ->assertSee(route('devices.show', $device->id), false)
             ->assertSee(route('edit-device', $device->id), false)
             ->assertSee(route('retireDevice', $device->id), false)
-            ->assertSee('>Retire</button>', false);
+            ->assertSee('>Inactivate</button>', false);
         $this->assertStringContainsString("encodeURIComponent(\"roof\")", $response->getContent());
         $this->get('/dashboard?search=no-match')->assertOk()->assertSee('No devices match this name search.')->assertDontSee('No devices registered yet.');
         $this->actingAs($this->other)->get('/dashboard')->assertOk()->assertSee('No devices registered yet.')->assertDontSee('No devices match this name search.');

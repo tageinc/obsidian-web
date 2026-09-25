@@ -14,7 +14,7 @@ class Device extends Model
     protected static function booted()
     {
         static::deleting(function () {
-            throw new \LogicException('Devices cannot be deleted. Retire them instead.');
+            throw new \LogicException('Devices cannot be deleted. Inactivate them instead.');
         });
         static::saving(function (Device $device) {
             if (! in_array($device->state, ['active', 'inactive'], true)) {

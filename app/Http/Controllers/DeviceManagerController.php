@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Device;
 use App\Models\GeoCode;
-use App\Models\Api\SolarTrackerLog;
+use App\Models\Api\DeviceLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -34,7 +34,7 @@ class DeviceManagerController extends Controller
         // //Log::info('Pagination Size:', ['pagination_size' => $pagination_size]);
 
         $devices = $this->ownedDevices($search)
-        ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'user_id', 'updated_at')
+        ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country', 'user_id', 'updated_at')
         ->paginate($pagination_size)->appends([
             'show' => $pagination_size, 'search' => $search,
             'status' => $this->statusFilter(), 'state' => $this->stateFilter(),
@@ -100,7 +100,7 @@ class DeviceManagerController extends Controller
 {
     $search = $this->nameSearch($request);
     $devices = $this->ownedDevices($search)
-             ->get(['id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'updated_at']);
+             ->get(['id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country', 'updated_at']);
 
     foreach ($devices as $device) {
             // Fetching the geo status as before
@@ -139,7 +139,7 @@ $devicesJson = $devices->toJson();
     $pagination_size = $request->input('show', env('PAGINATION_SIZE', 10));
 
     $devices = $this->ownedDevices($search)
-             ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'user_id', 'updated_at')
+             ->select('id', 'state', 'serial_no', 'sku', 'name', 'latitude', 'longitude', 'address_1', 'address_2', 'city', 'address_state', 'zip_code', 'country', 'user_id', 'updated_at')
              ->paginate($pagination_size)->appends([
                  'show' => $pagination_size, 'search' => $search,
                  'status' => $this->statusFilter(), 'state' => $this->stateFilter(),
@@ -227,9 +227,9 @@ $devicesJson = $devices->toJson();
         $device->save();
 
         if ($request->is('api/*') || $request->wantsJson()) {
-            return response()->json(['message' => 'Device retired successfully.', 'state' => $device->state]);
+            return response()->json(['message' => 'Device inactivated successfully.', 'state' => $device->state]);
         }
-        return redirect()->route('dashboard')->with('success', 'Device retired successfully.');
+        return redirect()->route('dashboard')->with('success', 'Device inactivated successfully.');
     }
 
     public function reactivate(Request $request, $id)
