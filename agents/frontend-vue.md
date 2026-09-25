@@ -1,5 +1,7 @@
 # Vue frontend rules
 
+- For every user-visible business change, follow [external-api.md](external-api.md). Data, filters, calculations, and actions require API parity even when implemented in a Vue component; purely presentational changes require only a documented exclusion.
+
 - Follow the existing mounts in `resources/js/entries/app.js` and Blade payloads. Preserve server-owned routes and release flags.
 - Retain the bounded workspace in `resources/js/workspace`, including its Vue Router history mode. Do not expand it into an unrestricted SPA or intercept document-only actions incidentally.
 - Keep feature components under `resources/js/features`; check `resources/js/shared/components`, `composables`, `stores`, and `api` before adding reusable code.

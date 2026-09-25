@@ -7,6 +7,7 @@
     "require": {
         "php": "^8.3",
         "ext-curl": "*",
+        "dompdf/dompdf": "^3.1.6",
         "fideloper/proxy": "^4.2",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^7.8",

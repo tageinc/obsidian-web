@@ -121,6 +121,8 @@ ID returned by the device list. Remote-control requests instead use the device's
 | GET | `/devices/{id}` | Device details in `data` |
 | PATCH | `/devices/{id}` | Update supported device fields; returns `values` |
 | GET | `/devices/{id}/data` | Recent telemetry in `graph.points` |
+| GET | `/devices/{id}/telemetry` | Fresh overview values and recent History readings in one read-only snapshot |
+| GET | `/devices/{id}/report` | Download the History PDF for an optional inclusive `from`/`to` range |
 | GET | `/remote-control?serial_no=...` | Stored control mode and motor speed |
 | POST | `/remote-control` | Save control mode and motor speed |
 | GET | `/firmware` | Paginated firmware releases |
@@ -218,7 +220,8 @@ curl --silent --show-error --fail-with-body \
 
 The response is `{"graph": {...}}`. It contains up to the latest **9,000** individual
 readings in chronological order, not a paginated or averaged series. Each point
-has `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, and `motor_speed`.
+has `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, `pds`, `ps_avg`,
+and `motor_speed`.
 Missing metric values are `null`; duplicate timestamps can represent distinct
 readings. Use `epoch_ms` or the ISO-8601 `timestamp` for processing.
 
@@ -236,6 +239,97 @@ An existing device without readings returns HTTP **200**:
   }
 }
 ```
+
+### Refresh the overview and History together
+
+`GET /devices/{id}/telemetry` returns the same snapshot used to initialize and
+refresh the Vue device page. The browser uses its session-authenticated
+`GET /devices/{id}/telemetry` route; integrations use the external API base URL:
+
+```bash
+curl --silent --show-error --fail-with-body \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/json' \
+  "$OBSIDIAN_API/devices/$DEVICE_ID/telemetry"
+```
+
+The response contains three fields:
+
+- `status`: the latest overview values under `State`, `PS1`, `PS2`, `PS Average`,
+  `PDS`, `CTS`, `Motor Speed`, `Temperature (°C)`, and `Updated`. Missing
+  measurements are `null`, including missing values in a recorded reading;
+  zero remains a real zero. `Updated` is the recorded time displayed in Pacific
+  Time, or `N/A` when no timestamped reading exists.
+- `graph`: the same latest 9,000 raw readings and metadata as `/data`, ordered
+  by timestamp and then ID. All measurements and duplicate timestamps are
+  preserved. There are no date-range parameters or additional history paging.
+- `latest_reading`: `{ "id": 123, "timestamp": "2026-09-25T11:00:00-07:00",
+  "epoch_ms": 1790359200000 }`, or `null` for a device without readings. When
+  several readings share a timestamp, the highest ID is the latest reading.
+
+Each successful request returns a full current snapshot, even if the latest
+timestamp has not changed. This also exposes corrections to existing readings.
+Responses are private and non-cacheable. Reads do not modify device telemetry or
+stored remote-control commands, and the response does not include control-form
+values. Missing devices return **404**. The browser route requires a verified
+owner or Developer session; the external route requires an active Developer
+external key. Browser timer scheduling, page visibility, and preserving local
+filter selections are presentation behavior and need no separate API operation.
+
+### Download the History PDF report
+
+`GET /devices/{id}/report` provides the same report as the printer button in the
+device's **History** tab. Success is an **application/pdf** attachment, not JSON.
+The PDF includes device name, serial number, SKU, order number, lifecycle state,
+address, coordinates, current stored control mode, report creation time, and the latest telemetry snapshot
+(including its recorded time). It includes all five History graphs:
+temperature, panel sensors (PS1 and PS2), PDS, PS Average, and motor speed, with
+raw readings and the same least-squares linear trends. The currently displayed
+measurement in the UI does not limit the report.
+
+| Query parameter | Contract |
+| --- | --- |
+| `from` | Inclusive starting instant; ISO 8601 with seconds and an explicit `Z` or numeric offset |
+| `to` | Inclusive ending instant in the same format, on or after `from` |
+
+Supply both parameters or omit both. Fractional seconds up to millisecond
+precision are accepted, matching the graph timestamps. Omitting
+both defaults to the last 24 elapsed hours ending at the current server time
+(rounded down to the second). Offset-free dates, impossible dates, incomplete
+pairs, and reversed ranges return **422** with field errors. Use URL encoding
+for numeric offsets so the `+` sign is preserved.
+
+```bash
+curl --silent --show-error --fail-with-body \
+  --get \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/pdf, application/json' \
+  --data-urlencode 'from=2026-09-24T18:00:00.000Z' \
+  --data-urlencode 'to=2026-09-25T18:00:00.000Z' \
+  --output ./device-history.pdf \
+  "$OBSIDIAN_API/devices/$DEVICE_ID/report"
+```
+
+Check the HTTP status and curl exit status before opening the file; failures are
+JSON errors. The selected interval filters the same latest **9,000** timestamped
+readings available to History, inclusively. It does not retrieve an unlimited
+archive. Distinct readings at the same timestamp are retained. Missing metric
+values remain missing; PS Average is the recorded `ps_avg`, not a recomputation
+from PS1 and PS2. A trend needs at least two distinct valid timestamps.
+
+The latest snapshot is independent of the selected interval and may be outside
+it. Report values are read from the database when the report is generated, so
+new readings or saved device edits can be newer than a previously opened page.
+The PDF labels dates in Pacific Time (`America/Los_Angeles`, PST/PDT) and marks
+empty ranges or absent readings. Existing devices without telemetry still return
+a PDF with empty graphs. Missing devices return **404**.
+
+Reports use the same owner-or-Developer permission as device details: verified
+owners and the configured verified Developer can download in the browser, and
+active external keys act as that Developer. The response is private and
+non-cacheable; no device settings or remote commands are changed. Browser
+filter-card layout and tab navigation are presentation-only and do not require
+additional API operations.
 
 ## 7. Read or change remote controls
 
@@ -502,6 +596,8 @@ API base URL.
 - [External authentication](../app/Http/Middleware/AuthenticateExternalApi.php)
 - [Lists and API discovery](../app/Http/Controllers/Api/ExternalApiController.php)
 - [Device reads, telemetry, and controls](../app/Http/Controllers/ViewDeviceController.php)
+- [Live telemetry snapshot](../app/Http/Controllers/DeviceTelemetryController.php)
+- [History PDF reports](../app/Http/Controllers/DeviceHistoryReportController.php)
 - [Device editing](../app/Http/Controllers/EditDeviceController.php)
 - [Software uploads and downloads](../app/Http/Controllers/DeveloperWorkspaceController.php)
 - [Access model](access-model.md)

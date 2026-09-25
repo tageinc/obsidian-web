@@ -15,6 +15,7 @@ independent linear trend, and missing values remain absent rather than zero.
 
 The time-period controls follow TAGCSOFT's Project Manager Labor tab: the range
 heading and compact previous/next/Today controls sit above the Filters rows.
+The controls and filters occupy their own card, separated from the chart card.
 View and its period selector occupy the first row; Measurement and Clear occupy
 the second. The default is the last 24 elapsed hours ending now, with a single
 Ending at datetime. Week and Month show one date selector. Custom span shows
@@ -33,10 +34,68 @@ section, with the same automatic/remote switch and manual command behavior.
 The control component stays mounted across section changes so confirmed state
 and pending requests remain intact. Switching sections sends no device commands.
 
+While a Vue device page is open, a browser task checks for fresh telemetry every
+minute and updates Overview and History together. The first check is one minute
+after opening the device. It uses the read-only `GET /devices/{id}/telemetry`
+snapshot, also available to authorized external clients at
+`GET /api/external/v1/devices/{id}/telemetry`. Each snapshot includes the latest
+Overview readings, the latest reading's identity and timestamp, and the most
+recent 9,000 graph points. It never reloads the page, edits device details, or
+changes the remote controls. The legacy fallback does not run this browser task.
+
+Checks pause while the browser tab is hidden and resume with an immediate check
+if one is due. Leaving the device cancels the pending request and its timer;
+requests never overlap. Network failures retain the last good readings and show
+a retry notice. Lost authorization or an unavailable device stops checks until
+the page is reloaded. The reading timestamp remains the device's actual recorded
+time; a separate status identifies automatic checks, so an unchanged reading is
+not presented as newly recorded.
+
+The default 24-hour window advances to the successful check time even if no new
+reading arrived. Current Week and Month views also follow the current period.
+Manually entered dates, Custom span, and previous/next navigation keep their
+chosen bounds while fresh points arrive. Today restores following the current
+period, and Clear restores the moving last 24 hours. Available history extends
+to the oldest/newest loaded points. The selected measurement is preserved. The
+polling timer and local range-following preference are presentation-only parity
+exclusions; the snapshot data has the same browser and external API contract.
+
 The compact header, clear page context, white content surfaces, and separation
 of tasks are grounded in TAGCSOFT's dashboard layout and developer workspace;
 device-specific behavior remains Obsidian's. Section tabs support arrow keys,
 Home, and End. Cards stack on small screens.
+
+## History PDF report
+
+The printer button beside the period navigation downloads a PDF from History.
+It includes all five measurement plots regardless of the selected Measurement:
+temperature, PS1/PS2, PDS, the recorded PS average, and motor speed. All plots
+use the selected inclusive time range and the latest 9,000 available readings,
+with the same missing-value and linear-regression rules as the screen.
+
+The summary includes device name, serial number, SKU, order number, lifecycle
+state, address and coordinates, report creation time, and the latest recorded
+state, CTS, temperature, motor speed and sensor readings with their timestamp.
+The latest reading is independent of the selected graph range. Missing values
+are marked unavailable, and empty periods still produce a report with explicit
+empty charts. Timestamps include the Pacific timezone abbreviation and offset.
+
+The report is generated from current server records when requested. It can
+include telemetry received or device details saved after the page was loaded;
+the on-screen readings refresh automatically each minute. An invalid range disables
+the button. Generation announces progress, prevents duplicate requests and
+allows retry after a failure. Leaving the device cancels a pending download.
+
+The same renderer and validation serve the owner/Developer browser download at
+`GET /devices/{id}/report` and the Developer-key external endpoint at
+`GET /api/external/v1/devices/{id}/report`. See
+[the external API contract](external-api-keys.md) for date parameters and access.
+The split cards and printer placement are presentation-only parity exclusions;
+PDF contents, range semantics and authorization have a shared API equivalent.
+
+PDF generation uses the locked `dompdf/dompdf` Composer dependency, with no
+browser executable or remote chart service. Run `composer install` when updating
+an existing checkout; the Docker build already installs locked dependencies.
 
 ## Timestamp and raw-data behavior
 

@@ -24,6 +24,11 @@ changed application with rebuilt assets and an isolated backend/database. Follow
 
 ## Existing checks
 
+For user-visible business changes, verify the UI/external API mapping and tests
+required by [external-api.md](external-api.md), including authorization, shared
+business results, validation, sensitive-field exclusions, and contract/discovery
+documentation. Record concrete exclusions and unresolved parity gaps.
+
 - Backend: `composer check` runs syntax and regression checks; use focused PHPUnit runs during iteration.
 - Frontend: `npm run check` runs the configured lint, formatting, unit/regression tests, and production build.
 - Compiled assets: `php scripts/verify-frontend-assets.php` after a production build.

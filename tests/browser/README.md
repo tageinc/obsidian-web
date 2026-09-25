@@ -34,6 +34,23 @@ horizontal overflow and keyboard menu access are also checked. Backend and Vue
 unit tests cover the remaining authorization, mutation, timezone/DST, lifecycle,
 and error-handling cases.
 
+History coverage exercises the separate filter/navigation and chart cards,
+Pacific-time ranges from a browser in another timezone, keyboard report
+activation, and real PDF downloads for the default and custom ranges. It checks
+the selected UTC bounds, PDF response and downloaded bytes, invalid-range
+disabling, and retry after a report-only mocked server failure. Ordinary report
+requests use the isolated backend; device-command requests remain blocked.
+
+Live-reading coverage advances the browser clock through one-minute checks and
+reads real telemetry snapshots from the isolated backend. It verifies updated
+Overview values and History counts, the moving default 24-hour window, preserved
+custom dates and measurement selection, retained data after a temporary refresh
+failure, successful retry, and polling cleanup after leaving the device page.
+Test-only routes in the guarded fixture application create tagged synthetic
+readings and remove only those readings in cleanup. These routes are absent from
+the deployed application. Only the failure response is mocked; normal refresh
+responses use the real backend, and motor commands remain blocked.
+
 Developer coverage includes Tools navigation, key creation and validation,
 one-time secret display, reload persistence, revocation, CSRF rejection, and a
 real authenticated external device-list request against synthetic fixtures.

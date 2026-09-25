@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { normalizePoints, rangeLabel, chartOptions, formatTimestamp } from './timeSeries';
+import { downloadHistoryReport } from './historyReport';
 
 import {
     lastDay,
@@ -14,9 +15,31 @@ import {
 const props = defineProps({
     points: { type: Array, default: () => [] },
     active: { type: Boolean, default: true },
+    reportUrl: { type: String, default: '' },
+    refreshedAt: { type: Number, default: null },
 });
+const reportBusy = ref(false);
+const reportError = ref('');
+const reportMessage = ref('');
+let reportController;
+async function createReport() {
+    if (reportBusy.value || rangeError.value || !props.reportUrl) return;
+    reportBusy.value = true;
+    reportError.value = '';
+    reportMessage.value = '';
+    reportController = new AbortController();
+    try {
+        await downloadHistoryReport(props.reportUrl, range.value, reportController.signal);
+        reportMessage.value = 'Your report download has started. It includes all measurements.';
+    } catch (error) {
+        if (error.name !== 'AbortError') reportError.value = error.message;
+    } finally {
+        reportBusy.value = false;
+    }
+}
 const initialRange = lastDay();
 const defaultRange = ref(initialRange);
+const followingNow = ref(true);
 const view = ref('day');
 const range = ref(initialRange);
 const from = ref(datetimeInput(initialRange.start));
@@ -50,6 +73,7 @@ function chooseView() {
     rangeError.value = '';
     if (view.value === 'day') resetRange();
     else if (view.value === 'all') {
+        followingNow.value = false;
         if (normalized.value.length)
             setRange({
                 start: normalized.value[0].epoch_ms,
@@ -58,6 +82,7 @@ function chooseView() {
     } else setRange(calendarRange(view.value, range.value.end));
 }
 function editPeriod() {
+    followingNow.value = false;
     const anchor = parseDatetime(
         view.value === 'day' ? to.value : `${selectedDate.value}T12:00:00`,
         'end',
@@ -67,6 +92,7 @@ function editPeriod() {
     setRange(view.value === 'day' ? lastDay(anchor) : calendarRange(view.value, anchor));
 }
 function editRange() {
+    followingNow.value = false;
     view.value = 'custom';
     const start = parseDatetime(from.value);
     const end = parseDatetime(to.value, 'end');
@@ -81,15 +107,18 @@ function editRange() {
     }
 }
 function shift(direction) {
+    followingNow.value = false;
     setRange(shiftRange(range.value, view.value, direction));
 }
 function resetRange() {
+    followingNow.value = true;
     view.value = 'day';
     defaultRange.value = lastDay();
     setRange(defaultRange.value);
 }
 function goToday() {
     if (!periodNavigation.value) return;
+    followingNow.value = true;
     if (view.value === 'day') resetRange();
     else setRange(calendarRange(view.value, Date.now()));
 }
@@ -128,6 +157,21 @@ const metrics = {
 };
 const selected = computed(() => metrics[metric.value]);
 const normalized = computed(() => normalizePoints(props.points));
+watch([normalized, () => props.refreshedAt], () => {
+    if (view.value === 'all' && normalized.value.length) {
+        setRange({
+            start: normalized.value[0].epoch_ms,
+            end: normalized.value.at(-1).epoch_ms,
+        });
+    } else if (followingNow.value && props.refreshedAt !== null && !rangeError.value) {
+        defaultRange.value = lastDay(props.refreshedAt);
+        setRange(
+            view.value === 'day'
+                ? defaultRange.value
+                : calendarRange(view.value, props.refreshedAt),
+        );
+    }
+});
 const visible = computed(() =>
     rangeError.value ? [] : pointsInRange(normalized.value, range.value),
 );
@@ -167,6 +211,7 @@ async function draw() {
 watch([visible, metric, () => props.active], draw);
 onMounted(draw);
 onBeforeUnmount(() => {
+    reportController?.abort();
     alive = false;
     revision++;
     destroy();
@@ -192,6 +237,25 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
                     <div class="history-date-nav">
+                        <button
+                            v-if="reportUrl"
+                            type="button"
+                            class="history-nav-icon"
+                            aria-label="Download history report"
+                            title="Download PDF report with all measurements"
+                            :disabled="reportBusy || !!rangeError"
+                            :aria-busy="reportBusy"
+                            @click="createReport"
+                        >
+                            <span
+                                v-if="reportBusy"
+                                class="spinner-border spinner-border-sm"
+                                aria-hidden="true"
+                            />
+                            <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7zM17 11h.01" />
+                            </svg>
+                        </button>
                         <button
                             type="button"
                             class="history-nav-icon"
@@ -331,7 +395,23 @@ onBeforeUnmount(() => {
                 </div>
                 <small id="history-timezone">Pacific Time (PST/PDT)</small>
                 <p id="history-range-error" class="text-danger" role="alert">{{ rangeError }}</p>
+                <p v-if="reportError" class="history-report-feedback text-danger" role="alert">
+                    {{ reportError }}
+                </p>
+                <p
+                    v-else-if="reportBusy || reportMessage"
+                    class="history-report-feedback"
+                    role="status"
+                >
+                    {{
+                        reportBusy
+                            ? 'Creating your PDF report with all measurements…'
+                            : reportMessage
+                    }}
+                </p>
             </div>
+        </div>
+        <div class="history-surface history-chart-card">
             <div class="history-plot" :aria-busy="state === 'loading'">
                 <div class="plot-heading">
                     <h3>
@@ -414,7 +494,13 @@ onBeforeUnmount(() => {
     flex-direction: column;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e0e6ee;
+}
+.history-chart-card {
+    margin-top: 1.25rem;
+}
+.history-report-feedback {
+    margin: 0;
+    font-size: 0.85rem;
 }
 .history-controls-header {
     display: flex;

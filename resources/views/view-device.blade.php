@@ -13,12 +13,9 @@
             'Serial No.' => $device->serial_no,
             'Address' => implode(' ', array_filter([$device->address_1, $device->address_2, $device->city, $device->address_state, $device->zip_code])),
         ]],
-        'status' => ['State' => $stateMessage, 'PS1' => $latestStatus->ps1, 'PS Average' => $latestStatus->ps_avg,
-            'Motor Speed' => $latestStatus->motor_speed, 'CTS' => $ctsValue,
-            'Updated' => $latestStatus->updated_at_pst ?: 'N/A', 'PS2' => $latestStatus->ps2,
-            'PDS' => $latestStatus->pds, 'Temperature (°C)' => $latestStatus->temp],
-        'remote' => $remoteControl, 'points' => $graph['points'], 'csrfToken' => csrf_token(),
-        'links' => ['retire' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'active') ? route('retireDevice', $device->id) : null, 'reactivate' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'inactive') ? route('reactivateDevice', $device->id) : null, 'update' => route('devices.update', $device->id), 'dashboard' => route('dashboard'), 'edit' => route('edit-device', $device->id), 'remote' => route('update-solar-tracker')],
+        'status' => $telemetry['status'],
+        'remote' => $remoteControl, 'points' => $telemetry['graph']['points'], 'csrfToken' => csrf_token(),
+        'links' => ['telemetry' => route('devices.telemetry', $device->id), 'report' => route('devices.report', $device->id), 'retire' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'active') ? route('retireDevice', $device->id) : null, 'reactivate' => ((int) Auth::id() === (int) $device->user_id && $device->state === 'inactive') ? route('reactivateDevice', $device->id) : null, 'update' => route('devices.update', $device->id), 'dashboard' => route('dashboard'), 'edit' => route('edit-device', $device->id), 'remote' => route('update-solar-tracker')],
     ]])
 @else
 <div class="container">

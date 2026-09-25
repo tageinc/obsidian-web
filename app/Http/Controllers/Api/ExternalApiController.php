@@ -17,6 +17,8 @@ class ExternalApiController extends Controller
             'endpoints' => [
                 'GET /api/external/v1/devices', 'GET /api/external/v1/devices/{id}',
                 'PATCH /api/external/v1/devices/{id}', 'GET /api/external/v1/devices/{id}/data',
+                'GET /api/external/v1/devices/{id}/report',
+                'GET /api/external/v1/devices/{id}/telemetry',
                 'GET /api/external/v1/remote-control?serial_no={serial}',
                 'POST /api/external/v1/remote-control',
                 'GET /api/external/v1/firmware', 'POST /api/external/v1/firmware',

@@ -38,7 +38,7 @@ configuration cache. A frontend feature-flag rollback keeps `DEVELOPER_EMAIL`
 and the canonical route, because the server authorization policy is shared.
 
 The same `User::isDeveloper()` policy permits developer access to device details,
-graphs, remote controls, and device edits alongside the owning user. Upload
+graphs, live telemetry snapshots, History PDF reports, remote controls, and device edits alongside the owning user. Upload
 POST URLs remain `/upload-firmware` and `/upload-config`, with this developer
 boundary enforced on the server. Existing browser download authorization and
 external firmware/mobile API contracts are unchanged.
@@ -83,6 +83,8 @@ rate-limit responses return 429 and `Retry-After`. No secrets are logged.
 | GET | `/devices/{id}` | Device details |
 | PATCH | `/devices/{id}` | Edit fields supported by the existing device form; serial number is immutable |
 | GET | `/devices/{id}/data` | Existing telemetry/graph response |
+| GET | `/devices/{id}/telemetry` | Current overview and latest 9,000 History readings in one private, non-cacheable snapshot |
+| GET | `/devices/{id}/report` | History PDF with all graphs, device details, latest readings, and creation timestamp; optional inclusive `from`/`to` ISO 8601 range |
 | GET | `/remote-control?serial_no=...` | Remote-control state |
 | POST | `/remote-control` | Set `serial_no`, `mode`, and `motor_speed` using existing validation |
 | GET / POST | `/firmware` | List releases / upload `firmware`, `description`, and `prefix` |
@@ -96,6 +98,29 @@ and validation; there is no blanket bypass of application rules. Device
 registration, account changes, key management, and owner-only lifecycle actions
 are not exposed by this initial external endpoint group. Existing hardware and
 mobile endpoint URLs/payloads remain unchanged.
+
+History's report button and the external report endpoint use the same data and
+PDF services. The browser route `GET /devices/{id}/report` requires a verified
+session and device ownership or `User::isDeveloper()`; the external route requires
+an active external key and retains the same device authorization check. Browser
+cookies and application-owned tokens do not authenticate the external route.
+Both range parameters must include explicit timezones and be supplied together;
+omitting both selects the last 24 hours ending now. Graphs filter the latest
+9,000 readings, while the latest overview snapshot is independent of that range.
+Reports are read-only, private, non-cacheable downloads and do not create a
+remote-control command. Filter-card layout and tab navigation are presentation
+details excluded from separate external operations.
+
+The Vue device page initializes and refreshes its overview and History through
+the same telemetry snapshot service. `GET /devices/{id}/telemetry` requires a
+verified browser session and device ownership or `User::isDeveloper()`.
+`GET /api/external/v1/devices/{id}/telemetry` provides the equivalent snapshot
+with an active external key, retaining the same device authorization check and
+credential separation. Missing measurements remain null; the latest reading
+is ordered by timestamp and then ID. These requests only read telemetry and
+never write remote-control settings or send commands to hardware. Frontend
+timer scheduling, visibility handling, and local navigation state are
+presentation concerns excluded from separate external operations.
 
 ## Application-owned API authentication
 

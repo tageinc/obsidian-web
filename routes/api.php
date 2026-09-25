@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\DeviceLogController;
 use App\Http\Controllers\Api\DeviceSoftwareController;
 use App\Http\Controllers\DeviceManagerController;
 use App\Http\Controllers\ViewDeviceController;
+use App\Http\Controllers\DeviceHistoryReportController;
+use App\Http\Controllers\DeviceTelemetryController;
 use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CreateDeviceController;
@@ -19,6 +21,8 @@ Route::prefix('external/v1')->name('external.')->middleware(['auth.external', 't
     Route::get('/devices/{id}', [ViewDeviceController::class, 'apiShow'])->name('devices.show');
     Route::patch('/devices/{id}', [EditDeviceController::class, 'patch'])->name('devices.update');
     Route::get('/devices/{id}/data', [ViewDeviceController::class, 'getDeviceData'])->name('devices.data');
+    Route::get('/devices/{id}/report', [DeviceHistoryReportController::class, '__invoke'])->name('devices.report');
+    Route::get('/devices/{id}/telemetry', [DeviceTelemetryController::class, '__invoke'])->name('devices.telemetry');
     Route::get('/remote-control', [ViewDeviceController::class, 'getSolarTrackerStatus'])->name('remote.show');
     Route::post('/remote-control', [ViewDeviceController::class, 'updateSolarTracker'])->name('remote.update');
     Route::get('/firmware', [ExternalApiController::class, 'firmware'])->name('firmware');

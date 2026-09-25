@@ -16,6 +16,16 @@ maps, device lifecycle, remote controls, and firmware/configuration distribution
 Do not infer active production flags from the commit or example environment files.
 Existing server environment settings survive deployment.
 
+## UI and external API parity
+
+User-visible business capabilities must have equivalent authorized behavior and
+data through the existing `/api/external/v1` API. Implement affected UI/API
+behavior, tests, capability discovery, and documentation in the same change set.
+Follow [external-api.md](external-api.md) for required coverage, explicit
+exclusions, and Obsidian's ownership and Developer authorization boundaries.
+This is a requirement for changes, not a claim that every existing capability
+has already been audited for parity.
+
 ## References
 
 Prefer current code and nearby implementations over imported patterns. Consult

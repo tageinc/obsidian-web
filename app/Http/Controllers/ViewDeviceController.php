@@ -6,6 +6,7 @@ use App\Models\Api\DeviceLog;
 use App\Models\Device;
 use App\Models\SolarTrackerRemoteControl;
 use App\Services\SolarTrackerGraphData;
+use App\Services\DeviceTelemetryData;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -16,6 +17,9 @@ class ViewDeviceController extends Controller
         $device = Device::findOrFail($id);
 
         $remoteControl = SolarTrackerRemoteControl::where('serial_no', $device->serial_no)->first();
+        $payload = config('frontend.vue3.view_device')
+            ? ['telemetry' => app(DeviceTelemetryData::class)->forDevice($device)]
+            : $this->statusPayload($device->serial_no);
 
         return view('view-device', array_merge([
             'device' => $device,
@@ -23,7 +27,7 @@ class ViewDeviceController extends Controller
                 'mode' => $remoteControl ? (int) $remoteControl->mode : 0,
                 'motor_speed' => $remoteControl ? (float) $remoteControl->motor_speed : 0,
             ],
-        ], $this->statusPayload($device->serial_no)));
+        ], $payload));
     }
 
     public function apiShow($id)

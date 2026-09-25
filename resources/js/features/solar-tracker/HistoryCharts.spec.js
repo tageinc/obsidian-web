@@ -1,6 +1,8 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import HistoryCharts from './HistoryCharts.vue';
+import { downloadHistoryReport } from './historyReport';
+vi.mock('./historyReport', () => ({ downloadHistoryReport: vi.fn() }));
 const { Chart, destroy } = vi.hoisted(() => {
     const destroy = vi.fn();
     return {
@@ -16,6 +18,51 @@ beforeEach(() => {
     vi.setSystemTime(new Date(7200000));
 });
 afterEach(() => vi.useRealTimers());
+it('downloads all measurements for the selected range and guards pending or invalid requests', async () => {
+    let finish;
+    downloadHistoryReport.mockReset().mockImplementation(
+        () =>
+            new Promise((resolve) => {
+                finish = resolve;
+            }),
+    );
+    const wrapper = mount(HistoryCharts, { props: { reportUrl: '/devices/1/report' } });
+    const button = wrapper.get('[aria-label="Download history report"]');
+    await wrapper.get('#history-metric').setValue('pds');
+    await button.trigger('click');
+    expect(downloadHistoryReport).toHaveBeenCalledWith(
+        '/devices/1/report',
+        { start: -79200000, end: 7200000 },
+        expect.any(AbortSignal),
+    );
+    expect(button.element.disabled).toBe(true);
+    expect(wrapper.text()).toContain('Creating your PDF report');
+    finish();
+    await flushPromises();
+    expect(button.element.disabled).toBe(false);
+    expect(wrapper.text()).toContain('report download has started');
+    await wrapper.get('#history-ending').setValue('');
+    expect(button.element.disabled).toBe(true);
+    expect(downloadHistoryReport).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+});
+it('announces report failures, allows retry and cancels on leaving the device', async () => {
+    downloadHistoryReport
+        .mockReset()
+        .mockRejectedValueOnce(new Error('The report could not be created. Please try again.'))
+        .mockImplementation(() => new Promise(() => {}));
+    const wrapper = mount(HistoryCharts, { props: { reportUrl: '/devices/1/report' } });
+    const button = wrapper.get('[aria-label="Download history report"]');
+    await button.trigger('click');
+    await flushPromises();
+    expect(wrapper.get('.history-report-feedback').text()).toContain('could not be created');
+    expect(button.element.disabled).toBe(false);
+    await button.trigger('click');
+    const signal = downloadHistoryReport.mock.calls.at(-1)[2];
+    expect(signal.aborted).toBe(false);
+    wrapper.unmount();
+    expect(signal.aborted).toBe(true);
+});
 it('announces empty data without constructing charts', async () => {
     Chart.mockClear();
     const wrapper = mount(HistoryCharts, { props: { points: [] } });
@@ -194,5 +241,86 @@ it('keeps invalid period input announced when entering a custom span', async () 
     expect(wrapper.get('[role="alert"]').text()).toContain('Enter valid From and To');
     expect(wrapper.get('#history-to').element.value).toBe('');
     expect(wrapper.get('canvas').isVisible()).toBe(false);
+    wrapper.unmount();
+});
+
+it('advances the live last 24 hours after each successful refresh even without new readings', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: -79200000, temp: 2 },
+                { epoch_ms: 7200000, temp: 3 },
+            ],
+        },
+    });
+    await wrapper.get('#history-metric').setValue('pds');
+    await wrapper.setProps({ refreshedAt: 7260000 });
+    expect(wrapper.get('#history-ending').element.value).toBe('1969-12-31T18:01');
+    expect(wrapper.get('.plot-heading').text()).toContain('1 raw readings');
+    expect(wrapper.get('#history-metric').element.value).toBe('pds');
+    expect(wrapper.get('.history-clear').element.disabled).toBe(true);
+    await wrapper.get('[aria-label="Previous time range"]').trigger('click');
+    const past = wrapper.get('#history-ending').element.value;
+    await wrapper.setProps({ refreshedAt: 7320000 });
+    expect(wrapper.get('#history-ending').element.value).toBe(past);
+    vi.setSystemTime(new Date(7320000));
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Today')
+        .trigger('click');
+    await wrapper.setProps({ refreshedAt: 7380000 });
+    expect(wrapper.get('#history-ending').element.value).toBe('1969-12-31T18:03');
+    wrapper.unmount();
+});
+
+it('preserves manually entered, custom and calendar periods while accepting new points', async () => {
+    const wrapper = mount(HistoryCharts);
+    await wrapper.get('#history-ending').setValue('1969-12-30T18:00');
+    await wrapper.setProps({ refreshedAt: 7260000 });
+    expect(wrapper.get('#history-ending').element.value).toBe('1969-12-30T18:00');
+    await wrapper.get('#history-view').setValue('custom');
+    const from = wrapper.get('#history-from').element.value;
+    const to = wrapper.get('#history-to').element.value;
+    await wrapper.setProps({ refreshedAt: 7320000, points: [{ epoch_ms: 0, temp: 8 }] });
+    expect(wrapper.get('#history-from').element.value).toBe(from);
+    expect(wrapper.get('#history-to').element.value).toBe(to);
+    for (const view of ['week', 'month']) {
+        await wrapper.get('#history-view').setValue(view);
+        await wrapper.get('#history-period-date').setValue('2026-08-15');
+        const selected = wrapper.get('#history-period-date').element.value;
+        await wrapper.setProps({ refreshedAt: Date.parse('2026-09-25T18:00:00Z') });
+        expect(wrapper.get('#history-period-date').element.value).toBe(selected);
+    }
+    await wrapper.get('#history-view').setValue('custom');
+    await wrapper.get('#history-from').setValue('');
+    await wrapper.setProps({ refreshedAt: Date.parse('2026-09-25T18:01:00Z') });
+    expect(wrapper.get('#history-from').element.value).toBe('');
+    expect(wrapper.get('[role="alert"]').text()).toContain('Enter valid');
+    await wrapper.get('.history-clear').trigger('click');
+    await wrapper.setProps({ refreshedAt: 7380000 });
+    expect(wrapper.get('#history-ending').element.value).toBe('1969-12-31T18:03');
+    wrapper.unmount();
+});
+
+it('extends available history to include new telemetry without changing its view', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: 0, temp: 2 },
+                { epoch_ms: 7200000, temp: 3 },
+            ],
+        },
+    });
+    await wrapper.get('#history-view').setValue('all');
+    await wrapper.setProps({
+        refreshedAt: 7260000,
+        points: [
+            { epoch_ms: 7200000, temp: 3 },
+            { epoch_ms: 7260000, temp: 4 },
+        ],
+    });
+    expect(wrapper.get('#history-view').element.value).toBe('all');
+    expect(wrapper.get('.plot-heading').text()).toContain('2 raw readings');
+    expect(wrapper.get('.history-range-display').text()).toContain('6:01 PM');
     wrapper.unmount();
 });

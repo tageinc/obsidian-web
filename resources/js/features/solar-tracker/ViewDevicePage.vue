@@ -7,6 +7,7 @@ const DeviceDetailsModal = defineAsyncComponent(
 );
 import HistoryCharts from './HistoryCharts.vue';
 import RemoteControl from './RemoteControl.vue';
+import { useDeviceTelemetry } from './useDeviceTelemetry';
 const props = defineProps({
     device: { type: Object, required: true },
     status: { type: Object, required: true },
@@ -72,8 +73,21 @@ const sections = [
     { id: 'history', label: 'History' },
     { id: 'control', label: 'Control' },
 ];
-const hasReading = computed(() => Boolean(props.status.Updated && props.status.Updated !== 'N/A'));
-const reading = (key) => (hasReading.value ? (props.status[key] ?? '—') : '—');
+const {
+    status: currentStatus,
+    points: currentPoints,
+    refreshedAt,
+    message: refreshMessage,
+} = useDeviceTelemetry({
+    url: () => props.links.telemetry,
+    deviceKey: () => props.device.serial,
+    initialStatus: () => props.status,
+    initialPoints: () => props.points,
+});
+const hasReading = computed(() =>
+    Boolean(currentStatus.value.Updated && currentStatus.value.Updated !== 'N/A'),
+);
+const reading = (key) => (hasReading.value ? (currentStatus.value[key] ?? '—') : '—');
 const sensors = ['PS1', 'PS2', 'PS Average', 'PDS', 'CTS'];
 async function exploreHistory() {
     activeSection.value = 'history';
@@ -200,6 +214,10 @@ function navigateSection(event, index) {
             </button>
         </div>
 
+        <p v-if="refreshMessage" class="device-refresh-status" role="status" aria-live="polite">
+            {{ refreshMessage }}
+        </p>
+
         <section
             v-show="activeSection === 'overview'"
             id="device-panel-overview"
@@ -215,7 +233,7 @@ function navigateSection(event, index) {
                 <p class="reading-time">
                     {{
                         hasReading
-                            ? 'Last reading · ' + status.Updated
+                            ? 'Last reading · ' + currentStatus.Updated
                             : 'No telemetry received yet'
                     }}
                 </p>
@@ -265,7 +283,12 @@ function navigateSection(event, index) {
             aria-labelledby="device-tab-history"
             tabindex="0"
         >
-            <HistoryCharts :points="points" :active="activeSection === 'history'" />
+            <HistoryCharts
+                :points="currentPoints"
+                :refreshed-at="refreshedAt"
+                :active="activeSection === 'history'"
+                :report-url="links.report"
+            />
         </section>
 
         <section
@@ -402,6 +425,11 @@ function navigateSection(event, index) {
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     margin-bottom: 1.25rem;
+}
+.device-refresh-status {
+    color: var(--device-muted);
+    font-size: 0.8rem;
+    margin: -0.75rem 0 1.25rem;
 }
 .section-heading h2,
 .section-heading h3,

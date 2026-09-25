@@ -1,5 +1,7 @@
 # Blade and legacy frontend rules
 
+- For every user-visible business change, follow [external-api.md](external-api.md). The same parity requirement applies to Blade and legacy JavaScript; rendering choices do not exempt business data or actions.
+
 - Preserve working Blade/fallback functionality unless the requested change includes its migration or removal.
 - Keep Blade focused on layout, server-provided data, forms, and Vue mount points. Put substantial business logic in the backend.
 - Inspect the current Vue/legacy branch and asset selection before editing a template. Avoid mixing incompatible Bootstrap versions or duplicating bundles.
