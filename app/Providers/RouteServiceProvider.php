@@ -58,6 +58,13 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        RateLimiter::for('api-login', function (Request $request) {
+            return Limit::perMinute(10)->by('login:'.$request->ip());
+        });
+        RateLimiter::for('external-api', function (Request $request) {
+            // Throttling runs before authentication; never put the bearer secret in cache keys.
+            return Limit::perMinute(120)->by('external:'.hash('sha256', $request->bearerToken() ?? ''));
+        });
         RateLimiter::for('device-telemetry', function (Request $request) {
             $serial = $request->input('serial_no');
             $key = is_string($serial) && strlen($serial) <= 255 ? $serial : 'invalid:'.$request->ip();

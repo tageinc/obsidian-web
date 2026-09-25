@@ -67,8 +67,8 @@ class DeviceArchiveTest extends TestCase
     {
         $owner = User::factory()->create();
         $device = Device::factory()->create(['user_id' => $owner->id]);
-        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/device/'.$device->id.'/retire')->assertForbidden();
-        $this->actingAs($owner, 'sanctum')->postJson('/api/device/'.$device->id.'/retire')
+        $this->actingAs(User::factory()->create(), 'api')->postJson('/api/device/'.$device->id.'/retire')->assertForbidden();
+        $this->actingAs($owner, 'api')->postJson('/api/device/'.$device->id.'/retire')
             ->assertOk()->assertJsonPath('state', 'inactive');
         $this->deleteJson('/api/device/'.$device->id)->assertNotFound();
         $this->assertDatabaseHas('devices', ['id' => $device->id, 'state' => 'inactive']);

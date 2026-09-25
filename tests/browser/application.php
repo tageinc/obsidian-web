@@ -24,7 +24,7 @@ if (config('database.default') !== 'sqlite'
     throw new RuntimeException('Browser tests cannot connect to the configured application database.');
 }
 config([
-    'app.developer_email' => 'admin@browser.example.test',
+    'app.developer_email' => 'developer@browser.example.test',
     'mail.default' => 'array',
     'logging.default' => 'null',
     'redis-workloads.enabled' => false,

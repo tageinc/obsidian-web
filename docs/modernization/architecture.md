@@ -114,12 +114,17 @@ needed, not a rewrite into one unrestricted SPA. Email templates stay Blade.
 it; installations without this setting retain the legacy fallback. Each page can override
 it with `FRONTEND_VUE3_PROFILE`, `FRONTEND_VUE3_CREATE_DEVICE`,
 `FRONTEND_VUE3_DEVICE_EDIT`, `FRONTEND_VUE3_DASHBOARD`,
-`FRONTEND_VUE3_VIEW_DEVICE`, `FRONTEND_VUE3_AUTH`, `FRONTEND_VUE3_ADMIN`,
+`FRONTEND_VUE3_VIEW_DEVICE`, `FRONTEND_VUE3_AUTH`, `FRONTEND_VUE3_DEVELOPER`,
 `FRONTEND_VUE3_PUBLIC_PAGES` or `FRONTEND_VUE3_WORKSPACE`.
+The developer page mounts as `developer` using `DeveloperPage.vue` and
+`DeveloperWorkspaceController`. `FRONTEND_VUE3_DEVELOPER` takes precedence;
+when absent, the previous `FRONTEND_VUE3_ADMIN` setting remains a compatibility
+fallback before the master switch. Refresh Laravel's configuration cache when
+changing these settings.
 Navigation follows the document's Vue/legacy asset choice. The workspace
 must have all five destination flags enabled before client routing is used;
 otherwise normal document navigation remains available. Flags select rendering
-only and never disable server ownership/admin/verification protections.
+only and never disable server ownership/developer/verification protections.
 The local app at `http://localhost:8080` has these frontend/workspace switches
 enabled in its ignored environment and passed the final browser checks.
 Existing server environment files are not replaced on deployment. Follow the

@@ -58,6 +58,20 @@ you need verification emails; the example's log mailer does not deliver email.
 
 ## Frontend configuration on existing installations
 
+The API-key release removes Sanctum and adds the
+`2026_09_24_000001_add_application_api_keys` migration. Install dependencies from
+the committed Composer lockfile and run migrations before accepting requests
+with the new application code. The migration adds `external_api_keys` and
+nullable expiration/revocation columns to the existing `personal_access_tokens`
+table; it preserves issued client token IDs and hashes. Keep `APP_KEY` and
+`DEVELOPER_EMAIL` unchanged during the upgrade and clear stale configuration,
+route, and view caches. No external keys are seeded automatically.
+
+For a deployment outside the existing Docker workflow, use a maintenance window
+to keep requests off the application until migrations and cache refresh finish.
+Do not roll back authentication code independently of token revocation policy:
+older Sanctum code does not honor the new expiration/revocation columns.
+
 For SSH diagnostics, enabling Vue, compiling assets, and checking the result, see
 [Fixing Vue in production](fixing-vue-production.md). Deployment verifies the
 compiled asset manifest and files before replacing the running app.

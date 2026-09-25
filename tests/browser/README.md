@@ -34,6 +34,17 @@ horizontal overflow and keyboard menu access are also checked. Backend and Vue
 unit tests cover the remaining authorization, mutation, timezone/DST, lifecycle,
 and error-handling cases.
 
+Developer coverage includes Tools navigation, key creation and validation,
+one-time secret display, reload persistence, revocation, CSRF rejection, and a
+real authenticated external device-list request against synthetic fixtures.
+The browser fixture developer is `developer@browser.example.test`. External
+remote-control endpoints are never invoked by these tests.
+
+Release-table coverage uses synthetic firmware/configuration records to verify
+full-history search, independent query state, searchable Tom Select prefix and
+version filters, inclusive upload dates, clearing, sorting, pagination, reloads,
+flat rows, accessibility, and desktop/mobile overflow.
+
 The checks workflow also runs the real Redis integration script against a
 disposable service with a unique namespace. The existing deployment workflow
 depends on these checks; running tests does not deploy or provision production.

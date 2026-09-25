@@ -120,9 +120,9 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
                                 >Profile</a
                             >
                             <a
-                                v-if="links.admin"
+                                v-if="links.developer"
                                 class="dropdown-item"
-                                :href="links.admin"
+                                :href="links.developer"
                                 @click="closeNavigation"
                                 >Developer Workspace</a
                             >

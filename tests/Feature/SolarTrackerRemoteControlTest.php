@@ -7,7 +7,6 @@ use App\Models\SolarTrackerRemoteControl;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SolarTrackerRemoteControlTest extends TestCase
@@ -86,7 +85,7 @@ class SolarTrackerRemoteControlTest extends TestCase
         SolarTrackerRemoteControl::create([
             'serial_no' => $this->device->serial_no, 'mode' => 1, 'motor_speed' => 30,
         ]);
-        Sanctum::actingAs(User::findOrFail($this->device->user_id));
+        $this->actingAs(User::findOrFail($this->device->user_id), 'api');
         foreach (['/update-solar-tracker', '/api/update-solar-tracker', '/api/remote-control-set'] as $url) {
             foreach ([-101, 101, 'not-a-speed'] as $speed) {
                 $this->postJson($url, [
@@ -104,7 +103,7 @@ class SolarTrackerRemoteControlTest extends TestCase
 
     public function test_existing_api_clients_can_still_use_speeds_outside_the_ui_step_of_ten(): void
     {
-        Sanctum::actingAs(User::findOrFail($this->device->user_id));
+        $this->actingAs(User::findOrFail($this->device->user_id), 'api');
         foreach (['/api/update-solar-tracker', '/api/remote-control-set'] as $url) {
             foreach ([-37, 23] as $speed) {
                 $this->postJson($url, [

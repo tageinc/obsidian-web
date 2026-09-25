@@ -8,6 +8,9 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use App\Models\ApiToken;
+use App\Models\User;
 
 class LoginController extends Controller
 {
@@ -17,7 +20,7 @@ class LoginController extends Controller
 
     public function __construct()
     {
-        $this->middleware('guest')->except('logout');
+        $this->middleware('guest')->except(['logout', 'apiLogin', 'apiLogout']);
     }
 
     protected function authenticated(Request $request, $user)
@@ -42,18 +45,28 @@ class LoginController extends Controller
             return response()->json(['status' => 'error', 'message' => $validator->errors()], 400);
         }
 
-        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $request->input('email'))->first();
+        if ($user && Hash::check($request->input('password'), $user->password)) {
+            $token = ApiToken::issue($user);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-
-            // Create Sanctum token
-            $token = $user->createToken('API Token')->plainTextToken;
-
-            return response()->json(['status' => 'success', 'user' => $user, 'token' => $token], 200);
+            return response()->json(['status' => 'success', 'user' => $user, 'token' => $token], 200)
+                ->header('Cache-Control', 'no-store');
         } else {
             return response()->json(['status' => 'error', 'message' => 'Invalid credentials'], 401);
         }
+    }
+
+    public function apiLogout(Request $request)
+    {
+        if ($token = $request->attributes->get('api_token')) {
+            $token->forceFill(['revoked_at' => now()])->save();
+        } elseif ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        return response()->noContent();
     }
 
     protected function sendFailedLoginResponse(Request $request)

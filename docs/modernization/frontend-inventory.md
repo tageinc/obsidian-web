@@ -15,7 +15,7 @@ The baseline contains 32 Blade templates, 15 reachable browser screens, one unus
 | `device-register.blade.php` | GET `/device-register`, POST `/dataInsert`; profile defaults, one save, no opt-in | Migrated: `DeviceFormPage`, flag `device_register`; native validation/transaction |
 | `edit-device.blade.php` | GET/PUT `/edit-device/{id}`; owner/developer checks | Migrated: `DeviceFormPage`, flag `device_edit`; immutable identity and paired coordinates |
 | `view-device.blade.php` | `/devices/{id}`; status, raw charts, remote mode/speed | Migrated: `ViewDevicePage`/`HistoryCharts`/`RemoteControl`, flag `view_device`; server owner/developer checks on both frontends |
-| `admin-control-center.blade.php` | `/developer-workspace`; firmware/config uploads and downloads; old URL redirects | Migrated: `AdminPage`/`UploadSection`, flag `admin`; server developer restriction on both frontends, internal names retained for compatibility |
+| `developer-workspace.blade.php` | `/developer-workspace`; firmware/config uploads and downloads; old URL redirects | Migrated: `DeveloperPage`/`UploadSection`, flag `developer`; server developer restriction on both frontends, legacy URL retained for compatibility |
 | `auth/login.blade.php` | GET/POST `/login`, remember me, verification resend, reset links | Migrated: `AuthPage`, flag `auth`; cookie authentication and native redirects |
 | `auth/register.blade.php` | GET/POST `/register`; account/contact/address/password | Migrated: `AuthPage`, flag `auth`; server validation and one native submission |
 | `auth/verify.blade.php` | `/email/verify`, resend and verification-link flow | Migrated: `AuthPage`, flag `auth`; signatures/hash/expiry/throttling repaired; old non-expiring links require resend |

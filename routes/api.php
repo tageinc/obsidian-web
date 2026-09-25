@@ -10,6 +10,24 @@ use App\Http\Controllers\ViewDeviceController;
 use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CreateDeviceController;
+use App\Http\Controllers\Api\ExternalApiController;
+use App\Http\Controllers\DeveloperWorkspaceController;
+
+Route::prefix('external/v1')->name('external.')->middleware(['auth.external', 'throttle:external-api'])->group(function () {
+    Route::get('/', [ExternalApiController::class, 'capabilities'])->name('capabilities');
+    Route::get('/devices', [ExternalApiController::class, 'devices'])->name('devices');
+    Route::get('/devices/{id}', [ViewDeviceController::class, 'apiShow'])->name('devices.show');
+    Route::patch('/devices/{id}', [EditDeviceController::class, 'patch'])->name('devices.update');
+    Route::get('/devices/{id}/data', [ViewDeviceController::class, 'getDeviceData'])->name('devices.data');
+    Route::get('/remote-control', [ViewDeviceController::class, 'getSolarTrackerStatus'])->name('remote.show');
+    Route::post('/remote-control', [ViewDeviceController::class, 'updateSolarTracker'])->name('remote.update');
+    Route::get('/firmware', [ExternalApiController::class, 'firmware'])->name('firmware');
+    Route::post('/firmware', [DeveloperWorkspaceController::class, 'uploadFirmware'])->name('firmware.store');
+    Route::get('/firmware/{version}/download', [DeveloperWorkspaceController::class, 'serveFirmwareByVersion'])->name('firmware.download');
+    Route::get('/configuration', [ExternalApiController::class, 'configuration'])->name('configuration');
+    Route::post('/configuration', [DeveloperWorkspaceController::class, 'uploadConfig'])->name('configuration.store');
+    Route::get('/configuration/{version}/download', [DeveloperWorkspaceController::class, 'serveConfigByVersion'])->name('configuration.download');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -37,13 +55,13 @@ Route::get('/remote-control/{serial_no?}', [DeviceRemoteController::class, 'getR
 Route::post('/remote-control-set/{data?}', [DeviceRemoteController::class, 'remoteControl'])->name('device.remote-control-set');
 
 // Public routes (without logging)
-Route::post('/login', [LoginController::class, 'apiLogin'])->name('api.login');
-Route::post('/logout', [LoginController::class, 'logout'])->name('api.logout');
+Route::post('/login', [LoginController::class, 'apiLogin'])->middleware('throttle:api-login')->name('api.login');
+Route::post('/logout', [LoginController::class, 'apiLogout'])->middleware('auth:api')->name('api.logout');
 Route::post('/create-device', [CreateDeviceController::class, 'apiCreateDevice']); //register device
 
 
-// Routes that require Sanctum authentication and logging
-Route::middleware(['log.requests', 'auth:sanctum'])->group(function () {
+// Application-owned bearer tokens, or CSRF-protected same-origin browser sessions.
+Route::middleware(['log.requests', 'auth:api'])->group(function () {
 
 
     // Profile Routes

@@ -31,7 +31,7 @@ class VueWorkflowPagesTest extends TestCase
             'frontend.vue3.create_device' => true,
             'frontend.vue3.device_edit' => true,
             'frontend.vue3.dashboard' => true,
-            'frontend.vue3.admin' => true,
+            'frontend.vue3.developer' => true,
             'app.developer_email' => 'admin@example.test',
         ]);
         foreach (['owner', 'other', 'admin'] as $role) {
@@ -191,7 +191,7 @@ class VueWorkflowPagesTest extends TestCase
             '_old_input' => ['_upload_kind' => 'config', 'description' => 'Retained description', 'prefix' => 'CFG', 'file_path' => 'old-path-must-not-be-serialized'],
             'errors' => (new ViewErrorBag)->put('default', new MessageBag(['config' => ['JSON required.']])),
         ])->get('/developer-workspace?firmware_show=2&config_show=1');
-        $props = $this->props($response, 'admin');
+        $props = $this->props($response, 'developer');
         $this->assertSame('config', $props['activeUpload']);
         $this->assertSame('config', $props['activeSection']);
         $this->assertSame(['description' => 'Retained description', 'prefix' => 'CFG'], $props['values']);
@@ -200,7 +200,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertCount(1, $props['config']['rows']);
         $this->assertSame(route('uploadFirmware'), $props['links']['uploadFirmware']);
         $this->assertSame(route('uploadConfig'), $props['links']['uploadConfig']);
-        $this->assertSame(route('developer-workspace'), $props['links']['admin']);
+        $this->assertSame(route('developer-workspace'), $props['links']['developer']);
         foreach (['firmware', 'config'] as $kind) {
             $this->assertSame(['version', 'prefix', 'description', 'createdAt'], array_keys($props[$kind]['rows'][0]));
             foreach ($props[$kind]['pagination']['links'] as $link) {
@@ -217,15 +217,15 @@ class VueWorkflowPagesTest extends TestCase
     public function test_developer_sections_follow_safe_query_or_upload_feedback_and_work_with_legacy_renderer(): void
     {
         $this->actingAs($this->admin);
-        $props = $this->props($this->get('/developer-workspace?section=config'), 'admin');
+        $props = $this->props($this->get('/developer-workspace?section=config'), 'developer');
         $this->assertSame('config', $props['activeSection']);
-        $props = $this->props($this->get('/developer-workspace?section=unexpected'), 'admin');
+        $props = $this->props($this->get('/developer-workspace?section=unexpected'), 'developer');
         $this->assertSame('firmware', $props['activeSection']);
-        $props = $this->props($this->withSession(['active_upload' => 'config'])->get('/developer-workspace?section=firmware'), 'admin');
+        $props = $this->props($this->withSession(['active_upload' => 'config'])->get('/developer-workspace?section=firmware'), 'developer');
         $this->assertSame('config', $props['activeSection']);
-        config(['frontend.vue3.admin' => false]);
+        config(['frontend.vue3.developer' => false]);
         $this->get('/developer-workspace')->assertOk()->assertSee('Developer Workspace')
-            ->assertDontSee('data-vue-page="admin"', false)
+            ->assertDontSee('data-vue-page="developer"', false)
             ->assertSee('action="'.route('developer-workspace').'"', false);
     }
 

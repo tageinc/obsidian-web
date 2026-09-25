@@ -18,7 +18,7 @@ class DeveloperUploadModalTest extends TestCase
     {
         parent::setUp();
         $this->useFrontendManifest();
-        config(['frontend.vue3.admin' => true, 'app.developer_email' => 'upload-modal@example.test']);
+        config(['frontend.vue3.developer' => true, 'app.developer_email' => 'upload-modal@example.test']);
         $this->actingAs(User::create([
             'name' => 'Upload developer', 'email' => 'upload-modal@example.test',
             'password' => 'synthetic-hash', 'email_verified_at' => now(),
@@ -29,7 +29,7 @@ class DeveloperUploadModalTest extends TestCase
     private function props($response): array
     {
         $response->assertOk();
-        $this->assertSame(1, preg_match('/<script id="frontend-admin" type="application\/json">(.*?)<\/script>/s', $response->getContent(), $matches));
+        $this->assertSame(1, preg_match('/<script id="frontend-developer" type="application\/json">(.*?)<\/script>/s', $response->getContent(), $matches));
 
         return json_decode($matches[1], true, 512, JSON_THROW_ON_ERROR);
     }
@@ -123,8 +123,8 @@ class DeveloperUploadModalTest extends TestCase
         ])->get('/developer-workspace?section=config'));
         $this->assertSame('config', $props['activeSection']);
         $this->assertNull($props['initiallyOpenUpload']);
-        config(['frontend.vue3.admin' => false]);
-        $this->get('/developer-workspace')->assertOk()->assertDontSee('data-vue-page="admin"', false)
+        config(['frontend.vue3.developer' => false]);
+        $this->get('/developer-workspace')->assertOk()->assertDontSee('data-vue-page="developer"', false)
             ->assertSee('action="'.route('uploadFirmware').'"', false)
             ->assertSee('action="'.route('uploadConfig').'"', false);
     }

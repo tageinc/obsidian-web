@@ -1,7 +1,7 @@
 {
-  "captured": "2026-09-21",
+  "captured": "2026-09-24",
   "baseline": "2045762; current middleware includes security baseline 306beb8 and the Vue page-response boundary",
-  "note": "Current registered route metadata; no request/account/environment values. baseline_routes preserves the original 88-route inventory for comparison. Developer Workspace adds a canonical route and preserves the old URL as an authorized redirect.",
+  "note": "Current registered route metadata; no request/account/environment values. baseline_routes preserves the original inventory. Current routes use application-owned API authentication and developer-only external API keys.",
   "routes": [
     {
       "domain": null,
@@ -20,7 +20,7 @@
       "method": "GET|HEAD",
       "uri": "admin-control-center",
       "name": "admin-control-center",
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@legacyRedirect",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@legacyRedirect",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -49,7 +49,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -85,23 +85,11 @@
     {
       "domain": null,
       "method": "POST",
-      "uri": "api/device-register",
+      "uri": "api/create-device",
       "name": null,
-      "action": "App\\Http\\Controllers\\DeviceRegisterController@apiRegisterDevice",
+      "action": "App\\Http\\Controllers\\CreateDeviceController@apiCreateDevice",
       "middleware": [
         "api"
-      ]
-    },
-    {
-      "domain": null,
-      "method": "DELETE",
-      "uri": "api/device/{id}",
-      "name": "device.delete-api",
-      "action": "App\\Http\\Controllers\\DeviceManagerController@deleteAPI",
-      "middleware": [
-        "api",
-        "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
       ]
     },
     {
@@ -113,7 +101,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -125,19 +113,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
-      ]
-    },
-    {
-      "domain": null,
-      "method": "PUT",
-      "uri": "api/device/{id}/alias",
-      "name": "device.api-update-product-alias",
-      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateProductAlias",
-      "middleware": [
-        "api",
-        "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -145,11 +121,47 @@
       "method": "GET|HEAD",
       "uri": "api/device/{id}/data",
       "name": "device.get-device-data",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@getDeviceData",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@getDeviceData",
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PUT",
+      "uri": "api/device/{id}/name",
+      "name": "device.api-update-device-name",
+      "action": "App\\Http\\Controllers\\EditDeviceController@apiUpdateDeviceName",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/device/{id}/reactivate",
+      "name": "device.reactivate-api",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@reactivate",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/device/{id}/retire",
+      "name": "device.retire-api",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@retire",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -161,7 +173,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -173,7 +185,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -185,7 +197,176 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/devices/{id}",
+      "name": "api.devices.show",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@apiShow",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\LogRequests",
+        "App\\Http\\Middleware\\Authenticate:api",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1",
+      "name": "external.capabilities",
+      "action": "App\\Http\\Controllers\\Api\\ExternalApiController@capabilities",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/configuration",
+      "name": "external.configuration",
+      "action": "App\\Http\\Controllers\\Api\\ExternalApiController@configuration",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/external/v1/configuration",
+      "name": "external.configuration.store",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@uploadConfig",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/configuration/{version}/download",
+      "name": "external.configuration.download",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveConfigByVersion",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/devices",
+      "name": "external.devices",
+      "action": "App\\Http\\Controllers\\Api\\ExternalApiController@devices",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/devices/{id}",
+      "name": "external.devices.show",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@apiShow",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PATCH",
+      "uri": "api/external/v1/devices/{id}",
+      "name": "external.devices.update",
+      "action": "App\\Http\\Controllers\\EditDeviceController@patch",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/devices/{id}/data",
+      "name": "external.devices.data",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@getDeviceData",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/firmware",
+      "name": "external.firmware",
+      "action": "App\\Http\\Controllers\\Api\\ExternalApiController@firmware",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/external/v1/firmware",
+      "name": "external.firmware.store",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@uploadFirmware",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/firmware/{version}/download",
+      "name": "external.firmware.download",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveFirmwareByVersion",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "api/external/v1/remote-control",
+      "name": "external.remote.show",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@getSolarTrackerStatus",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "api/external/v1/remote-control",
+      "name": "external.remote.update",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@updateSolarTracker",
+      "middleware": [
+        "api",
+        "App\\Http\\Middleware\\AuthenticateExternalApi",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:external-api"
       ]
     },
     {
@@ -223,11 +404,11 @@
       "method": "GET|HEAD",
       "uri": "api/get-solar-tracker-status",
       "name": "device.get-solar-tracker-status",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@getSolarTrackerStatus",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@getSolarTrackerStatus",
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -249,7 +430,7 @@
       "action": "App\\Http\\Controllers\\Auth\\LoginController@apiLogin",
       "middleware": [
         "api",
-        "App\\Http\\Middleware\\RedirectIfAuthenticated"
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:api-login"
       ]
     },
     {
@@ -257,9 +438,10 @@
       "method": "POST",
       "uri": "api/logout",
       "name": "api.logout",
-      "action": "App\\Http\\Controllers\\Auth\\LoginController@logout",
+      "action": "App\\Http\\Controllers\\Auth\\LoginController@apiLogout",
       "middleware": [
-        "api"
+        "api",
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -271,7 +453,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -283,7 +465,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -295,7 +477,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -323,11 +505,11 @@
       "method": "GET|HEAD",
       "uri": "api/solar-tracker/{serial_no}",
       "name": "device.get-latest-status-json",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@getLatestStatusJson",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@getLatestStatusJson",
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -339,7 +521,7 @@
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -347,11 +529,11 @@
       "method": "POST",
       "uri": "api/update-solar-tracker",
       "name": "device.update-solar-tracker",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@updateSolarTracker",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@updateSolarTracker",
       "middleware": [
         "api",
         "App\\Http\\Middleware\\LogRequests",
-        "App\\Http\\Middleware\\Authenticate:sanctum"
+        "App\\Http\\Middleware\\Authenticate:api"
       ]
     },
     {
@@ -359,7 +541,7 @@
       "method": "GET|HEAD",
       "uri": "config-file/prefix/{prefix?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveConfigByPrefix",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveConfigByPrefix",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -371,7 +553,7 @@
       "method": "GET|HEAD",
       "uri": "config-file/version/{version?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveConfigByVersion",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveConfigByVersion",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -383,7 +565,7 @@
       "method": "GET|HEAD",
       "uri": "config-version/{prefix?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@getLatestConfigVersionNumber",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@getLatestConfigVersionNumber",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -403,9 +585,9 @@
     {
       "domain": null,
       "method": "GET|HEAD",
-      "uri": "dashboard",
-      "name": "dashboard",
-      "action": "App\\Http\\Controllers\\DeviceManagerController@index",
+      "uri": "create-device",
+      "name": "create-device",
+      "action": "App\\Http\\Controllers\\CreateDeviceController@index",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -415,9 +597,9 @@
     {
       "domain": null,
       "method": "POST",
-      "uri": "dataInsert",
-      "name": "dataInsert",
-      "action": "App\\Http\\Controllers\\DeviceRegisterController@dataInsert",
+      "uri": "create-device",
+      "name": "create-device.store",
+      "action": "App\\Http\\Controllers\\CreateDeviceController@createDevice",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -427,9 +609,9 @@
     {
       "domain": null,
       "method": "GET|HEAD",
-      "uri": "delete-device/{id}",
-      "name": "deleteDevice",
-      "action": "App\\Http\\Controllers\\DeviceManagerController@delete",
+      "uri": "dashboard",
+      "name": "dashboard",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@index",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -453,7 +635,7 @@
       "method": "GET|HEAD",
       "uri": "developer-workspace",
       "name": "developer-workspace",
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@index",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@index",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -464,14 +646,41 @@
     {
       "domain": null,
       "method": "GET|HEAD",
-      "uri": "device-info/{id}",
-      "name": "device-info",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@index",
+      "uri": "developer-workspace/api-keys",
+      "name": "developer.api-keys.index",
+      "action": "App\\Http\\Controllers\\ExternalApiKeyController@index",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
-        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
+        "App\\Http\\Middleware\\DeveloperMiddleware"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "developer-workspace/api-keys",
+      "name": "developer.api-keys.store",
+      "action": "App\\Http\\Controllers\\ExternalApiKeyController@store",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\DeveloperMiddleware",
+        "Illuminate\\Routing\\Middleware\\ThrottleRequests:20,1"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "POST",
+      "uri": "developer-workspace/api-keys/{key}/revoke",
+      "name": "developer.api-keys.revoke",
+      "action": "App\\Http\\Controllers\\ExternalApiKeyController@revoke",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\DeveloperMiddleware"
       ]
     },
     {
@@ -488,22 +697,10 @@
     },
     {
       "domain": null,
-      "method": "GET|HEAD",
-      "uri": "device-register",
-      "name": "device-register",
-      "action": "App\\Http\\Controllers\\DeviceRegisterController@index",
-      "middleware": [
-        "web",
-        "App\\Http\\Middleware\\Authenticate",
-        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
-      ]
-    },
-    {
-      "domain": null,
       "method": "POST",
       "uri": "device/refresh/{id}",
       "name": "device.refresh",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@refresh",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@refresh",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -516,7 +713,7 @@
       "method": "GET|HEAD",
       "uri": "device/{id}/fetch-graph-data",
       "name": "device.fetchGraphData",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@fetchGraphData",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@fetchGraphData",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -529,7 +726,7 @@
       "method": "GET|HEAD",
       "uri": "device/{id}/refresh",
       "name": "device.refresh",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@refresh",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@refresh",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -540,9 +737,9 @@
     {
       "domain": null,
       "method": "PUT",
-      "uri": "device/{id}/update-product-alias",
-      "name": "update.alias",
-      "action": "App\\Http\\Controllers\\EditDeviceController@updateProductAlias",
+      "uri": "device/{id}/update-device-name",
+      "name": "update.name",
+      "action": "App\\Http\\Controllers\\EditDeviceController@updateDeviceName",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -559,6 +756,31 @@
         "web",
         "App\\Http\\Middleware\\Authenticate",
         "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "PATCH",
+      "uri": "devices/{id}",
+      "name": "devices.update",
+      "action": "App\\Http\\Controllers\\EditDeviceController@patch",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
+      "method": "GET|HEAD",
+      "uri": "devices/{id}",
+      "name": "devices.show",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@show",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified",
+        "App\\Http\\Middleware\\EnsureBrowserDeviceAccess"
       ]
     },
     {
@@ -672,7 +894,7 @@
       "method": "GET|HEAD",
       "uri": "firmware-file/prefix/{prefix?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveFirmwareByPrefix",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveFirmwareByPrefix",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -684,7 +906,7 @@
       "method": "GET|HEAD",
       "uri": "firmware-file/version/{version?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@serveFirmwareByVersion",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@serveFirmwareByVersion",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -696,7 +918,7 @@
       "method": "GET|HEAD",
       "uri": "firmware-version/{prefix?}",
       "name": null,
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@getLatestFirmwareVersionNumber",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@getLatestFirmwareVersionNumber",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -930,6 +1152,18 @@
     },
     {
       "domain": null,
+      "method": "POST",
+      "uri": "reactivate-device/{id}",
+      "name": "reactivateDevice",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@reactivate",
+      "middleware": [
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
+      ]
+    },
+    {
+      "domain": null,
       "method": "GET|HEAD",
       "uri": "register",
       "name": "register",
@@ -952,12 +1186,14 @@
     },
     {
       "domain": null,
-      "method": "GET|HEAD",
-      "uri": "sanctum/csrf-cookie",
-      "name": null,
-      "action": "Laravel\\Sanctum\\Http\\Controllers\\CsrfCookieController@show",
+      "method": "POST",
+      "uri": "retire-device/{id}",
+      "name": "retireDevice",
+      "action": "App\\Http\\Controllers\\DeviceManagerController@retire",
       "middleware": [
-        "web"
+        "web",
+        "App\\Http\\Middleware\\Authenticate",
+        "Illuminate\\Auth\\Middleware\\EnsureEmailIsVerified"
       ]
     },
     {
@@ -977,7 +1213,7 @@
       "method": "POST",
       "uri": "update-solar-tracker",
       "name": "update-solar-tracker",
-      "action": "App\\Http\\Controllers\\DeviceInfoController@updateSolarTracker",
+      "action": "App\\Http\\Controllers\\ViewDeviceController@updateSolarTracker",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -990,7 +1226,7 @@
       "method": "POST",
       "uri": "upload-config",
       "name": "uploadConfig",
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@uploadConfig",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@uploadConfig",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",
@@ -1003,7 +1239,7 @@
       "method": "POST",
       "uri": "upload-firmware",
       "name": "uploadFirmware",
-      "action": "App\\Http\\Controllers\\AdminControlCenterController@uploadFirmware",
+      "action": "App\\Http\\Controllers\\DeveloperWorkspaceController@uploadFirmware",
       "middleware": [
         "web",
         "App\\Http\\Middleware\\Authenticate",

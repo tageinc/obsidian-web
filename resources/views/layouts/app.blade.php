@@ -53,7 +53,7 @@
                     'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
                     'login' => route('login'),
                     'register' => route('register'), 'logout' => route('logout'),
-                    'admin' => Auth::check() && Auth::user()->isDeveloper() ? route('developer-workspace') : null,
+                    'developer' => Auth::check() && Auth::user()->isDeveloper() ? route('developer-workspace') : null,
                 ],
             ]])
         @else

@@ -11,7 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BrowserAuthorizationTest extends TestCase
@@ -59,7 +58,7 @@ class BrowserAuthorizationTest extends TestCase
     {
         $url = '/api/devices/'.$this->device->id;
         $this->getJson($url)->assertUnauthorized();
-        Sanctum::actingAs($this->owner);
+        $this->actingAs($this->owner, 'api');
         $response = $this->getJson($url)->assertOk()
             ->assertJsonPath('data.id', $this->device->id)
             ->assertJsonPath('data.state', 'active')
@@ -67,9 +66,9 @@ class BrowserAuthorizationTest extends TestCase
         $this->assertArrayNotHasKey('user_id', $response->json('data'));
         $this->getJson('/api/devices/999999')->assertNotFound();
         $this->get('/device-info/'.$this->device->id)->assertNotFound();
-        Sanctum::actingAs($this->other);
+        $this->actingAs($this->other, 'api');
         $this->getJson($url)->assertForbidden();
-        Sanctum::actingAs($this->admin);
+        $this->actingAs($this->admin, 'api');
         $this->getJson($url)->assertOk();
     }
 
@@ -188,7 +187,7 @@ class BrowserAuthorizationTest extends TestCase
 
     public function test_browser_middleware_does_not_change_external_mobile_or_firmware_access(): void
     {
-        Sanctum::actingAs($this->other);
+        $this->actingAs($this->other, 'api');
         $this->getJson('/api/device/'.$this->device->id.'/data')->assertOk()->assertJsonStructure(['graph']);
         $this->postJson('/api/update-solar-tracker', [
             'serial_no' => $this->device->serial_no, 'mode' => 0, 'motor_speed' => 0,

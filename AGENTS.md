@@ -7,6 +7,14 @@
 
 These instructions apply throughout this repository.
 
+## Developer access and naming
+
+- There is no admin role in Obsidian. The developer is a regular application user with additional developer functionality.
+- Exactly one user in the database shall be the developer. Do not introduce multiple developer accounts or a separate admin account or role.
+- The developer's email is determined exclusively by `DEVELOPER_EMAIL` in `.env`, exposed through `config('app.developer_email')`. Use the existing `User::isDeveloper()` policy for authorization; do not hardcode an email, use `ADMIN_EMAIL`, or add alternative role-based access. Missing or blank developer configuration must deny developer access.
+- Use Developer terminology consistently in UI labels, components, directories, controllers, tests, and documentation. The workspace page is `DeveloperPage.vue` under `resources/js/features/developer`, not `AdminPage`.
+- Preserve existing legacy URL and configuration compatibility only where required for deployed installations; compatibility aliases do not define an admin role or grant additional access.
+
 ## Instruction map
 
 Always read [agents/rules.md](agents/rules.md),

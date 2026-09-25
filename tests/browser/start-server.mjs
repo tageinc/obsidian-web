@@ -57,7 +57,7 @@ for (const flag of [
     'DASHBOARD',
     'DEVICE_INFO',
     'AUTH',
-    'ADMIN',
+    'DEVELOPER',
     'PUBLIC_PAGES',
     'WORKSPACE',
 ]) {

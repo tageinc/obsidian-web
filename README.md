@@ -1,6 +1,9 @@
 # obsidian
 The purpose of this software application is to manage Internet-Of-Things devices with geographical and sensor information with remote control capability
 
+For integration setup, key creation and revocation, authentication examples, and
+supported endpoints, see the [External API keys guide](docs/external-api-keys.md).
+
 ## Docker deployment
 
 For automated VPS deployments, follow [GitHub Actions setup](docs/github-actions-deployment.md).

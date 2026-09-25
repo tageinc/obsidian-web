@@ -45,7 +45,7 @@ it('shows the canonical Developer Workspace link when the server grants access',
         props: {
             ...props,
             user: { name: 'Developer' },
-            links: { ...links, admin: '/developer-workspace' },
+            links: { ...links, developer: '/developer-workspace' },
         },
         global: { plugins: [createPinia()] },
     });

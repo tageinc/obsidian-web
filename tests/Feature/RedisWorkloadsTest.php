@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\DeviceSoftwareController;
-use App\Http\Controllers\AdminControlCenterController;
+use App\Http\Controllers\DeveloperWorkspaceController;
 use App\Http\Middleware\LogRequests;
 use App\Models\ConfigVersions;
 use App\Models\FirmwareVersions;
@@ -191,12 +191,12 @@ class RedisWorkloadsTest extends TestCase
         $this->assertVersion('firmware', 'solar', '1');
         $request = Request::create('/upload-firmware', 'POST', ['prefix' => 'solar', 'description' => 'synthetic']);
         $request->files->set('firmware', UploadedFile::fake()->create('firmware.bin', 1));
-        app(AdminControlCenterController::class)->uploadFirmware($request);
+        app(DeveloperWorkspaceController::class)->uploadFirmware($request);
         $this->assertVersion('firmware', 'solar', '2');
         $this->assertSame(2, FirmwareVersions::count());
 
         try {
-            app(AdminControlCenterController::class)->uploadFirmware(Request::create('/upload-firmware', 'POST', ['prefix' => 'solar']));
+            app(DeveloperWorkspaceController::class)->uploadFirmware(Request::create('/upload-firmware', 'POST', ['prefix' => 'solar']));
             $this->fail('An invalid upload must fail validation.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('firmware', $exception->errors());

@@ -13,7 +13,7 @@ const pages = {
     dashboard: '../features/dashboard/DashboardPage.vue',
     'view-device': '../features/solar-tracker/ViewDevicePage.vue',
     auth: '../features/auth/AuthPage.vue',
-    admin: '../features/admin/AdminPage.vue',
+    developer: '../features/developer/DeveloperPage.vue',
     public: '../features/public/PublicPage.vue',
 };
 const pinia = createPinia();

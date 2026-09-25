@@ -17,7 +17,7 @@ if (filesize(getenv('DB_DATABASE')) !== 0) {
 if (Artisan::call('migrate', ['--force' => true]) !== 0) {
     throw new RuntimeException('Isolated browser migrations failed.');
 }
-foreach (['owner', 'admin', 'empty'] as $role) {
+foreach (['owner', 'developer', 'empty'] as $role) {
     // Deliberately synthetic, test-only credentials. Never passed to production seeders.
     $user = User::create([
         'name' => ucfirst($role).' browser fixture', 'email' => $role.'@browser.example.test',
@@ -43,6 +43,22 @@ foreach ([0, 1, 4, 12, 24, 30] as $index => $hours) {
     $log->created_at = now()->subHours($hours);
     $log->updated_at = $log->created_at;
     $log->save();
+}
+foreach (['firmware_versions' => 'firmware', 'config_versions' => 'configuration'] as $table => $kind) {
+    for ($version = 1; $version <= 12; $version++) {
+        $uploaded = sprintf('2026-09-%02d 12:00:00', $version);
+        DB::table($table)->insert([
+            'version' => (string) $version,
+            'prefix' => $version % 2 ? 'BROWSER-SP1' : 'BROWSER-SP2',
+            'description' => $version === 1
+                ? ($kind === 'firmware' ? 'Firmware sunrise calibration fixture.' : 'Configuration dusk schedule fixture.')
+                : 'Synthetic '.$kind.' release '.$version.'.',
+            'file_path' => 'browser-fixtures/'.$kind.'-'.$version,
+            'timestamp' => $uploaded,
+            'created_at' => $uploaded,
+            'updated_at' => $uploaded,
+        ]);
+    }
 }
 fwrite(STDOUT, "Isolated browser fixtures ready.\n");
 } catch (Throwable $error) {
