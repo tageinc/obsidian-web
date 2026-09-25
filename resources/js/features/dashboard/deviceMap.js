@@ -66,7 +66,9 @@ export function devicePopup(device) {
                 device.address_state,
                 device.zip_code,
                 device.country,
-            ].filter(Boolean).join(', ') || 'No Address',
+            ]
+                .filter(Boolean)
+                .join(', ') || 'No Address',
         ],
         ['Last Updated', device.last_updated || 'No data'],
     ];
