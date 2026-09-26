@@ -106,12 +106,6 @@ export function zeroReferenceScale() {
             // Keep the zero label even when the chart is short on mobile.
             autoSkip: false,
             maxTicksLimit: 7,
-            color: ({ tick }) => (tick?.value === 0 ? '#334155' : '#666'),
-            font: ({ tick }) => ({ weight: tick?.value === 0 ? 'bold' : 'normal' }),
-        },
-        grid: {
-            color: ({ tick }) => (tick?.value === 0 ? '#52627a' : '#e2e8f0'),
-            lineWidth: ({ tick }) => (tick?.value === 0 ? 2 : 1),
         },
     };
 }

@@ -74,7 +74,16 @@ test('legacy device sensors show Fahrenheit and CTS states without device comman
                     if (!chart) return false;
                     const scale = chart.scales.y;
                     const zero = scale.ticks.find((tick) => tick.value === 0);
-                    return scale.min <= 0 && scale.max >= 0 && String(zero?.label) === '0';
+                    const grid =
+                        zero &&
+                        scale.options.grid.setContext(scale.getContext(scale.ticks.indexOf(zero)));
+                    return (
+                        scale.min <= 0 &&
+                        scale.max >= 0 &&
+                        String(zero?.label) === '0' &&
+                        grid.color === window.Chart.defaults.borderColor &&
+                        grid.lineWidth === 1
+                    );
                 }),
             )
             .toBe(true);

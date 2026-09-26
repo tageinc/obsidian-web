@@ -124,8 +124,8 @@ class DeviceHistoryReportCharts
         $svg .= '<rect width="700" height="270" fill="#ffffff"/>';
         foreach ($ticks as $index => $value) {
             $axisY = $top + $plotHeight - (($value - $minimum) / ($maximum - $minimum)) * $plotHeight;
-            // Keep the dedicated zero label legible when a regular tick is nearby.
-            if ($zeroY !== null && abs($axisY - $zeroY) < 14) {
+            // Keep the zero label readable when tiny endpoint ticks are nearby.
+            if ($value != 0 && $zeroY !== null && abs($axisY - $zeroY) < 14) {
                 continue;
             }
             $svg .= $this->line($left, $axisY, $width - $right, $axisY, '#e2e8f0');
@@ -156,10 +156,6 @@ class DeviceHistoryReportCharts
             }
         }
         $svg .= $this->line($left, $height - $bottom, $width - $right, $height - $bottom, '#b7c5d8');
-        if ($zeroY !== null) {
-            $svg .= $this->line($left, $zeroY, $width - $right, $zeroY, '#52627a', ' class="zero-reference" stroke-width="2"');
-            $svg .= $this->text($left - 9, $zeroY + 4, '0', 'end', 11, '#52627a', ' font-weight="bold"');
-        }
         $svg .= $this->text($width / 2, $height - 9, 'Recorded time (Pacific Time)', 'middle', 11, '#52627a');
         $legendX = $left;
         foreach ($chart['series'] as $series) {
@@ -305,8 +301,8 @@ class DeviceHistoryReportCharts
         return '<line x1="'.$this->coordinate($x1).'" y1="'.$this->coordinate($y1).'" x2="'.$this->coordinate($x2).'" y2="'.$this->coordinate($y2).'" stroke="'.$color.'"'.$attributes.'/>';
     }
 
-    private function text(float $x, float $y, string $value, string $anchor = 'start', int $size = 12, string $color = '#26354b', string $attributes = ''): string
+    private function text(float $x, float $y, string $value, string $anchor = 'start', int $size = 12, string $color = '#26354b'): string
     {
-        return '<text x="'.$this->coordinate($x).'" y="'.$this->coordinate($y).'" text-anchor="'.$anchor.'" font-family="DejaVu Sans" font-size="'.$size.'" fill="'.$color.'"'.$attributes.'>'.htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8').'</text>';
+        return '<text x="'.$this->coordinate($x).'" y="'.$this->coordinate($y).'" text-anchor="'.$anchor.'" font-family="DejaVu Sans" font-size="'.$size.'" fill="'.$color.'">'.htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8').'</text>';
     }
 }

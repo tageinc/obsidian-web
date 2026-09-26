@@ -315,9 +315,9 @@ same conversion as `temp_f`. The latest CTS value uses Open/Closed text; an
 unrecognized state retains its raw value, and missing values are shown as N/A.
 All report plots follow History's rounded numeric tick intervals and
 clock-aligned time ticks, with label density adapted to the printed chart size.
-Motor-speed and PDS plots in History and the report include a labeled zero
-reference line, even when all readings lie on one side of zero. Axis bounds,
-ticks, and reference-line styling are presentation behavior; measurements,
+Motor-speed and PDS plots in History and the report include a labeled zero tick,
+even when all readings lie on one side of zero. Zero uses the ordinary grid
+styling. Axis bounds, ticks, and grid styling are presentation behavior; measurements,
 linear trends, filters, and API payloads are unchanged.
 
 | Query parameter | Contract |

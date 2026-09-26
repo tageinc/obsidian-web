@@ -20,11 +20,16 @@ async function expectZeroReference(page) {
                 if (!chart) return false;
                 const scale = chart.scales.y;
                 const zero = scale.ticks.find((tick) => tick.value === 0);
+                const grid =
+                    zero &&
+                    scale.options.grid.setContext(scale.getContext(scale.ticks.indexOf(zero)));
                 const pixel = scale.getPixelForValue(0);
                 return (
                     scale.min <= 0 &&
                     scale.max >= 0 &&
                     String(zero?.label) === '0' &&
+                    grid.color === Chart.defaults.borderColor &&
+                    grid.lineWidth === 1 &&
                     pixel >= chart.chartArea.top &&
                     pixel <= chart.chartArea.bottom
                 );

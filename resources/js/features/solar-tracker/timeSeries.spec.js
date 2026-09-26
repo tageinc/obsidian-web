@@ -165,7 +165,7 @@ describe('zero reference for signed telemetry', () => {
         },
     );
 
-    it('keeps a labeled, emphasized zero tick when ordinary ticks miss it', () => {
+    it('keeps a labeled zero tick with normal styling when ordinary ticks miss it', () => {
         const options = zeroReferenceScale();
         const scale = { ticks: [{ value: -3 }, { value: -1 }, { value: 1 }, { value: 3 }] };
         options.afterBuildTicks(scale);
@@ -173,14 +173,9 @@ describe('zero reference for signed telemetry', () => {
         expect(scale.ticks.map(({ value }) => value)).toEqual([-3, -1, 0, 1, 3]);
         expect(options.ticks.autoSkip).toBe(false);
         expect(options.ticks.maxTicksLimit).toBe(7);
-        const zero = { tick: { value: 0 } };
-        const other = { tick: { value: 1 } };
-        expect(options.grid.color(zero)).toBe('#52627a');
-        expect(options.grid.lineWidth(zero)).toBe(2);
-        expect(options.grid.color(other)).toBe('#e2e8f0');
-        expect(options.grid.lineWidth(other)).toBe(1);
-        expect(options.ticks.font(zero).weight).toBe('bold');
-        expect(options.ticks.font(other).weight).toBe('normal');
+        expect(options.grid).toBeUndefined();
+        expect(options.ticks.color).toBeUndefined();
+        expect(options.ticks.font).toBeUndefined();
     });
 
     it.each(['temp', 'ps1', 'ps2', 'ps_avg'])(

@@ -141,7 +141,7 @@ class DeviceHistoryReportChartsTest extends TestCase
     }
 
     /** @dataProvider zeroReferenceReadings */
-    public function test_signed_sensor_charts_show_a_labeled_zero_reference_without_losing_readings(array $values): void
+    public function test_signed_sensor_charts_show_zero_as_an_ordinary_tick_without_losing_readings(array $values): void
     {
         $points = array_map(static fn ($value, $index) => [
             'epoch_ms' => 1000 + $index * 1000,
@@ -161,23 +161,24 @@ class DeviceHistoryReportChartsTest extends TestCase
             $this->assertTrue($document->loadXML($chart['svg']));
             $xpath = new \DOMXPath($document);
             $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
-            $lines = $xpath->query('//svg:line[@class="zero-reference"]');
+            $zeroLabels = $xpath->query('//svg:text[@text-anchor="end" and text()="0"]');
+            $this->assertCount(1, $zeroLabels);
+            $zeroLabel = $zeroLabels->item(0);
+            $zeroY = (float) $zeroLabel->getAttribute('y') - 4;
+            $axisY = number_format($zeroY, 3, '.', '');
+            $lines = $xpath->query('//svg:line[@stroke="#e2e8f0" and @y1="'.$axisY.'" and @y2="'.$axisY.'"]');
             $this->assertCount(1, $lines);
             $line = $lines->item(0);
-            $zeroY = (float) $line->getAttribute('y1');
             $this->assertGreaterThanOrEqual(36, $zeroY);
             $this->assertLessThanOrEqual(204, $zeroY);
             $this->assertSame($line->getAttribute('y1'), $line->getAttribute('y2'));
             $this->assertGreaterThanOrEqual(68, (float) $line->getAttribute('x1'));
             $this->assertSame('675.000', $line->getAttribute('x2'));
-            $this->assertSame('2', $line->getAttribute('stroke-width'));
-            $this->assertSame('#52627a', $line->getAttribute('stroke'));
+            $this->assertFalse($line->hasAttribute('stroke-width'));
+            $this->assertFalse($zeroLabel->hasAttribute('font-weight'));
 
-            $zeroLabels = $xpath->query('//svg:text[@text-anchor="end" and text()="0"]');
-            $this->assertCount(1, $zeroLabels);
-            $labelX = $zeroLabels->item(0)->getAttribute('x');
+            $labelX = $zeroLabel->getAttribute('x');
             $this->assertEqualsWithDelta((float) $line->getAttribute('x1') - 9, (float) $labelX, 0.001);
-            $this->assertEqualsWithDelta($zeroY + 4, (float) $zeroLabels->item(0)->getAttribute('y'), 0.001);
             foreach ($xpath->query('//svg:text[@x="'.$labelX.'" and text()!="0"]') as $label) {
                 $this->assertGreaterThanOrEqual(13.999, abs((float) $label->getAttribute('y') - ($zeroY + 4)));
             }
@@ -198,10 +199,6 @@ class DeviceHistoryReportChartsTest extends TestCase
                 $this->assertStringContainsString('No valid measurements', $chart['svg']);
             }
         }
-
-        foreach ([0, 1, 3] as $index) {
-            $this->assertStringNotContainsString('class="zero-reference"', $charts[$index]['svg']);
-        }
     }
 
     public static function zeroReferenceReadings(): array
@@ -216,6 +213,7 @@ class DeviceHistoryReportChartsTest extends TestCase
             'positive finite extremes' => [[PHP_FLOAT_MAX / 2, PHP_FLOAT_MAX]],
             'negative finite extremes' => [[-PHP_FLOAT_MAX, -PHP_FLOAT_MAX / 2]],
             'tiny finite readings' => [[-1e-305, 2e-305]],
+            'tiny endpoint close to zero' => [[-1e-307, 2e-305]],
         ];
     }
 

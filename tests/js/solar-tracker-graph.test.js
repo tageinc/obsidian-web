@@ -199,14 +199,7 @@ try {
   const negativeTicks = { ticks: [{ value: -10 }, { value: -5 }] };
   motorYAxis.afterBuildTicks(negativeTicks);
   assert.deepEqual(negativeTicks.ticks.map(tick => tick.value), [-10, -5, 0]);
-  assert.equal(motorYAxis.ticks.color({ tick: { value: 0 } }), '#334155');
-  assert.equal(motorYAxis.ticks.color({ tick: { value: 5 } }), '#666');
-  assert.deepEqual(motorYAxis.ticks.font({ tick: { value: 0 } }), { weight: 'bold' });
-  assert.deepEqual(motorYAxis.ticks.font({ tick: { value: -5 } }), { weight: 'normal' });
-  assert.equal(motorYAxis.grid.color({ tick: { value: 0 } }), '#52627a');
-  assert.equal(motorYAxis.grid.color({ tick: { value: 5 } }), '#e2e8f0');
-  assert.equal(motorYAxis.grid.lineWidth({ tick: { value: 0 } }), 2);
-  assert.equal(motorYAxis.grid.lineWidth({ tick: { value: -5 } }), 1);
+  assert.equal(motorYAxis.grid, undefined, 'Motor speed uses the default grid styling');
   closeTo(createdCharts[0].config.data.datasets[1].data[0].y, (258 / 13) * 9 / 5 + 32);
   closeTo(createdCharts[0].config.data.datasets[1].data[1].y, (306 / 13) * 9 / 5 + 32);
 

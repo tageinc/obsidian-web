@@ -101,10 +101,6 @@
     }
 
     function zeroReferenceYAxis() {
-        function isZeroTick(context) {
-            return Boolean(context && context.tick && Number(context.tick.value) === 0);
-        }
-
         return {
             beginAtZero: true,
             afterBuildTicks: function (axis) {
@@ -115,13 +111,7 @@
             },
             ticks: {
                 autoSkip: false,
-                maxTicksLimit: 7,
-                color: function (context) { return isZeroTick(context) ? '#334155' : '#666'; },
-                font: function (context) { return { weight: isZeroTick(context) ? 'bold' : 'normal' }; }
-            },
-            grid: {
-                color: function (context) { return isZeroTick(context) ? '#52627a' : '#e2e8f0'; },
-                lineWidth: function (context) { return isZeroTick(context) ? 2 : 1; }
+                maxTicksLimit: 7
             }
         };
     }

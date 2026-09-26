@@ -326,12 +326,14 @@ it('shows the zero reference only for PDS and motor speed when switching measure
         const showZero = metric === 'pds' || metric === 'motor';
         const options = Chart.mock.calls.at(-1)[1];
         expect(options.options.scales.y.beginAtZero).toBe(showZero);
-        expect(wrapper.get('.history-footer').text().includes('marks y = 0')).toBe(showZero);
-        expect(wrapper.get('canvas').attributes('aria-label').includes('marks y = 0')).toBe(
+        expect(wrapper.get('.history-footer').text().includes('y-axis includes zero')).toBe(
             showZero,
         );
+        expect(
+            wrapper.get('canvas').attributes('aria-label').includes('y-axis includes zero'),
+        ).toBe(showZero);
         if (showZero) {
-            expect(options.options.scales.y.grid.lineWidth({ tick: { value: 0 } })).toBe(2);
+            expect(options.options.scales.y.grid).toBeUndefined();
         }
     }
     wrapper.unmount();

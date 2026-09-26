@@ -452,7 +452,7 @@ onBeforeUnmount(() => {
                             ', scatter plot with linear trend lines, ' +
                             visible.length +
                             ' raw readings. ' +
-                            (showZeroReference ? 'The solid horizontal line marks y = 0. ' : '') +
+                            (showZeroReference ? 'The y-axis includes zero. ' : '') +
                             rangeLabel(visible)
                         "
                     />
@@ -466,7 +466,7 @@ onBeforeUnmount(() => {
                     range; a trend needs at least two distinct timestamps.
                 </p>
                 <p v-if="showZeroReference">
-                    The solid horizontal line marks y = 0 so you can see readings cross zero.
+                    The y-axis includes zero so you can see readings cross zero.
                 </p>
                 <p>
                     The default is the last 24 hours ending now. Ranges filter the latest 9,000
