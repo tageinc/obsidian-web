@@ -28,7 +28,7 @@ class DeviceHistoryReportPdfTest extends TestCase
         $report['control_mode'] = 1;
         $report['latest'] = [
             'recorded_at' => CarbonImmutable::parse('2026-11-01T10:30:00Z'),
-            'temp' => 0, 'ps_avg' => 999, 'pds' => null,
+            'temp' => 0, 'temp_f' => 32, 'cts' => 0, 'cts_state' => 'Open', 'ps_avg' => 999, 'pds' => null,
         ];
         $charts = (new DeviceHistoryReportCharts)->build([], $report['range']['from']->valueOf(), $report['range']['to']->valueOf());
         $html = view('pdf.device-history', ['report' => $report, 'chartPages' => array_chunk($charts, 2)])->render();
@@ -39,12 +39,28 @@ class DeviceHistoryReportPdfTest extends TestCase
         $this->assertStringContainsString('Recorded Nov 1, 2026, 2:30:00 AM PST', $html);
         $this->assertStringContainsString('Nov 1, 2026, 1:30:00 AM PDT', $html);
         $this->assertStringContainsString('Nov 1, 2026, 1:30:00 AM PST', $html);
-        $this->assertStringContainsString('>0 °C<', $html);
+        $this->assertStringContainsString('>32 °F<', $html);
+        $this->assertStringContainsString('Temperature (°F)', $html);
+        $this->assertStringContainsString('CTS</span><span class="value">Open</span>', $html);
         $this->assertStringContainsString('>999<', $html);
         $this->assertStringContainsString('PDS</span><span class="value">N/A</span>', $html);
         $this->assertStringContainsString('CURRENT CONTROL MODE</span><span class="value">Remote control</span>', $html);
         $this->assertStringContainsString('PDT (-07:00)', $html);
         $this->assertStringContainsString('PST (-08:00)', $html);
+    }
+
+    public function test_report_labels_known_cts_states_and_preserves_unknown_values(): void
+    {
+        foreach ([[0, 'Open', 'Open'], [1, 'Closed', 'Closed'], [4, null, '4'], [null, null, 'N/A']] as [$raw, $state, $display]) {
+            $report = $this->report();
+            $report['latest'] = [
+                'recorded_at' => CarbonImmutable::parse('2026-11-01T10:30:00Z'),
+                'cts' => $raw, 'cts_state' => $state,
+            ];
+            $html = view('pdf.device-history', ['report' => $report, 'chartPages' => []])->render();
+
+            $this->assertStringContainsString('CTS</span><span class="value">'.$display.'</span>', $html);
+        }
     }
 
     private function report(): array

@@ -34,6 +34,7 @@ class SolarTrackerGraphData
                     'epoch_ms' => $recordedAt->valueOf(),
                     'label' => $recordedAt->format(self::DISPLAY_FORMAT),
                     'temp' => $this->reading($log->temp),
+                    'temp_f' => DeviceTelemetryValues::celsiusToFahrenheit($log->temp),
                     'ps1' => $this->reading($log->ps1),
                     'ps2' => $this->reading($log->ps2),
                     'ps_avg' => $this->reading($log->ps_avg),

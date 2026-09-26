@@ -12,7 +12,12 @@ export default defineConfig({
     timeout: 45000,
     expect: { timeout: 12000 },
     reporter: 'list',
-    use: { baseURL, screenshot: 'off', video: 'off', trace: 'off' },
+    use: {
+        baseURL,
+        screenshot: 'only-on-failure',
+        video: 'off',
+        trace: 'retain-on-failure',
+    },
     projects: [
         { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
         { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },

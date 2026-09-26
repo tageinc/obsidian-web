@@ -16,7 +16,8 @@ class DeviceHistoryReportChartsTest extends TestCase
         ], 1000, 2000);
 
         $this->assertSame(['Temperature', 'Panel sensors', 'PDS', 'PS average', 'Motor speed'], array_column($charts, 'title'));
-        $this->assertSame([0.0], array_column($charts[0]['series'][0]['points'], 'y'));
+        $this->assertSame('°F', $charts[0]['unit']);
+        $this->assertSame([32.0], array_column($charts[0]['series'][0]['points'], 'y'));
         $this->assertSame([10.0], array_column($charts[1]['series'][0]['points'], 'y'));
         $this->assertSame([20.0, 30.0], array_column($charts[1]['series'][1]['points'], 'y'));
         $this->assertSame([-3.0, 0.0], array_column($charts[2]['series'][0]['points'], 'y'));
@@ -41,8 +42,8 @@ class DeviceHistoryReportChartsTest extends TestCase
         $this->assertSame(4, $chart['reading_count']);
         $this->assertSame([300.0, 400.0], array_column($chart['series'][0]['points'], 'x'));
         $this->assertSame([300.0, 400.0], array_column($chart['series'][0]['trend'], 'x'));
-        $this->assertEqualsWithDelta(10, $chart['series'][0]['trend'][0]['y'], 0.00001);
-        $this->assertEqualsWithDelta(20, $chart['series'][0]['trend'][1]['y'], 0.00001);
+        $this->assertEqualsWithDelta(50, $chart['series'][0]['trend'][0]['y'], 0.00001);
+        $this->assertEqualsWithDelta(68, $chart['series'][0]['trend'][1]['y'], 0.00001);
         $this->assertSame(200.0, $chart['from']);
         $this->assertSame(500.0, $chart['to']);
     }
@@ -105,8 +106,8 @@ class DeviceHistoryReportChartsTest extends TestCase
     public function test_extreme_finite_measurements_keep_axis_coordinates_finite(): void
     {
         $charts = (new DeviceHistoryReportCharts)->build([
-            ['epoch_ms' => 1000, 'temp' => -1e308, 'ps1' => -PHP_FLOAT_MAX, 'ps2' => PHP_FLOAT_MAX],
-            ['epoch_ms' => 2000, 'temp' => 1e308, 'ps1' => PHP_FLOAT_MAX, 'ps2' => PHP_FLOAT_MAX],
+            ['epoch_ms' => 1000, 'temp_f' => -1e308, 'ps1' => -PHP_FLOAT_MAX, 'ps2' => PHP_FLOAT_MAX],
+            ['epoch_ms' => 2000, 'temp_f' => 1e308, 'ps1' => PHP_FLOAT_MAX, 'ps2' => PHP_FLOAT_MAX],
         ], 1000, 2000);
 
         foreach ($charts as $chart) {
@@ -116,5 +117,17 @@ class DeviceHistoryReportChartsTest extends TestCase
         }
         $this->assertSame(2, $charts[0]['measurement_count']);
         $this->assertStringContainsString('1.16e+308', $charts[0]['svg']);
+    }
+
+    public function test_fahrenheit_payloads_are_not_converted_twice_and_invalid_values_stay_missing(): void
+    {
+        $chart = (new DeviceHistoryReportCharts)->build([
+            ['epoch_ms' => 1000, 'temp' => 26.1135, 'temp_f' => 79.0043],
+            ['epoch_ms' => 2000, 'temp' => 0, 'temp_f' => null],
+            ['epoch_ms' => 3000, 'temp' => 'invalid'],
+        ], 1000, 3000)[0];
+
+        $this->assertSame([79.0043], array_column($chart['series'][0]['points'], 'y'));
+        $this->assertSame(1, $chart['measurement_count']);
     }
 }

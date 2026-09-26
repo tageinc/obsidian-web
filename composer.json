@@ -61,9 +61,11 @@
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
         ],
+        "validate-project": "composer validate --no-interaction --no-check-publish",
         "lint": "@php scripts/lint.php",
         "test": "@php vendor/phpunit/phpunit/phpunit --do-not-cache-result",
         "check": [
+            "@validate-project",
             "@lint",
             "@test"
         ]

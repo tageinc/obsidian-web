@@ -89,10 +89,10 @@ it('redraws selected ranges and destroys every chart on navigation', async () =>
     expect(initial.data.datasets[0].showLine).toBe(false);
     expect(initial.data.datasets[1]).toMatchObject({
         isTrend: true,
-        label: 'Temperature (°C) — linear trend',
+        label: 'Temperature (°F) — linear trend',
         data: [
-            { x: 0, y: 2 },
-            { x: 7200000, y: 3 },
+            { x: 0, y: 35.6 },
+            { x: 7200000, y: 37.4 },
         ],
     });
     expect(wrapper.get('canvas').attributes('aria-label')).toContain('scatter plot');
@@ -117,6 +117,71 @@ it('redraws selected ranges and destroys every chart on navigation', async () =>
     expect(wrapper.text()).toContain('1 raw readings');
     wrapper.unmount();
     expect(destroy).toHaveBeenCalledTimes(4);
+});
+it('converts temperature readings to Fahrenheit without changing source data or other sensors', async () => {
+    const points = [
+        { epoch_ms: 0, temp: 0, ps1: 8, ps2: 12 },
+        { epoch_ms: 1000, temp: '100', ps1: 10, ps2: 14 },
+        { epoch_ms: 2000, temp: 26.1135 },
+        { epoch_ms: 3000, temp: -40 },
+        { epoch_ms: 4000, temp: null },
+        { epoch_ms: 5000, temp: '' },
+        { epoch_ms: 6000, temp: 'invalid' },
+        { epoch_ms: 7000 },
+        { epoch_ms: 8000, temp: true },
+        { epoch_ms: 9000, temp: '0x10' },
+    ];
+    const original = points.map((point) => ({ ...point }));
+    const wrapper = mount(HistoryCharts, { props: { points } });
+    await vi.dynamicImportSettled();
+    await flushPromises();
+    const options = Chart.mock.calls.at(-1)[1];
+    expect(options.data.datasets[0].label).toBe('Temperature (°F)');
+    expect(options.data.datasets[0].data.map(({ y }) => y)).toEqual([
+        32,
+        212,
+        79.0043,
+        -40,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+    ]);
+    expect(wrapper.get('.plot-heading').text()).toContain('°F');
+    expect(wrapper.get('canvas').attributes('aria-label')).toContain('degrees Fahrenheit');
+    expect(points).toEqual(original);
+
+    await wrapper.get('#history-metric').setValue('panels');
+    await flushPromises();
+    const panelDatasets = Chart.mock.calls.at(-1)[1].data.datasets;
+    expect(panelDatasets[0].data.slice(0, 2).map(({ y }) => y)).toEqual([8, 10]);
+    expect(panelDatasets[1].data.slice(0, 2).map(({ y }) => y)).toEqual([12, 14]);
+    await wrapper.get('#history-metric').setValue('temperature');
+    await wrapper.setProps({ points: [{ epoch_ms: 0, temp: 10 }] });
+    await flushPromises();
+    expect(Chart.mock.calls.at(-1)[1].data.datasets[0].data[0].y).toBe(50);
+    wrapper.unmount();
+});
+it('uses derived Fahrenheit values and preserves missing measurements from the telemetry API', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: 0, temp: 26.1135, temp_f: 79.0043 },
+                { epoch_ms: 1000, temp: 0, temp_f: null },
+                { epoch_ms: 2000, temp: 0, temp_f: 32 },
+            ],
+        },
+    });
+    await vi.dynamicImportSettled();
+    await flushPromises();
+    expect(Chart.mock.calls.at(-1)[1].data.datasets[0].data.map(({ y }) => y)).toEqual([
+        79.0043,
+        null,
+        32,
+    ]);
+    wrapper.unmount();
 });
 it('waits until the history section is opened before initializing a chart', async () => {
     Chart.mockClear();

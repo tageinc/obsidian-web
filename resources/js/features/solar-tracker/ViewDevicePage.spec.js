@@ -20,6 +20,9 @@ const props = {
         Updated: 'Sep 20, 2026, 12:00 PM PDT',
         'Temperature (°C)': 24,
         'Motor Speed': 0,
+        'Firmware version': '001.020',
+        'Config version': '0',
+        CTS: 0,
         PS1: 10,
     },
     remote: { mode: 0, motor_speed: 0 },
@@ -82,6 +85,68 @@ it('shows missing telemetry explicitly instead of presenting placeholder zero re
     });
     expect(wrapper.text()).toContain('No telemetry received yet');
     expect(wrapper.get('.device-metrics').text()).not.toContain('0');
+    expect(wrapper.findAll('.device-software-versions dd').map((value) => value.text())).toEqual([
+        '—',
+        '—',
+    ]);
+    wrapper.unmount();
+});
+it.each([false, true])(
+    'shows reported software versions without losing leading zeros (embedded=%s)',
+    (embedded) => {
+        const wrapper = mount(ViewDevicePage, { props: { ...props, embedded } });
+        expect(wrapper.get('.device-metrics').text()).toContain('Software versions');
+        expect(
+            wrapper.findAll('.device-software-versions dd').map((value) => value.text()),
+        ).toEqual(['001.020', '0']);
+        wrapper.unmount();
+    },
+);
+it('shows missing versions even when other telemetry is present', () => {
+    const wrapper = mount(ViewDevicePage, {
+        props: {
+            ...props,
+            status: { ...props.status, 'Firmware version': null, 'Config version': undefined },
+        },
+    });
+    expect(wrapper.findAll('.device-software-versions dd').map((value) => value.text())).toEqual([
+        '—',
+        '—',
+    ]);
+    wrapper.unmount();
+});
+it.each([false, true])('shows Fahrenheit and the CTS state (embedded=%s)', (embedded) => {
+    const wrapper = mount(ViewDevicePage, { props: { ...props, embedded } });
+    expect(wrapper.get('.device-metrics').text()).toContain('75.2 °F');
+    expect(wrapper.get('.cts-badge-open').text()).toBe('Open');
+    expect(wrapper.findAll('.device-sensors dd')[0].text()).toBe('10');
+    wrapper.unmount();
+});
+it.each([0, '0', 1, '1', null, 2])('only labels known CTS readings: %s', (value) => {
+    const wrapper = mount(ViewDevicePage, {
+        props: { ...props, status: { ...props.status, CTS: value } },
+    });
+    if (value === 0 || value === '0') {
+        expect(wrapper.get('.cts-badge-open').text()).toBe('Open');
+    } else if (value === 1 || value === '1') {
+        expect(wrapper.get('.cts-badge-closed').text()).toBe('Closed');
+    } else {
+        expect(wrapper.find('.cts-badge').exists()).toBe(false);
+        expect(wrapper.findAll('.device-sensors dd').at(-1).text()).toBe(
+            value === null ? '—' : '2',
+        );
+    }
+    wrapper.unmount();
+});
+it('preserves missing Fahrenheit readings supplied by the API', () => {
+    const wrapper = mount(ViewDevicePage, {
+        props: {
+            ...props,
+            status: { ...props.status, 'Temperature (°C)': 0, 'Temperature (°F)': null },
+        },
+    });
+    expect(wrapper.get('.device-metrics').text()).not.toContain('32');
+    expect(wrapper.get('.device-metrics').text()).not.toContain('°F');
     wrapper.unmount();
 });
 it('embeds device details without page navigation without a standalone edit link', async () => {
@@ -174,6 +239,9 @@ it.each([false, true])(
                 ...props.status,
                 Updated: 'Sep 25, 2026, 11:01 AM PDT',
                 'Temperature (°C)': 31,
+                'Firmware version': '001.021',
+                'Config version': '003.004',
+                CTS: 1,
                 PS1: 99,
             },
             graph: {
@@ -183,7 +251,11 @@ it.each([false, true])(
         });
         await vi.advanceTimersByTimeAsync(60000);
         await flushPromises();
-        expect(wrapper.get('.device-metrics').text()).toContain('31 °C');
+        expect(wrapper.get('.device-metrics').text()).toContain('87.8 °F');
+        expect(wrapper.get('.cts-badge-closed').text()).toBe('Closed');
+        expect(
+            wrapper.findAll('.device-software-versions dd').map((value) => value.text()),
+        ).toEqual(['001.021', '003.004']);
         expect(wrapper.get('.device-sensors').text()).toContain('99');
         expect(wrapper.get('.reading-time').text()).toContain('11:01 AM PDT');
         expect(wrapper.get('.plot-heading').text()).toContain('2 raw readings');

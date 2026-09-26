@@ -8,6 +8,7 @@ const DeviceDetailsModal = defineAsyncComponent(
 import HistoryCharts from './HistoryCharts.vue';
 import RemoteControl from './RemoteControl.vue';
 import { useDeviceTelemetry } from './useDeviceTelemetry';
+import { celsiusToFahrenheit, ctsState } from './sensorReadings';
 const props = defineProps({
     device: { type: Object, required: true },
     status: { type: Object, required: true },
@@ -88,6 +89,15 @@ const hasReading = computed(() =>
     Boolean(currentStatus.value.Updated && currentStatus.value.Updated !== 'N/A'),
 );
 const reading = (key) => (hasReading.value ? (currentStatus.value[key] ?? '—') : '—');
+const temperature = computed(() => {
+    if (!hasReading.value) return null;
+    if ('Temperature (°F)' in currentStatus.value) {
+        const value = currentStatus.value['Temperature (°F)'];
+        return Number.isFinite(value) ? value : null;
+    }
+    return celsiusToFahrenheit(currentStatus.value['Temperature (°C)']);
+});
+const cts = computed(() => (hasReading.value ? ctsState(currentStatus.value.CTS) : null));
 const sensors = ['PS1', 'PS2', 'PS Average', 'PDS', 'CTS'];
 async function exploreHistory() {
     activeSection.value = 'history';
@@ -245,7 +255,7 @@ function navigateSection(event, index) {
                 </div>
                 <div>
                     <dt>Temperature</dt>
-                    <dd>{{ reading('Temperature (°C)') }}<span v-if="hasReading"> °C</span></dd>
+                    <dd>{{ temperature ?? '—' }}<span v-if="temperature !== null"> °F</span></dd>
                 </div>
                 <div>
                     <dt>Motor speed</dt>
@@ -254,6 +264,21 @@ function navigateSection(event, index) {
                 <div>
                     <dt>Control mode</dt>
                     <dd class="state-value">{{ mode === 1 ? 'Remote control' : 'Automatic' }}</dd>
+                </div>
+                <div class="device-software-metric">
+                    <dt>Software versions</dt>
+                    <dd>
+                        <dl class="device-software-versions">
+                            <div>
+                                <dt>Firmware</dt>
+                                <dd>{{ reading('Firmware version') }}</dd>
+                            </div>
+                            <div>
+                                <dt>Configuration</dt>
+                                <dd>{{ reading('Config version') }}</dd>
+                            </div>
+                        </dl>
+                    </dd>
                 </div>
             </dl>
             <div class="device-overview-grid">
@@ -265,7 +290,15 @@ function navigateSection(event, index) {
                     <dl class="device-sensors">
                         <div v-for="sensor in sensors" :key="sensor">
                             <dt>{{ sensor }}</dt>
-                            <dd>{{ reading(sensor) }}</dd>
+                            <dd>
+                                <span
+                                    v-if="sensor === 'CTS' && cts"
+                                    class="cts-badge"
+                                    :class="cts === 'Open' ? 'cts-badge-open' : 'cts-badge-closed'"
+                                    >{{ cts }}</span
+                                >
+                                <template v-else>{{ reading(sensor) }}</template>
+                            </dd>
                         </div>
                     </dl>
                     <button type="button" class="btn btn-link px-0" @click="exploreHistory">
@@ -451,7 +484,7 @@ function navigateSection(event, index) {
 }
 .device-metrics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.35fr);
     margin-bottom: 1.5rem;
     background: #fff;
     border: 1px solid var(--device-border);
@@ -485,6 +518,25 @@ function navigateSection(event, index) {
 .device-metrics .state-value {
     font-size: 1.2rem;
 }
+.device-software-versions {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+}
+.device-software-versions > div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.6rem;
+}
+.device-software-versions dt {
+    font-size: 0.75rem;
+    margin: 0;
+}
+.device-software-versions dd {
+    font-size: 0.9rem;
+    text-align: right;
+}
 .device-overview-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -513,6 +565,22 @@ function navigateSection(event, index) {
     margin: 0;
     font-weight: 600;
     overflow-wrap: anywhere;
+}
+.cts-badge {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+.cts-badge-open {
+    color: #fff;
+    background: #198754;
+}
+.cts-badge-closed {
+    color: #495057;
+    background: #e9ecef;
 }
 .device-header-details {
     margin-top: 1.25rem;
@@ -567,6 +635,25 @@ function navigateSection(event, index) {
 @media (max-width: 991px) {
     .device-details {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .device-metrics {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .device-metrics > .device-software-metric {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--device-border);
+    }
+    .device-software-versions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    .device-software-versions > div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.4rem;
+    }
+    .device-software-versions dd {
+        text-align: left;
     }
 }
 @media (max-width: 575px) {

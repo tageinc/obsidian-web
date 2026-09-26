@@ -12,11 +12,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\UsesFrontendManifest;
 use Tests\TestCase;
 
 class DeviceTelemetryTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $owner;
     private User $developer;
@@ -25,6 +27,7 @@ class DeviceTelemetryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         $this->owner = User::factory()->create();
         $this->developer = User::factory()->create(['email' => 'telemetry-developer@example.test']);
         config(['app.developer_email' => $this->developer->email, 'frontend.vue3.view_device' => true]);
@@ -37,8 +40,12 @@ class DeviceTelemetryTest extends TestCase
     {
         $first = $this->reading('2026-09-25 17:00:00', ['temp' => 20]);
         $latest = $this->reading('2026-09-25 18:00:00', [
-            'temp' => 31.5, 'ps1' => 18, 'ps2' => 19, 'ps_avg' => null, 'pds' => -1,
-            'cts' => 4, 'state' => 'tracking', 'motor_speed' => -20,
+            'data' => [
+                'temp' => 31.5, 'ps1' => 18, 'ps2' => 19, 'ps_avg' => null, 'pds' => -1,
+                'cts' => 4, 'state' => 'tracking', 'motor_speed' => -20,
+                'firmware_version' => '001.020', 'config_version' => '0',
+                'extension' => ['private_value' => 'not-for-the-overview'],
+            ],
         ]);
         DeviceLog::factory()->create(['serial_no' => 'OTHER-SIMULATOR', 'temp' => 999]);
         $control = SolarTrackerRemoteControl::create([
@@ -53,8 +60,13 @@ class DeviceTelemetryTest extends TestCase
             ->assertJsonPath('status.PS Average', null)
             ->assertJsonPath('status.PDS', -1)
             ->assertJsonPath('status.Temperature (°C)', 31.5)
+            ->assertJsonPath('status.Temperature (°F)', 88.7)
+            ->assertJsonPath('graph.points.1.temp_f', 88.7)
             ->assertJsonPath('status.CTS', 4)
+            ->assertJsonPath('status.CTS state', null)
             ->assertJsonPath('status.Motor Speed', -20)
+            ->assertJsonPath('status.Firmware version', '001.020')
+            ->assertJsonPath('status.Config version', '0')
             ->assertJsonPath('status.Updated', 'September 25, 2026, 11:00 AM PDT')
             ->assertJsonPath('latest_reading.id', $latest->id)
             ->assertJsonPath('latest_reading.timestamp', '2026-09-25T11:00:00-07:00')
@@ -67,7 +79,7 @@ class DeviceTelemetryTest extends TestCase
         $external = $this->bearer($secret)->getJson($this->externalUrl())->assertOk();
         $this->assertSame($browser->json(), $external->json());
         $this->assertSame(['status', 'graph', 'latest_reading'], array_keys($external->json()));
-        $external->assertDontSee('user_id');
+        $external->assertDontSee('user_id')->assertDontSee('private_value')->assertDontSee('not-for-the-overview');
         $this->assertSame($beforeDevice, $this->device->fresh()->getAttributes());
         $this->assertSame($beforeControl, $control->fresh()->getAttributes());
         $this->assertSame($beforeCount, DeviceLog::count());
@@ -116,6 +128,60 @@ class DeviceTelemetryTest extends TestCase
             ->assertJsonPath('status.Temperature (°C)', null)->assertJsonPath('status.State', null)
             ->assertJsonPath('status.CTS', null)->assertJsonPath('status.PS Average', null)
             ->assertJsonPath('status.PDS', 0);
+        $this->assertDatabaseCount('solar_tracker_remote_controls', 0);
+    }
+
+    public function test_software_versions_follow_the_same_reading_and_preserve_missing_and_zero_values(): void
+    {
+        $this->reading('2026-09-25 18:00:00', [
+            'data' => ['temp' => 20, 'firmware_version' => 'older-firmware', 'config_version' => 'older-config'],
+        ]);
+        [, $secret] = ExternalApiKey::issue($this->developer, 'Software versions test', null);
+        $cases = [
+            [['firmware_version' => '001.020', 'config_version' => '0'], '001.020', '0'],
+            [['firmware_version' => 43, 'config_version' => 0], 43, 0],
+            [['firmware_version' => 1.25, 'config_version' => 2.5], 1.25, 2.5],
+            [['firmware_version' => null, 'config_version' => null], null, null],
+            [[], null, null],
+            [['firmware_version' => '', 'config_version' => '  '], null, null],
+            [['firmware_version' => ['version' => 'nested'], 'config_version' => false], null, null],
+        ];
+
+        foreach ($cases as [$versions, $firmware, $configuration]) {
+            $latest = $this->reading('2026-09-25 18:00:00', ['data' => array_merge(['temp' => 21], $versions)]);
+            $browser = $this->actingAs($this->owner)->getJson($this->browserUrl())->assertOk()
+                ->assertJsonPath('latest_reading.id', $latest->id)
+                ->assertJsonPath('status.Firmware version', $firmware)
+                ->assertJsonPath('status.Config version', $configuration);
+            $external = $this->bearer($secret)->getJson($this->externalUrl())->assertOk();
+            $this->assertSame($browser->json(), $external->json());
+        }
+    }
+
+    public function test_browser_external_and_graph_values_share_fahrenheit_and_cts_states(): void
+    {
+        [, $secret] = ExternalApiKey::issue($this->developer, 'Reading display test', null);
+        $cases = [
+            [0, 0, 32, 'Open'], ['26.1135', '1', 79.0043, 'Closed'],
+            [-40, '0', -40, 'Open'], [100, 1, 212, 'Closed'],
+            [null, null, null, null], ['', '', null, null],
+            [false, false, null, null], ['invalid', 4, null, null],
+        ];
+        foreach ($cases as [$temperature, $cts, $fahrenheit, $state]) {
+            $latest = $this->reading('2026-09-25 18:00:00', ['data' => ['temp' => $temperature, 'cts' => $cts]]);
+            $browser = $this->actingAs($this->owner)->getJson($this->browserUrl())->assertOk()
+                ->assertJsonPath('latest_reading.id', $latest->id)
+                ->assertJsonPath('status.Temperature (°F)', $fahrenheit)
+                ->assertJsonPath('status.CTS state', $state)
+                ->assertJsonPath('status.CTS', $cts);
+            $external = $this->bearer($secret)->getJson($this->externalUrl())->assertOk();
+            $this->assertSame($browser->json(), $external->json());
+            $points = $external->json('graph.points');
+            $this->assertSame($fahrenheit, $points[count($points) - 1]['temp_f']);
+            $graph = $this->bearer($secret)->getJson('/api/external/v1/devices/'.$this->device->id.'/data')->assertOk();
+            $this->assertSame($points, $graph->json('graph.points'));
+            $this->assertSame(['temp' => $temperature, 'cts' => $cts], $latest->fresh()->data);
+        }
         $this->assertDatabaseCount('solar_tracker_remote_controls', 0);
     }
 

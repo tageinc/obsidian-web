@@ -20,7 +20,7 @@
         }
 
         function speedLabel(speed) {
-            return speed === 0 ? 'Stop (0)' : (speed > 0 ? 'Up (' : 'Down (') + speed + ')';
+            return speed === 0 ? 'Stop (0)' : String(speed);
         }
 
         function validSpeed(speed) {

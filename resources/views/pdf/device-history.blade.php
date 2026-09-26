@@ -52,9 +52,9 @@
         $device['country'] ?? null,
     ], static fn ($value) => $value !== null && $value !== ''));
     $metrics = [
-        ['State', 'state', ''], ['Temperature', 'temp', ' °C'], ['Motor speed', 'motor_speed', ''],
+        ['State', 'state', ''], ['Temperature', 'temp_f', ' °F'], ['Motor speed', 'motor_speed', ''],
         ['PS1', 'ps1', ''], ['PS2', 'ps2', ''], ['PS average', 'ps_avg', ''],
-        ['PDS', 'pds', ''], ['CTS', 'cts', ''],
+        ['PDS', 'pds', ''], ['CTS', 'cts_state', ''],
     ];
 @endphp
 <div class="intro">
@@ -98,7 +98,8 @@
         @foreach (array_chunk($metrics, 4) as $row)
             <tr>
                 @foreach ($row as [$label, $key, $unit])
-                    <td><span class="label">{{ $label }}</span><span class="value">{{ $display($latest[$key] ?? null) }}{{ ($latest[$key] ?? null) !== null ? $unit : '' }}</span></td>
+                    @php($value = $latest[$key] ?? ($key === 'cts_state' ? ($latest['cts'] ?? null) : null))
+                    <td><span class="label">{{ $label }}</span><span class="value">{{ $display($value) }}{{ $value !== null ? $unit : '' }}</span></td>
                 @endforeach
             </tr>
         @endforeach

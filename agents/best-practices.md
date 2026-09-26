@@ -10,7 +10,7 @@
 - Never commit or expose credentials, tokens, private keys, full authorization headers, or secret values in logs, errors, browser code, or reports. Use configured secret stores and environment variables.
 - Write concise comments for assumptions, constraints, business rules, and non-obvious decisions. Avoid decorative blocks, emojis, assistant/user commentary, and restating the code. Remove stale comments in modified areas.
 - Keep validation, retrieval, business logic, persistence, and response construction easy to follow.
-- Follow [testing.md](testing.md), report verification gaps accurately, and fix relevant failures before recommending a merge.
+- Follow the mandatory completion checks in [testing.md](testing.md). Coordinate all contributors before the final run, fix failures, and report unavailable checks explicitly before recommending a merge.
 
 Use judgment for routine implementation decisions within the user's authorized
 scope. Do not add approval steps solely because a rule was imported from another

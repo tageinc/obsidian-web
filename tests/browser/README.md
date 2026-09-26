@@ -46,10 +46,17 @@ reads real telemetry snapshots from the isolated backend. It verifies updated
 Overview values and History counts, the moving default 24-hour window, preserved
 custom dates and measurement selection, retained data after a temporary refresh
 failure, successful retry, and polling cleanup after leaving the device page.
+Temperature values use Fahrenheit; CTS changes exercise green Open, light-gray
+Closed, and missing-value displays with real telemetry snapshots.
 Test-only routes in the guarded fixture application create tagged synthetic
 readings and remove only those readings in cleanup. These routes are absent from
 the deployed application. Only the failure response is mocked; normal refresh
 responses use the real backend, and motor commands remain blocked.
+
+Legacy sensor coverage uses a guarded fixture route with the same browser device
+authorization to render the fallback page. It verifies Fahrenheit status and
+chart values and CTS badges on desktop/mobile, serving Chart.js and Bootstrap
+from installed local dependencies while blocking other external requests.
 
 Developer coverage includes Tools navigation, key creation and validation,
 one-time secret display, reload persistence, revocation, CSRF rejection, and a

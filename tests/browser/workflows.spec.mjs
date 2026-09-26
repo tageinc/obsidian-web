@@ -130,6 +130,25 @@ test('device view is a page with overview, history, and control tabs', async ({ 
     );
     await page.getByRole('tab', { name: 'Control', exact: true }).click();
     await expect(page.getByRole('switch', { name: 'Remote control mode' })).toBeVisible();
+    const control = page.getByRole('tabpanel', { name: 'Control', exact: true });
+    await expect(control.locator('.motor-speed-tick')).toHaveCount(21);
+    await expect(control.locator('.motor-speed-tick-label')).toHaveText([
+        '-100',
+        '-80',
+        '-60',
+        '-40',
+        '-20',
+        '0',
+        '20',
+        '40',
+        '60',
+        '80',
+        '100',
+    ]);
+    await expect(control).not.toContainText(/\b(?:Up|Down)\b/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+        true,
+    );
     await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
 });

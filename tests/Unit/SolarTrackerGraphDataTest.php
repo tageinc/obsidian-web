@@ -41,6 +41,7 @@ class SolarTrackerGraphDataTest extends TestCase
         $this->assertLessThan($graph['points'][1]['epoch_ms'], $graph['points'][0]['epoch_ms']);
         $this->assertSame($graph['points'][1]['epoch_ms'], $graph['points'][2]['epoch_ms']);
         $this->assertSame([10.0, 20.0, 30.0], array_column($graph['points'], 'temp'));
+        $this->assertSame([50.0, 68.0, 86.0], array_column($graph['points'], 'temp_f'));
         $this->assertStringContainsString('PDT', $graph['points'][0]['label']);
         $this->assertStringContainsString('PST', $graph['points'][1]['label']);
     }
@@ -59,6 +60,7 @@ class SolarTrackerGraphDataTest extends TestCase
         ]);
         $point = app(SolarTrackerGraphData::class)->forSerial('SP1')['points'][0];
         $this->assertSame(21.123456, $point['temp']);
+        $this->assertSame(70.0222, $point['temp_f']);
         $this->assertSame(0.0, $point['ps1']);
         $this->assertSame(52.789, $point['ps2']);
         $this->assertNull($point['motor_speed']);

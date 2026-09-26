@@ -9,6 +9,16 @@
 
     function asDate(value) { return new Date(typeof value === 'object' ? value.epoch_ms : value); }
 
+    function celsiusToFahrenheit(value) {
+        if (typeof value !== 'number' && typeof value !== 'string') return null;
+        if (typeof value === 'string' && !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim())) return null;
+        const number = Number(value);
+        const fahrenheit = number * 9 / 5 + 32;
+        if (!Number.isFinite(number) || !Number.isFinite(fahrenheit)) return null;
+        const scaled = Math.abs(fahrenheit) * 10000;
+        return Number.isFinite(scaled) ? Math.sign(fahrenheit) * Math.round(scaled) / 10000 : fahrenheit;
+    }
+
     function formatTime(value) {
         return new Intl.DateTimeFormat('en-US', { ...FORMATTER_OPTIONS, timeZone: TIME_ZONE }).format(asDate(value));
     }
@@ -31,7 +41,7 @@
     function normalizePoints(points) {
         function numericValue(value) {
             if (typeof value !== 'number' && typeof value !== 'string') return null;
-            if (typeof value === 'string' && value.trim() === '') return null;
+            if (typeof value === 'string' && !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim())) return null;
             const number = Number(value);
             return Number.isFinite(number) ? number : null;
         }
@@ -42,6 +52,7 @@
             ['temp', 'ps1', 'ps2', 'motor_speed'].forEach(function (field) {
                 result[field] = numericValue(point[field]);
             });
+            if (Object.prototype.hasOwnProperty.call(point, 'temp_f')) result.temp_f = numericValue(point.temp_f);
             return { point: result, index: index, id: numericValue(point.id) };
         }).filter(Boolean).sort(function (a, b) {
             if (a.point.epoch_ms !== b.point.epoch_ms) return a.point.epoch_ms - b.point.epoch_ms;
@@ -93,7 +104,7 @@
         if (!root.Chart) return null;
         const includeDate = shouldIncludeDate(points);
         const datasets = series.map(function (metric) {
-            return { label: metric.label, data: points.map(function (point) { return { x: point.epoch_ms, y: point[metric.field], id: point.id }; }), borderColor: metric.color, backgroundColor: metric.color, showLine: false, pointRadius: 2, pointHoverRadius: 4, pointStyle: 'circle', tension: 0, spanGaps: false, order: 0 };
+            return { label: metric.label, data: points.map(function (point) { return { x: point.epoch_ms, y: metric.field === 'temp' ? (Object.prototype.hasOwnProperty.call(point, 'temp_f') ? point.temp_f : celsiusToFahrenheit(point.temp)) : point[metric.field], id: point.id }; }), borderColor: metric.color, backgroundColor: metric.color, showLine: false, pointRadius: 2, pointHoverRadius: 4, pointStyle: 'circle', tension: 0, spanGaps: false, order: 0 };
         });
         const trends = datasets.flatMap(function (dataset, index) {
             const fitted = linearRegression(dataset.data);
@@ -124,7 +135,7 @@
             const empty = container.querySelector('[data-graph-empty]');
             empty.hidden = points.length > 0;
             charts = points.length ? [
-                makeChart(container.querySelector('[data-chart="temperature"]'), [{ label: 'Temperature (°C)', color: '#0d6efd', field: 'temp' }], points),
+                makeChart(container.querySelector('[data-chart="temperature"]'), [{ label: 'Temperature (°F)', color: '#0d6efd', field: 'temp' }], points),
                 makeChart(container.querySelector('[data-chart="panel"]'), [
                     { label: 'PS1', color: '#198754', field: 'ps1' },
                     { label: 'PS2', color: '#6f42c1', field: 'ps2' }
@@ -136,5 +147,5 @@
         redraw(0);
     }
 
-    return { TIME_ZONE: TIME_ZONE, formatTime: formatTime, formatTimestamp: formatTimestamp, normalizePoints: normalizePoints, rangeLabel: rangeLabel, filteredPoints: filteredPoints, shouldIncludeDate: shouldIncludeDate, linearRegression: linearRegression, render: render };
+    return { TIME_ZONE: TIME_ZONE, formatTime: formatTime, formatTimestamp: formatTimestamp, normalizePoints: normalizePoints, rangeLabel: rangeLabel, filteredPoints: filteredPoints, shouldIncludeDate: shouldIncludeDate, linearRegression: linearRegression, celsiusToFahrenheit: celsiusToFahrenheit, render: render };
 }));

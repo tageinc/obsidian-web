@@ -22,6 +22,21 @@ it('defaults to Stop without commands on mount or unmount and disables automatic
         step: '10',
     });
     expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.findAll('.motor-speed-tick')).toHaveLength(21);
+    expect(wrapper.findAll('.motor-speed-tick-label').map((label) => label.text())).toEqual([
+        '-100',
+        '-80',
+        '-60',
+        '-40',
+        '-20',
+        '0',
+        '20',
+        '40',
+        '60',
+        '80',
+        '100',
+    ]);
+    expect(wrapper.text()).not.toMatch(/\b(?:Up|Down)\b/);
     await slider.trigger('change');
     wrapper.unmount();
     expect(requestJson).not.toHaveBeenCalled();
@@ -29,7 +44,7 @@ it('defaults to Stop without commands on mount or unmount and disables automatic
 it('loads saved speed and preserves off-step legacy commands without rewriting them', () => {
     const wrapper = mount(RemoteControl, { props: { ...props, mode: 1, motorSpeed: 25 } });
     expect(wrapper.get('#remote-motor-speed').element.value).toBe('30');
-    expect(wrapper.get('#remote-saved-speed').text()).toBe('Saved motor speed: Up (25)');
+    expect(wrapper.get('#remote-saved-speed').text()).toBe('Saved motor speed: 25');
     expect(requestJson).not.toHaveBeenCalled();
 });
 it('previews dragging without saving, commits once, and skips unchanged commands', async () => {
@@ -39,9 +54,9 @@ it('previews dragging without saving, commits once, and skips unchanged commands
     expect(slider.element.value).toBe('40');
     slider.element.value = '-30';
     await slider.trigger('input');
-    expect(wrapper.get('#remote-speed-value').text()).toBe('Down (-30)');
-    expect(slider.attributes('aria-valuetext')).toBe('Down (-30)');
-    expect(wrapper.get('#remote-saved-speed').text()).toContain('Up (40)');
+    expect(wrapper.get('#remote-speed-value').text()).toBe('-30');
+    expect(slider.attributes('aria-valuetext')).toBe('-30');
+    expect(wrapper.get('#remote-saved-speed').text()).toContain('40');
     expect(requestJson).not.toHaveBeenCalled();
     await slider.trigger('change');
     await flushPromises();
@@ -50,8 +65,8 @@ it('previews dragging without saving, commits once, and skips unchanged commands
         csrfToken: props.csrfToken,
         data: { mode: 1, motor_speed: -30, serial_no: props.serial },
     });
-    expect(wrapper.get('#remote-saved-speed').text()).toContain('Down (-30)');
-    expect(wrapper.get('[role="status"]').text()).toBe('Motor speed saved: Down (-30).');
+    expect(wrapper.get('#remote-saved-speed').text()).toContain('-30');
+    expect(wrapper.get('[role="status"]').text()).toBe('Motor speed saved: -30.');
     expect(wrapper.emitted('change')).toEqual([[{ mode: 1, motor_speed: -30 }]]);
     await slider.trigger('change');
     expect(requestJson).toHaveBeenCalledTimes(1);
@@ -126,13 +141,13 @@ it('restores the saved speed after failure and permits an explicit retry', async
     await slider.setValue('100');
     await flushPromises();
     expect(slider.element.value).toBe('-40');
-    expect(wrapper.get('#remote-speed-value').text()).toBe('Down (-40)');
-    expect(wrapper.get('#remote-saved-speed').text()).toContain('Down (-40)');
+    expect(wrapper.get('#remote-speed-value').text()).toBe('-40');
+    expect(wrapper.get('#remote-saved-speed').text()).toContain('-40');
     expect(wrapper.get('[role="alert"]').text()).toContain('Could not save');
     expect(wrapper.emitted('change')).toBeUndefined();
     expect(requestJson).toHaveBeenCalledTimes(1);
     requestJson.mockResolvedValueOnce({ success: true, mode: 1, motor_speed: 100 });
     await slider.setValue('100');
     await flushPromises();
-    expect(wrapper.get('#remote-saved-speed').text()).toContain('Up (100)');
+    expect(wrapper.get('#remote-saved-speed').text()).toContain('100');
 });

@@ -1,6 +1,13 @@
 const assert = require('assert');
 const graph = require('../../public/js/solar-tracker-graph.js');
 
+assert.equal(graph.celsiusToFahrenheit(0), 32);
+assert.equal(graph.celsiusToFahrenheit(-40), -40);
+assert.equal(graph.celsiusToFahrenheit('26.1135'), 79.0043);
+[null, undefined, '', ' ', false, NaN, Infinity, 'unknown', '0x10', '0b11'].forEach(value => {
+  assert.equal(graph.celsiusToFahrenheit(value), null, 'Missing and invalid temperatures stay missing');
+});
+
 const points = graph.normalizePoints([
   { id: 3, timestamp: '2026-03-08T10:30:00Z', temp: 40 },
   { id: 1, timestamp: '2026-03-08T09:30:00Z', temp: 10 }, // 1:30 AM PST
@@ -170,28 +177,30 @@ try {
     assert.equal(chart.config.options.plugins.legend.display, true);
     assert.equal(chart.config.options.plugins.legend.labels.usePointStyle, true);
   });
-  assert.deepEqual(createdCharts[0].config.data.datasets[0].data.map(point => point.y), [20, null, 22, 24]);
+  assert.equal(createdCharts[0].config.data.datasets[0].label, 'Temperature (°F)');
+  assert.deepEqual(createdCharts[0].config.data.datasets[0].data.map(point => point.y), [68, null, 71.6, 75.2]);
   assert.deepEqual(createdCharts[1].config.data.datasets.map(dataset => dataset.label), ['PS1', 'PS2', 'PS1 — linear trend', 'PS2 — linear trend']);
   assert.deepEqual(createdCharts[1].config.data.datasets[0].data.map(point => point.y), [40, 0, 42, 45]);
   assert.deepEqual(createdCharts[1].config.data.datasets[1].data.map(point => point.y), [50, null, 52, 55]);
   assert.equal(createdCharts[1].config.options.plugins.legend.display, true);
   assert.equal(createdCharts[0].config.options.plugins.legend.display, true);
   assert.deepEqual(createdCharts[2].config.data.datasets[0].data.map(point => point.y), [10, 0, 11, 12]);
-  closeTo(createdCharts[0].config.data.datasets[1].data[0].y, 258 / 13);
-  closeTo(createdCharts[0].config.data.datasets[1].data[1].y, 306 / 13);
+  closeTo(createdCharts[0].config.data.datasets[1].data[0].y, (258 / 13) * 9 / 5 + 32);
+  closeTo(createdCharts[0].config.data.datasets[1].data[1].y, (306 / 13) * 9 / 5 + 32);
 
   container.buttons[0].click();
   assert.equal(createdCharts.length, 6);
   assert.ok(createdCharts.slice(0, 3).every(chart => chart.destroyed));
-  assert.deepEqual(createdCharts[3].config.data.datasets[0].data.map(point => point.y), [null, 22, 24]);
-  assert.deepEqual(createdCharts[3].config.data.datasets[1].data, [
-    { x: Date.parse('2026-06-02T07:00:00Z'), y: 22 },
-    { x: Date.parse('2026-06-02T07:30:00Z'), y: 24 }
+  assert.deepEqual(createdCharts[3].config.data.datasets[0].data.map(point => point.y), [null, 71.6, 75.2]);
+  assert.deepEqual(createdCharts[3].config.data.datasets[1].data.map(point => point.x), [
+    Date.parse('2026-06-02T07:00:00Z'), Date.parse('2026-06-02T07:30:00Z')
   ], 'Changing the range must fit its valid readings again without extrapolation');
+  closeTo(createdCharts[3].config.data.datasets[1].data[0].y, 71.6);
+  closeTo(createdCharts[3].config.data.datasets[1].data[1].y, 75.2);
   container.buttons[3].click();
   assert.equal(createdCharts.length, 9);
   assert.equal(createdCharts[6].config.data.datasets[0].data.length, 4);
-  closeTo(createdCharts[6].config.data.datasets[1].data[0].y, 258 / 13);
+  closeTo(createdCharts[6].config.data.datasets[1].data[0].y, (258 / 13) * 9 / 5 + 32);
 
   const emptyContainer = graphContainer();
   graph.render(emptyContainer, []);
@@ -209,7 +218,7 @@ try {
   [[0, [3, 4]], [1, [2, 3, 4]], [2, [1, 2, 3, 4]], [3, [0, 1, 2, 3, 4]]].forEach(([buttonIndex, values]) => {
     rangedContainer.buttons[buttonIndex].click();
     const chart = createdCharts[createdCharts.length - 3];
-    assert.deepEqual(chart.config.data.datasets[0].data.map(point => point.y), values);
+    assert.deepEqual(chart.config.data.datasets[0].data.map(point => point.y), values.map(value => graph.celsiusToFahrenheit(value)));
     assert.equal(chart.config.data.datasets[1].data[0].x, chart.config.data.datasets[0].data[0].x);
     assert.equal(chart.config.data.datasets[1].data[1].x, latestEpoch);
     assert.match(chart.config.options.scales.x.ticks.callback(latestEpoch), /12:00 PM/);
@@ -218,8 +227,14 @@ try {
   const sparseContainer = graphContainer();
   graph.render(sparseContainer, [{ id: 1, epoch_ms: latestEpoch, temp: 0, ps1: null, ps2: 0, motor_speed: null }]);
   assert.equal(sparseContainer.elements['[data-graph-empty]'].hidden, true);
-  assert.deepEqual(createdCharts[createdCharts.length - 3].config.data.datasets[0].data, [{ x: latestEpoch, y: 0, id: 1 }]);
+  assert.deepEqual(createdCharts[createdCharts.length - 3].config.data.datasets[0].data, [{ x: latestEpoch, y: 32, id: 1 }]);
   assert.ok(createdCharts.slice(-3).every(chart => chart.config.data.datasets.every(dataset => !dataset.isTrend)));
+
+  const invalidTemperatureContainer = graphContainer();
+  graph.render(invalidTemperatureContainer, [{ epoch_ms: latestEpoch, temp: 0, temp_f: null }]);
+  assert.equal(createdCharts[createdCharts.length - 3].config.data.datasets[0].data[0].y, null, 'The validated Fahrenheit value preserves malformed source temperatures as missing');
+  graph.render(invalidTemperatureContainer, [{ epoch_ms: latestEpoch, temp: '0x10' }]);
+  assert.equal(createdCharts[createdCharts.length - 3].config.data.datasets[0].data[0].y, null, 'Older payloads must not turn hexadecimal strings into temperature readings');
 
   const duplicateContainer = graphContainer();
   graph.render(duplicateContainer, [10, 20].map((value, index) => ({

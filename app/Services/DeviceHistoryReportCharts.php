@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 class DeviceHistoryReportCharts
 {
     private const VIEWS = [
-        ['title' => 'Temperature', 'unit' => '°C', 'series' => [['temp', 'Temperature', '#2862c4']]],
+        ['title' => 'Temperature', 'unit' => '°F', 'series' => [['temp', 'Temperature', '#2862c4']]],
         ['title' => 'Panel sensors', 'unit' => '', 'series' => [['ps1', 'PS1', '#2862c4'], ['ps2', 'PS2', '#138369']]],
         ['title' => 'PDS', 'unit' => '', 'series' => [['pds', 'PDS', '#8954b9']]],
         ['title' => 'PS average', 'unit' => '', 'series' => [['ps_avg', 'PS average', '#138369']]],
@@ -28,6 +28,10 @@ class DeviceHistoryReportCharts
                 $readings = [];
                 foreach ($points as $point) {
                     $value = $point[$field] ?? null;
+                    if ($field === 'temp') {
+                        $value = array_key_exists('temp_f', $point)
+                            ? $point['temp_f'] : DeviceTelemetryValues::celsiusToFahrenheit($value);
+                    }
                     if (is_numeric($value) && is_finite((float) $value)) {
                         $readings[] = ['x' => (float) $point['epoch_ms'], 'y' => (float) $value];
                     }

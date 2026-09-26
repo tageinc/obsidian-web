@@ -18,8 +18,14 @@ These instructions apply throughout this repository.
 ## Instruction map
 
 Always read [agents/rules.md](agents/rules.md),
-[agents/project-overview.md](agents/project-overview.md), and
-[agents/best-practices.md](agents/best-practices.md).
+[agents/project-overview.md](agents/project-overview.md),
+[agents/best-practices.md](agents/best-practices.md), and
+[agents/testing.md](agents/testing.md).
+
+Application changes are not ready for handoff until the mandatory completion
+checks in `agents/testing.md` pass against the final files. Focused tests are
+for iteration; they do not replace the full completion checks. If a required
+check cannot run, report verification as incomplete with the exact blocker.
 
 Read additional rules for the work being performed:
 

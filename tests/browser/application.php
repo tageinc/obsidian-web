@@ -35,11 +35,20 @@ $app->make(Illuminate\Contracts\Debug\ExceptionHandler::class)->reportable(funct
 
 // These routes exist only behind the disposable-database checks above. The live
 // browser test removes only the tagged readings that it created.
+Illuminate\Support\Facades\Route::get('/__browser-fixtures/devices/{id}/legacy', function ($id) {
+    config(['frontend.vue3.view_device' => false, 'frontend.vue3.workspace' => false]);
+
+    return app(App\Http\Controllers\ViewDeviceController::class)->show($id);
+})->middleware(['web', 'auth', 'verified', 'browser.device']);
+
 Illuminate\Support\Facades\Route::post('/__browser-fixtures/telemetry', function (Illuminate\Http\Request $request) {
     $values = $request->validate([
         'temp' => 'required|numeric',
         'ps_avg' => 'required|numeric',
         'pds' => 'required|numeric',
+        'firmware_version' => 'nullable|string|max:255',
+        'config_version' => 'nullable|string|max:255',
+        'cts' => 'sometimes|nullable|integer',
     ]);
     $serial = 'BROWSER-SIMULATOR-1';
     abort_unless(App\Models\Device::where('serial_no', $serial)->exists(), 404);
@@ -50,7 +59,8 @@ Illuminate\Support\Facades\Route::post('/__browser-fixtures/telemetry', function
     $reading = new App\Models\Api\DeviceLog([
         'serial_no' => $serial,
         'data' => array_merge($values, [
-            'ps1' => 35, 'ps2' => 45, 'motor_speed' => 0, 'state' => 'solar-track', 'cts' => 1,
+            'ps1' => 35, 'ps2' => 45, 'motor_speed' => 0, 'state' => 'solar-track',
+            'cts' => array_key_exists('cts', $values) ? $values['cts'] : 1,
             'browser_live_fixture' => true,
         ]),
     ]);

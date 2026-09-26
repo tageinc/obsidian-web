@@ -34,6 +34,8 @@ class DeviceHistoryReportData
             foreach (DeviceLog::TELEMETRY_FIELDS as $field) {
                 $latest[$field] = $log->{$field};
             }
+            $latest['temp_f'] = DeviceTelemetryValues::celsiusToFahrenheit($log->temp);
+            $latest['cts_state'] = DeviceTelemetryValues::ctsState($log->cts);
         }
 
         return [

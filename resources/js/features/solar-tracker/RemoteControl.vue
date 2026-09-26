@@ -18,6 +18,7 @@ const speedInput = ref(null);
 const pending = ref(null);
 const feedback = ref('');
 const failed = ref(false);
+const speedTicks = Array.from({ length: 21 }, (_, index) => -100 + index * 10);
 let alive = true;
 onBeforeUnmount(() => {
     alive = false;
@@ -27,7 +28,7 @@ function sliderSpeed(speed) {
     return Number.isFinite(value) ? Math.max(-100, Math.min(100, Math.round(value / 10) * 10)) : 0;
 }
 function speedLabel(speed) {
-    return `${speed === 0 ? 'Stop' : speed > 0 ? 'Up' : 'Down'} (${speed})`;
+    return speed === 0 ? 'Stop (0)' : String(speed);
 }
 function previewSpeed(event) {
     if (pending.value || confirmed.value.mode !== 1) return;
@@ -136,12 +137,20 @@ async function save(mode, speed, toggle = false) {
                 @input="previewSpeed"
                 @change="commitSpeed"
             />
-            <div class="d-flex justify-content-between small text-muted" aria-hidden="true">
-                <span>Down (-100)</span><span>Stop (0)</span><span>Up (100)</span>
+            <div class="motor-speed-scale" aria-hidden="true">
+                <span
+                    v-for="tick in speedTicks"
+                    :key="tick"
+                    class="motor-speed-tick"
+                    :class="{ 'motor-speed-tick-major': tick % 20 === 0 }"
+                    :style="{ left: `${(tick + 100) / 2}%` }"
+                >
+                    <span v-if="tick % 20 === 0" class="motor-speed-tick-label">{{ tick }}</span>
+                </span>
             </div>
             <p id="remote-speed-help" class="small text-muted mt-3 mb-2">
-                Drag and release to save, or use the arrow keys. Negative values move Down, positive
-                values move Up, and 0 stops the motor.
+                Drag and release to save, or use the arrow keys. Set a value from -100 to 100 in
+                steps of 10; 0 stops the motor.
             </p>
             <p id="remote-saved-speed" class="small mb-0">
                 Saved motor speed: {{ speedLabel(confirmed.motor_speed) }}
@@ -152,3 +161,38 @@ async function save(mode, speed, toggle = false) {
         </div>
     </section>
 </template>
+
+<style scoped>
+.motor-speed-scale {
+    position: relative;
+    height: 2.1rem;
+    margin: -0.25rem 0.5rem 0;
+}
+.motor-speed-tick {
+    position: absolute;
+    top: 0;
+    width: 0;
+    height: 0.35rem;
+    border-left: 1px solid #adb5bd;
+}
+.motor-speed-tick-major {
+    height: 0.5rem;
+    border-left-color: #6c757d;
+}
+.motor-speed-tick-label {
+    position: absolute;
+    top: 0.65rem;
+    left: 0;
+    color: #6c757d;
+    font-size: 0.7rem;
+    line-height: 1;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.motor-speed-tick:first-child .motor-speed-tick-label {
+    transform: none;
+}
+.motor-speed-tick:last-child .motor-speed-tick-label {
+    transform: translateX(-100%);
+}
+</style>

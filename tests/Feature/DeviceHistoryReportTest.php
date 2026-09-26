@@ -77,14 +77,17 @@ class DeviceHistoryReportTest extends TestCase
         $this->assertSame(-2.0, $report['points'][0]['pds']);
         $this->assertSame(91.0, $report['points'][0]['ps_avg']);
         $this->assertNull($report['points'][1]['temp']);
+        $this->assertNull($report['points'][1]['temp_f']);
         $this->assertNull($report['points'][1]['ps_avg']);
         $this->assertSame('REPORT-ORDER', $report['device']['order_no']);
         $this->assertSame('100 Test Street', $report['device']['address_1']);
         $this->assertArrayNotHasKey('user_id', $report['device']);
         $this->assertArrayNotHasKey('data', $report['latest']);
         $this->assertSame(32.5, $report['latest']['temp']);
+        $this->assertSame(90.5, $report['latest']['temp_f']);
         $this->assertSame('tracking', $report['latest']['state']);
         $this->assertSame(4, $report['latest']['cts']);
+        $this->assertNull($report['latest']['cts_state']);
         $this->assertTrue($report['latest']['recorded_at']->equalTo($latest->updated_at));
         $this->assertSame('America/Los_Angeles', $report['timezone']);
         $this->assertSame(0, $report['control_mode']);
@@ -141,7 +144,9 @@ class DeviceHistoryReportTest extends TestCase
         $this->get($this->browserUrl())->assertOk();
         $this->assertSame([], $renderer->reports[1]['points']);
         $this->assertNull($renderer->reports[1]['latest']['temp']);
+        $this->assertNull($renderer->reports[1]['latest']['temp_f']);
         $this->assertNull($renderer->reports[1]['latest']['cts']);
+        $this->assertNull($renderer->reports[1]['latest']['cts_state']);
         $this->assertNull($renderer->reports[1]['latest']['state']);
         $this->assertNull($renderer->reports[1]['latest']['ps_avg']);
     }

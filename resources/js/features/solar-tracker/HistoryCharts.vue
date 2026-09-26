@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { normalizePoints, rangeLabel, chartOptions, formatTimestamp } from './timeSeries';
 import { downloadHistoryReport } from './historyReport';
+import { celsiusToFahrenheit } from './sensorReadings';
 
 import {
     lastDay,
@@ -128,8 +129,8 @@ const state = ref('ready');
 const metrics = {
     temperature: {
         title: 'Temperature',
-        unit: '°C',
-        series: [['temp', 'Temperature (°C)', '#275bb5']],
+        unit: '°F',
+        series: [['temp', 'Temperature (°F)', '#275bb5']],
     },
     panels: {
         title: 'Panel sensors',
@@ -156,7 +157,20 @@ const metrics = {
     },
 };
 const selected = computed(() => metrics[metric.value]);
-const normalized = computed(() => normalizePoints(props.points));
+const normalized = computed(() =>
+    normalizePoints(
+        props.points.map((point) =>
+            point
+                ? {
+                      ...point,
+                      temp: Object.hasOwn(point, 'temp_f')
+                          ? point.temp_f
+                          : celsiusToFahrenheit(point.temp),
+                  }
+                : point,
+        ),
+    ),
+);
 watch([normalized, () => props.refreshedAt], () => {
     if (view.value === 'all' && normalized.value.length) {
         setRange({
@@ -433,6 +447,7 @@ onBeforeUnmount(() => {
                         role="img"
                         :aria-label="
                             selected.title +
+                            (metric === 'temperature' ? ' in degrees Fahrenheit' : '') +
                             ', scatter plot with linear trend lines, ' +
                             visible.length +
                             ' raw readings. ' +

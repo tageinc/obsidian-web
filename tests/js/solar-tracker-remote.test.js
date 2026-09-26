@@ -60,7 +60,7 @@ function success(mode, motorSpeed) {
 }
 
 function label(speed) {
-    return speed === 0 ? 'Stop (0)' : (speed > 0 ? 'Up (' : 'Down (') + speed + ')';
+    return speed === 0 ? 'Stop (0)' : String(speed);
 }
 
 (async function () {
@@ -79,6 +79,10 @@ function label(speed) {
             assert.ok(range.includes(attribute), 'Range must include ' + attribute);
         }
         assert.match(blade, /<label[^>]*for="remote-motor-speed">Motor speed<\/label>/);
+        assert.equal((blade.match(/class="motor-speed-tick(?:--major)?"/g) || []).length, 0);
+        assert.match(blade, /range\(-100, 100, 10\)/);
+        assert.match(blade, /class="motor-speed-tick-label"/);
+        assert.doesNotMatch(blade, /\b(?:Up|Down)\s*\(/);
         assert.doesNotMatch(blade, /data-speed=/);
 
         const automatic = fixture();
@@ -102,12 +106,12 @@ function label(speed) {
         assert.equal(savedRemote.controls.attributes['aria-disabled'], 'false');
         assert.equal(savedRemote.slider.disabled, false);
         assert.equal(savedRemote.slider.value, '-20');
-        assert.equal(savedRemote.speedValue.textContent, 'Down (-20)');
-        assert.equal(savedRemote.savedSpeed.textContent, 'Down (-20)');
+        assert.equal(savedRemote.speedValue.textContent, '-20');
+        assert.equal(savedRemote.savedSpeed.textContent, '-20');
         assert.equal(savedRemote.slider.focusCalls, 0, 'Rendering must not steal focus');
         const offStep = fixture(1, -37);
         assert.equal(offStep.slider.value, '-40');
-        assert.equal(offStep.savedSpeed.textContent, 'Down (-37)', 'Preserve the exact saved command when it is between slider steps');
+        assert.equal(offStep.savedSpeed.textContent, '-37', 'Preserve the exact saved command when it is between slider steps');
         assert.equal(requests.length, 0, 'Normalizing the thumb position must not send a command');
 
         automatic.toggle.checked = true;
@@ -174,7 +178,7 @@ function label(speed) {
             assert.equal(slow.container.attributes['aria-busy'], 'true');
             assert.equal(slow.feedback.textContent, 'Saving…');
             assert.equal(slow.label.textContent, 'Remote Control', 'Show the confirmed mode until saved');
-            assert.equal(slow.savedSpeed.textContent, 'Down (-20)');
+            assert.equal(slow.savedSpeed.textContent, '-20');
             slow.slider.value = '-100';
             slow.slider.input();
             await slow.slider.change();
@@ -188,7 +192,7 @@ function label(speed) {
             assert.equal(slow.toggle.disabled, false);
             assert.equal(slow.slider.disabled, isModeChange);
             assert.equal(slow.container.attributes['aria-busy'], 'false');
-            assert.equal(slow.savedSpeed.textContent, isModeChange ? 'Stop (0)' : 'Up (50)');
+            assert.equal(slow.savedSpeed.textContent, isModeChange ? 'Stop (0)' : '50');
         }
 
         // Restore focus lost when pending disables the slider, without stealing it after user navigation.
@@ -231,7 +235,7 @@ function label(speed) {
                 assert.equal(failed.label.textContent, initialMode === 1 ? 'Remote Control' : 'Automatic');
                 assert.equal(failed.slider.disabled, initialMode === 0);
                 assert.equal(failed.slider.value, '-20');
-                assert.equal(failed.savedSpeed.textContent, 'Down (-20)');
+                assert.equal(failed.savedSpeed.textContent, '-20');
                 assert.match(failed.feedback.textContent, /cannot|failed|Could not/);
                 assert.doesNotMatch(failed.feedback.textContent, /saved[.:]/);
             }
@@ -239,11 +243,11 @@ function label(speed) {
             failedCommand.slider.focus();
             failedCommand.slider.value = '60';
             failedCommand.slider.input();
-            assert.equal(failedCommand.speedValue.textContent, 'Up (60)');
+            assert.equal(failedCommand.speedValue.textContent, '60');
             await failedCommand.slider.change();
             assert.equal(failedCommand.slider.value, '-20');
-            assert.equal(failedCommand.speedValue.textContent, 'Down (-20)');
-            assert.equal(failedCommand.savedSpeed.textContent, 'Down (-20)');
+            assert.equal(failedCommand.speedValue.textContent, '-20');
+            assert.equal(failedCommand.savedSpeed.textContent, '-20');
             assert.equal(failedCommand.toggle.checked, true);
             assert.equal(failedCommand.slider.ownerDocument.activeElement, failedCommand.slider, 'Failed saves must allow the keyboard user to retry');
         }

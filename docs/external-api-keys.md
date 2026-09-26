@@ -220,10 +220,16 @@ curl --silent --show-error --fail-with-body \
 
 The response is `{"graph": {...}}`. It contains up to the latest **9,000** individual
 readings in chronological order, not a paginated or averaged series. Each point
-has `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `ps1`, `ps2`, `pds`, `ps_avg`,
+has `id`, `timestamp`, `epoch_ms`, `label`, `temp`, `temp_f`, `ps1`, `ps2`, `pds`, `ps_avg`,
 and `motor_speed`.
 Missing metric values are `null`; duplicate timestamps can represent distinct
 readings. Use `epoch_ms` or the ISO-8601 `timestamp` for processing.
+
+`temp` retains the recorded Celsius value for existing clients. `temp_f` is the
+Fahrenheit value used by the device overview and History: `C * 9 / 5 + 32`, rounded
+to four decimal places. Numeric strings are accepted; missing, blank, boolean,
+and invalid temperatures or non-finite conversion results return `null` for
+`temp_f`. A recorded zero Celsius is `32` Fahrenheit. Raw telemetry is not rewritten.
 
 Timestamps and display labels use `America/Los_Angeles` with the applicable UTC
 offset. This endpoint does not implement date ranges, custom limits, or
@@ -256,7 +262,8 @@ curl --silent --show-error --fail-with-body \
 The response contains three fields:
 
 - `status`: the latest overview values under `State`, `PS1`, `PS2`, `PS Average`,
-  `PDS`, `CTS`, `Motor Speed`, `Temperature (°C)`, and `Updated`. Missing
+  `PDS`, `CTS`, `CTS state`, `Motor Speed`, `Temperature (°C)`, `Temperature (°F)`, `Firmware version`,
+  `Config version`, and `Updated`. Missing
   measurements are `null`, including missing values in a recorded reading;
   zero remains a real zero. `Updated` is the recorded time displayed in Pacific
   Time, or `N/A` when no timestamped reading exists.
@@ -266,6 +273,23 @@ The response contains three fields:
 - `latest_reading`: `{ "id": 123, "timestamp": "2026-09-25T11:00:00-07:00",
   "epoch_ms": 1790359200000 }`, or `null` for a device without readings. When
   several readings share a timestamp, the highest ID is the latest reading.
+
+The Overview card's **Software versions** values come from `firmware_version`
+and `config_version` in that same latest device reading. They describe the
+device-reported versions, not the newest releases available for download.
+Nonempty string identifiers retain their exact text (including leading zeros),
+and numeric versions retain their numeric value; `"0"` and `0` are valid
+versions. Missing, `null`, blank, or nonscalar values return `null`, as do
+booleans. Versions are not carried forward from an older reading when the
+latest reading omits them. The card layout is presentation behavior; the data
+is available through the existing telemetry operation above.
+
+`Temperature (°F)` uses the same conversion, precision, and null handling as
+`graph.points[].temp_f`. `Temperature (°C)` and `CTS` retain their existing raw
+contracts. `CTS state` maps the numeric or string value `0` to `Open` and `1` to
+`Closed`; missing or unrecognized states return `null`. The overview shows Open
+with a green badge and Closed with a light-gray badge. Badge colors are
+presentation behavior; the state values are available through telemetry.
 
 Each successful request returns a full current snapshot, even if the latest
 timestamp has not changed. This also exposes corrections to existing readings.
@@ -286,6 +310,9 @@ address, coordinates, current stored control mode, report creation time, and the
 temperature, panel sensors (PS1 and PS2), PDS, PS Average, and motor speed, with
 raw readings and the same least-squares linear trends. The currently displayed
 measurement in the UI does not limit the report.
+Temperatures in the latest snapshot and history charts use Fahrenheit with the
+same conversion as `temp_f`. The latest CTS value uses Open/Closed text; an
+unrecognized state retains its raw value, and missing values are shown as N/A.
 
 | Query parameter | Contract |
 | --- | --- |

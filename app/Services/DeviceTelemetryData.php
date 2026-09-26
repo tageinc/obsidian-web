@@ -14,6 +14,7 @@ class DeviceTelemetryData
         $lastPoint = $graph['points'] ? $graph['points'][count($graph['points']) - 1] : null;
         // Use the graph's last record so equal timestamps choose the same reading.
         $latest = $lastPoint ? DeviceLog::find($lastPoint['id']) : null;
+        $latestData = $latest ? ($latest->data ?? []) : [];
 
         return [
             'status' => [
@@ -22,11 +23,15 @@ class DeviceTelemetryData
                 'PS Average' => $lastPoint['ps_avg'] ?? null,
                 'Motor Speed' => $lastPoint['motor_speed'] ?? null,
                 'CTS' => $latest ? $latest->cts : null,
+                'CTS state' => DeviceTelemetryValues::ctsState($latest ? $latest->cts : null),
                 'Updated' => $latest ? $latest->updated_at->copy()
                     ->timezone(SolarTrackerGraphData::TIMEZONE)->format('F j, Y, g:i A T') : 'N/A',
                 'PS2' => $lastPoint['ps2'] ?? null,
                 'PDS' => $lastPoint['pds'] ?? null,
                 'Temperature (°C)' => $lastPoint['temp'] ?? null,
+                'Temperature (°F)' => $lastPoint['temp_f'] ?? null,
+                'Firmware version' => $this->softwareVersion($latestData['firmware_version'] ?? null),
+                'Config version' => $this->softwareVersion($latestData['config_version'] ?? null),
             ],
             'graph' => $graph,
             'latest_reading' => $lastPoint ? [
@@ -35,5 +40,11 @@ class DeviceTelemetryData
                 'epoch_ms' => $lastPoint['epoch_ms'],
             ] : null,
         ];
+    }
+
+    private function softwareVersion($value)
+    {
+        return is_int($value) || is_float($value) || (is_string($value) && trim($value) !== '')
+            ? $value : null;
     }
 }

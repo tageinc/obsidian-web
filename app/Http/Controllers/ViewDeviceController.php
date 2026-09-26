@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\SolarTrackerRemoteControl;
 use App\Services\SolarTrackerGraphData;
 use App\Services\DeviceTelemetryData;
+use App\Services\DeviceTelemetryValues;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -20,6 +21,16 @@ class ViewDeviceController extends Controller
         $payload = config('frontend.vue3.view_device')
             ? ['telemetry' => app(DeviceTelemetryData::class)->forDevice($device)]
             : $this->statusPayload($device->serial_no);
+        if (isset($payload['latestStatus'])) {
+            // Legacy JSON replaces missing values with zero; display the actual recorded values.
+            $raw = $payload['latestStatus'] instanceof DeviceLog
+                ? $payload['latestStatus']->getOriginal('data') : [];
+            $payload['legacyReadings'] = [
+                'temperature' => DeviceTelemetryValues::celsiusToFahrenheit($raw['temp'] ?? null),
+                'ctsState' => DeviceTelemetryValues::ctsState($raw['cts'] ?? null),
+                'cts' => $raw['cts'] ?? null,
+            ];
+        }
 
         return view('view-device', array_merge([
             'device' => $device,

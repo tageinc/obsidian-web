@@ -84,6 +84,16 @@ not change an existing database user's password.
 Run `composer lint` to syntax-check first-party PHP files and `composer test`
 to run the Laravel test suite. `composer check` runs both checks in order.
 
+The canonical full verification command is `php scripts/check-all.php all`.
+It runs the backend checks with the generated frontend manifest unavailable,
+then the frontend, asset, scheduler, Docker, browser, formatting, and disposable
+Redis checks in their required order. The Redis integration requires the
+explicit testing environment described by `php scripts/check-all.php --help`.
+Use `application` and `redis` modes only when the two groups run separately
+against the same revision, as in CI. Add `--plan` to print the commands without
+executing them. The verification runner builds and tests locally; it never
+deploys the application.
+
 ## Restored device workflows
 
 Device creation uses the dashboard modal and `POST /create-device`, plus `POST /api/create-device`.
