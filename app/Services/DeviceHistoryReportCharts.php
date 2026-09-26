@@ -100,7 +100,6 @@ class DeviceHistoryReportCharts
         $right = 25;
         $top = 36;
         $bottom = 66;
-        $plotWidth = $width - $left - $right;
         $plotHeight = $height - $top - $bottom;
         $from = $chart['from'];
         $to = $chart['to'];
@@ -114,49 +113,46 @@ class DeviceHistoryReportCharts
                 $values[] = $point['y'];
             }
         }
-        // Scale before subtracting to keep finite extremes (for example -1e308
-        // and +1e308) from overflowing the axis span or SVG coordinates.
-        $magnitude = $values ? max(1, max(array_map('abs', $values))) : 1;
-        $minimum = $values ? min($values) / $magnitude : 0;
-        $maximum = $values ? max($values) / $magnitude : 1;
-        if ($chart['zero_reference']) {
-            $minimum = min(0, $minimum);
-            $maximum = max(0, $maximum);
-        }
-        $padding = $minimum === $maximum ? max(abs($minimum) * 0.1, 1 / $magnitude) : ($maximum - $minimum) * 0.08;
-        $finiteBound = PHP_FLOAT_MAX / $magnitude;
-        $minimum = max(-$finiteBound, $minimum - $padding);
-        $maximum = min($finiteBound, $maximum + $padding);
+        [$minimum, $maximum, $ticks, $magnitude, $spacing] = $this->valueAxis($values, $chart['zero_reference']);
+        $labels = array_map(fn ($value) => $this->number($value * $magnitude, $spacing * $magnitude), $ticks);
+        $left = max($left, max(array_map(fn ($label) => $this->labelWidth($label, 11), $labels)) + 13);
+        $plotWidth = $width - $left - $right;
         $x = static fn ($value) => $left + (($value - $from) / ($to - $from)) * $plotWidth;
         $y = static fn ($value) => $top + $plotHeight - (($value / $magnitude - $minimum) / ($maximum - $minimum)) * $plotHeight;
         $zeroY = $chart['zero_reference'] ? $y(0) : null;
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="700" height="270" viewBox="0 0 700 270">';
         $svg .= '<rect width="700" height="270" fill="#ffffff"/>';
-        for ($index = 0; $index <= 4; $index++) {
-            $value = $minimum + ($maximum - $minimum) * $index / 4;
+        foreach ($ticks as $index => $value) {
             $axisY = $top + $plotHeight - (($value - $minimum) / ($maximum - $minimum)) * $plotHeight;
             // Keep the dedicated zero label legible when a regular tick is nearby.
             if ($zeroY !== null && abs($axisY - $zeroY) < 14) {
                 continue;
             }
             $svg .= $this->line($left, $axisY, $width - $right, $axisY, '#e2e8f0');
-            $labelValue = $value * $magnitude;
-            $label = is_finite($labelValue) ? $this->number($labelValue) : ($value < 0 ? '-' : '').sprintf('%.2e', PHP_FLOAT_MAX);
-            $svg .= $this->text($left - 9, $axisY + 4, $label, 'end', 11, '#52627a');
+            $svg .= $this->text($left - 9, $axisY + 4, $labels[$index], 'end', 11, '#52627a');
         }
         $startDate = CarbonImmutable::createFromTimestampMs($from)->setTimezone(SolarTrackerGraphData::TIMEZONE);
         $endDate = CarbonImmutable::createFromTimestampMs($to)->setTimezone(SolarTrackerGraphData::TIMEZONE);
         $showDate = $startDate->format('Y-m-d T') !== $endDate->format('Y-m-d T');
-        $tickCount = $showDate ? 4 : 5;
-        for ($index = 0; $index <= $tickCount; $index++) {
-            $timestamp = $from + ($to - $from) * $index / $tickCount;
+        $timeTicks = $this->timeTicks($from, $to);
+        $previousLabelEnd = -INF;
+        foreach ($timeTicks as $timestamp) {
             $axisX = $x($timestamp);
             $date = CarbonImmutable::createFromTimestampMs($timestamp)->setTimezone(SolarTrackerGraphData::TIMEZONE);
-            $anchor = $index === 0 ? 'start' : ($index === $tickCount ? 'end' : 'middle');
+            $dateLabel = $date->format($showDate ? 'M j, Y' : 'g:i A');
+            $timeLabel = $showDate ? $date->format('g:i A T') : '';
+            $halfLabel = max($this->labelWidth($dateLabel, 11), $this->labelWidth($timeLabel, 10)) / 2;
+            $labelX = max(4 + $halfLabel, min($width - 4 - $halfLabel, $axisX));
+            // Like History's automatic label skipping, retain clock alignment
+            // while leaving enough room for dates at the report's printed size.
+            if ($labelX - $halfLabel < $previousLabelEnd + 4) {
+                continue;
+            }
+            $previousLabelEnd = $labelX + $halfLabel;
             $svg .= $this->line($axisX, $top, $axisX, $height - $bottom, '#eef2f7');
-            $svg .= $this->text($axisX, $height - $bottom + 20, $date->format($showDate ? 'M j, Y' : 'g:i A'), $anchor, 11, '#52627a');
+            $svg .= $this->text($labelX, $height - $bottom + 20, $dateLabel, 'middle', 11, '#52627a');
             if ($showDate) {
-                $svg .= $this->text($axisX, $height - $bottom + 35, $date->format('g:i A T'), $anchor, 10, '#52627a');
+                $svg .= $this->text($labelX, $height - $bottom + 35, $timeLabel, 'middle', 10, '#52627a');
             }
         }
         $svg .= $this->line($left, $height - $bottom, $width - $right, $height - $bottom, '#b7c5d8');
@@ -191,18 +187,117 @@ class DeviceHistoryReportCharts
         return $svg.'</svg>';
     }
 
-    private function number(float $value): string
+    private function valueAxis(array $values, bool $beginAtZero): array
     {
-        if ($value != 0 && (abs($value) >= 1000000 || abs($value) < 0.001)) {
-            return sprintf('%.2e', $value);
+        // Keep normal ranges identical to History's Chart.js linear scale. Scale
+        // extreme magnitudes before subtraction to avoid overflow or underflow.
+        $largest = $values ? max(array_map('abs', $values)) : 0;
+        $magnitude = $largest > 1e100 || ($largest > 0 && $largest < 1e-100)
+            ? (10 ** floor(log10($largest)) ?: $largest) : 1;
+        $minimum = $values ? min($values) / $magnitude : 0;
+        $maximum = $values ? max($values) / $magnitude : 1;
+        $finiteBound = PHP_FLOAT_MAX / $magnitude;
+        if ($beginAtZero) {
+            $minimum = min(0, $minimum);
+            $maximum = max(0, $maximum);
+        }
+        if ($minimum === $maximum) {
+            $offset = $maximum == 0 ? 1 : abs($maximum * 0.05);
+            $maximum = min($finiteBound, $maximum + $offset);
+            if (!$beginAtZero) {
+                $minimum = max(-$finiteBound, $minimum - $offset);
+            }
+        }
+        $maxSpaces = $beginAtZero ? 6 : 10;
+        $spacing = ($maximum - $minimum) / $maxSpaces;
+        // Chart.js keeps data limits instead of rounding sub-1e-14 spacing.
+        if ($spacing * $magnitude < 1e-14) {
+            $ticks = [$minimum, $maximum];
+            $spacing = $maximum - $minimum;
+        } else {
+            $spacing = $this->niceNumber($spacing);
+            $spaces = ceil($maximum / $spacing) - floor($minimum / $spacing);
+            if ($spaces > $maxSpaces) {
+                $spacing = $this->niceNumber($spaces * $spacing / $maxSpaces);
+            }
+            $first = floor($minimum / $spacing);
+            $last = ceil($maximum / $spacing);
+            $decimals = max(0, -(int) floor(log10($spacing)));
+            $minimum = max(-$finiteBound, round($first * $spacing, $decimals));
+            $maximum = min($finiteBound, round($last * $spacing, $decimals));
+            $ticks = [$minimum];
+            for ($index = 1; $index < $last - $first && $index <= $maxSpaces; $index++) {
+                $value = round(($first + $index) * $spacing, $decimals);
+                if ($value > $minimum && $value < $maximum) {
+                    $ticks[] = $value;
+                }
+            }
+            $ticks[] = $maximum;
+        }
+        if ($beginAtZero && !in_array(0, $ticks)) {
+            $ticks[] = 0;
+            sort($ticks, SORT_NUMERIC);
         }
 
-        return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.') ?: '0';
+        return [$minimum, $maximum, $ticks, $magnitude, $spacing];
+    }
+
+    private function niceNumber(float $range): float
+    {
+        $rounded = round($range);
+        $range = abs($range - $rounded) < $range / 1000 ? $rounded : $range;
+        $power = 10 ** floor(log10($range));
+        $fraction = $range / $power;
+
+        return ($fraction <= 1 ? 1 : ($fraction <= 2 ? 2 : ($fraction <= 5 ? 5 : 10))) * $power;
+    }
+
+    private function timeTicks(float $from, float $to): array
+    {
+        // Same epoch-aligned clock intervals as History's timeSeries.timeTicks.
+        $target = ($to - $from) / 6;
+        $step = ceil($target / 86400000) * 86400000;
+        foreach ([1, 5, 15, 30, 60, 120, 240, 360, 720, 1440, 2880, 10080] as $minutes) {
+            if ($minutes * 60000 >= $target) {
+                $step = $minutes * 60000;
+                break;
+            }
+        }
+        $ticks = [];
+        for ($timestamp = ceil($from / $step) * $step; $timestamp <= $to; $timestamp += $step) {
+            $ticks[] = $timestamp;
+        }
+
+        return $ticks ?: [$from];
+    }
+
+    private function number(float $value, float $spacing): string
+    {
+        if ($value == 0) {
+            return '0';
+        }
+        $stepExponent = $spacing > 0 && is_finite($spacing)
+            ? (int) floor(log10($spacing)) : (int) floor(log10(abs($value))) - 2;
+        if (abs($value) >= 1000000 || abs($value) < 0.001) {
+            $digits = max(2, min(16, (int) floor(log10(abs($value))) - $stepExponent));
+
+            return sprintf('%.*e', $digits, $value);
+        }
+        $decimals = max(0, min(20, -$stepExponent));
+        $label = number_format($value, $decimals, '.', '');
+
+        return $decimals ? rtrim(rtrim($label, '0'), '.') : $label;
     }
 
     private function coordinate(float $value): string
     {
         return number_format($value, 3, '.', '');
+    }
+
+    private function labelWidth(string $label, int $fontSize): float
+    {
+        // Conservative space for these numeric and English DejaVu Sans labels.
+        return strlen($label) * $fontSize * 0.7;
     }
 
     private function line(float $x1, float $y1, float $x2, float $y2, string $color, string $attributes = ''): string

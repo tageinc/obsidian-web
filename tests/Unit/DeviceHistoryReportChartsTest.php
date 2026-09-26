@@ -116,7 +116,16 @@ class DeviceHistoryReportChartsTest extends TestCase
             $this->assertTrue($document->loadXML($chart['svg']));
         }
         $this->assertSame(2, $charts[0]['measurement_count']);
-        $this->assertStringContainsString('1.16e+308', $charts[0]['svg']);
+        foreach ([0, 1] as $index) {
+            $labels = $this->valueLabels($charts[$index]['svg']);
+            $this->assertLessThanOrEqual(min(array_column($charts[$index]['series'][0]['points'], 'y')), min($labels));
+            $this->assertGreaterThanOrEqual(max(array_column($charts[$index]['series'][0]['points'], 'y')), max($labels));
+            preg_match_all('/M[\d.-]+ ([\d.-]+)l0\.01 0/', $charts[$index]['svg'], $coordinates);
+            foreach ($coordinates[1] as $coordinate) {
+                $this->assertGreaterThanOrEqual(36, (float) $coordinate);
+                $this->assertLessThanOrEqual(204, (float) $coordinate);
+            }
+        }
     }
 
     public function test_fahrenheit_payloads_are_not_converted_twice_and_invalid_values_stay_missing(): void
@@ -156,18 +165,20 @@ class DeviceHistoryReportChartsTest extends TestCase
             $this->assertCount(1, $lines);
             $line = $lines->item(0);
             $zeroY = (float) $line->getAttribute('y1');
-            $this->assertGreaterThan(36, $zeroY);
-            $this->assertLessThan(204, $zeroY);
+            $this->assertGreaterThanOrEqual(36, $zeroY);
+            $this->assertLessThanOrEqual(204, $zeroY);
             $this->assertSame($line->getAttribute('y1'), $line->getAttribute('y2'));
-            $this->assertSame('68.000', $line->getAttribute('x1'));
+            $this->assertGreaterThanOrEqual(68, (float) $line->getAttribute('x1'));
             $this->assertSame('675.000', $line->getAttribute('x2'));
             $this->assertSame('2', $line->getAttribute('stroke-width'));
             $this->assertSame('#52627a', $line->getAttribute('stroke'));
 
-            $zeroLabels = $xpath->query('//svg:text[@x="59.000" and text()="0"]');
+            $zeroLabels = $xpath->query('//svg:text[@text-anchor="end" and text()="0"]');
             $this->assertCount(1, $zeroLabels);
+            $labelX = $zeroLabels->item(0)->getAttribute('x');
+            $this->assertEqualsWithDelta((float) $line->getAttribute('x1') - 9, (float) $labelX, 0.001);
             $this->assertEqualsWithDelta($zeroY + 4, (float) $zeroLabels->item(0)->getAttribute('y'), 0.001);
-            foreach ($xpath->query('//svg:text[@x="59.000" and text()!="0"]') as $label) {
+            foreach ($xpath->query('//svg:text[@x="'.$labelX.'" and text()!="0"]') as $label) {
                 $this->assertGreaterThanOrEqual(13.999, abs((float) $label->getAttribute('y') - ($zeroY + 4)));
             }
 
@@ -206,5 +217,145 @@ class DeviceHistoryReportChartsTest extends TestCase
             'negative finite extremes' => [[-PHP_FLOAT_MAX, -PHP_FLOAT_MAX / 2]],
             'tiny finite readings' => [[-1e-305, 2e-305]],
         ];
+    }
+
+    /** @dataProvider historyValueTicks */
+    public function test_all_report_metrics_follow_history_numeric_tick_rules(array $values, array $ordinary, array $signed): void
+    {
+        $points = array_map(static fn ($value, $index) => [
+            'epoch_ms' => 1000 + $index * 1000,
+            'temp_f' => $value, 'ps1' => $value, 'ps_avg' => $value,
+            'pds' => $value, 'motor_speed' => $value,
+        ], $values, array_keys($values));
+        $charts = (new DeviceHistoryReportCharts)->build($points, 1000, max(1000, count($values) * 1000));
+
+        foreach ($charts as $index => $chart) {
+            // Golden tick values from the installed Chart.js LinearScale, with
+            // History's ordinary 11-tick and signed-sensor 7-tick limits.
+            $this->assertEquals(in_array($index, [2, 4]) ? $signed : $ordinary, $this->valueLabels($chart['svg']), $chart['title']);
+        }
+    }
+
+    public static function historyValueTicks(): array
+    {
+        return [
+            'positive' => [[12, 24], [12, 14, 16, 18, 20, 22, 24], [0, 5, 10, 15, 20, 25]],
+            'negative' => [[-24, -12], [-24, -22, -20, -18, -16, -14, -12], [-25, -20, -15, -10, -5, 0]],
+            'crossing' => [[-3, 2], [-3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2], [-3, -2, -1, 0, 1, 2]],
+            'constant' => [[42, 42], [39.5, 40, 40.5, 41, 41.5, 42, 42.5, 43, 43.5, 44, 44.5], [0, 10, 20, 30, 40, 50]],
+            'zero' => [[0, 0], [-1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1], [0, 0.2, 0.4, 0.6, 0.8, 1]],
+            'fractional' => [[79.0043, 79.121], [79, 79.02, 79.04, 79.06, 79.08, 79.1, 79.12, 79.14], [0, 20, 40, 60, 80]],
+            'small fractional' => [[0.0012, 0.0024], [0.001, 0.0012, 0.0014, 0.0016, 0.0018, 0.002, 0.0022, 0.0024], [0, 0.0005, 0.001, 0.0015, 0.002, 0.0025]],
+            'tiny' => [[1e-16, 2e-16], [1e-16, 2e-16], [0, 2e-16]],
+            'empty' => [[], [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], [0, 0.2, 0.4, 0.6, 0.8, 1]],
+        ];
+    }
+
+    public function test_time_ticks_are_clock_aligned_within_the_selected_range(): void
+    {
+        $from = CarbonImmutable::parse('2026-01-01T15:45:00Z')->valueOf();
+        $to = $from + 12 * 3600000;
+        $charts = (new DeviceHistoryReportCharts)->build([], $from, $to);
+        $expected = ['8:00 AM', '10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM'];
+        foreach ($charts as $chart) {
+            $xpath = $this->svgPath($chart['svg']);
+            $labels = $xpath->query('//svg:text[@y="224.000"]');
+            $this->assertSame($expected, array_map(static fn ($label) => $label->textContent, iterator_to_array($labels)));
+            $lines = $xpath->query('//svg:line[@stroke="#eef2f7"]');
+            foreach ($lines as $index => $line) {
+                $timestamp = $from + (((float) $line->getAttribute('x1') - 68) / 607) * ($to - $from);
+                $this->assertEqualsWithDelta(ceil($from / 7200000) * 7200000 + $index * 7200000, $timestamp, 40);
+                $this->assertGreaterThanOrEqual($from, $timestamp);
+                $this->assertLessThanOrEqual($to, $timestamp);
+            }
+        }
+    }
+
+    public function test_short_and_single_instant_ranges_keep_history_time_tick_fallbacks(): void
+    {
+        $instant = CarbonImmutable::parse('2026-01-01T15:45:30Z')->valueOf();
+        $short = (new DeviceHistoryReportCharts)->build([], $instant, $instant + 1000)[0];
+        $this->assertCount(1, $this->svgPath($short['svg'])->query('//svg:line[@stroke="#eef2f7"]'));
+        $single = (new DeviceHistoryReportCharts)->build([['epoch_ms' => $instant, 'temp_f' => 42]], $instant, $instant)[0];
+        $labels = $this->svgPath($single['svg'])->query('//svg:text[@y="224.000"]');
+        $this->assertSame(['7:30 AM', '7:45 AM', '8:00 AM', '8:15 AM'], array_map(static fn ($label) => $label->textContent, iterator_to_array($labels)));
+    }
+
+    public function test_nearby_tiny_measurements_keep_distinct_tick_labels(): void
+    {
+        $values = [1e-20, 1.00000001e-20];
+        $chart = (new DeviceHistoryReportCharts)->build([
+            ['epoch_ms' => 1000, 'temp_f' => $values[0]],
+            ['epoch_ms' => 2000, 'temp_f' => $values[1]],
+        ], 1000, 2000)[0];
+
+        $this->assertSame($values, $this->valueLabels($chart['svg']));
+    }
+
+    public function test_subnormal_measurements_do_not_produce_invalid_svg_coordinates(): void
+    {
+        $charts = (new DeviceHistoryReportCharts)->build([
+            ['epoch_ms' => 1000, 'temp_f' => 5e-324, 'pds' => -5e-324],
+            ['epoch_ms' => 2000, 'temp_f' => 1e-323, 'pds' => 1e-323],
+        ], 1000, 2000);
+
+        foreach ([0, 2] as $index) {
+            $this->assertDoesNotMatchRegularExpression('/(?:nan|inf)/i', $charts[$index]['svg']);
+            $this->assertCount(2, $charts[$index]['series'][0]['points']);
+            $this->svgPath($charts[$index]['svg']);
+        }
+    }
+
+    public function test_long_numeric_labels_fit_the_report_without_crowding_date_labels(): void
+    {
+        $from = CarbonImmutable::parse('2026-11-12T08:00:00Z')->valueOf();
+        $to = $from + 86400000;
+        $charts = (new DeviceHistoryReportCharts)->build([
+            ['epoch_ms' => $from, 'temp_f' => -1e-20, 'pds' => -PHP_FLOAT_MAX, 'ps_avg' => 12],
+            ['epoch_ms' => $to, 'temp_f' => -1.00000001e-20, 'pds' => PHP_FLOAT_MAX, 'ps_avg' => 24],
+        ], $from, $to);
+
+        foreach ([0, 2, 3] as $index) {
+            $xpath = $this->svgPath($charts[$index]['svg']);
+            foreach ($xpath->query('//svg:text[@text-anchor="end"]') as $label) {
+                $left = (float) $label->getAttribute('x') - strlen($label->textContent) * 11 * 0.7;
+                $this->assertGreaterThanOrEqual(3.999, $left);
+                if ($index === 3) {
+                    $this->assertSame('59.000', $label->getAttribute('x'));
+                }
+            }
+            foreach ([224, 239] as $row) {
+                $labels = $xpath->query('//svg:text[@y="'.$row.'.000"]');
+                $this->assertGreaterThanOrEqual(4, $labels->length);
+                $previousEnd = 0;
+                foreach ($labels as $label) {
+                    $halfWidth = strlen($label->textContent) * (int) $label->getAttribute('font-size') * 0.7 / 2;
+                    $center = (float) $label->getAttribute('x');
+                    $this->assertSame('middle', $label->getAttribute('text-anchor'));
+                    $this->assertGreaterThanOrEqual($previousEnd + 3.999, $center - $halfWidth);
+                    $this->assertLessThanOrEqual(696.001, $center + $halfWidth);
+                    $previousEnd = $center + $halfWidth;
+                }
+            }
+        }
+    }
+
+    private function valueLabels(string $svg): array
+    {
+        $labels = $this->svgPath($svg)->query('//svg:text[@text-anchor="end"]');
+        $values = array_map(static fn ($label) => (float) $label->textContent, iterator_to_array($labels));
+        sort($values, SORT_NUMERIC);
+
+        return $values;
+    }
+
+    private function svgPath(string $svg): \DOMXPath
+    {
+        $document = new \DOMDocument;
+        $this->assertTrue($document->loadXML($svg));
+        $xpath = new \DOMXPath($document);
+        $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
+
+        return $xpath;
     }
 }

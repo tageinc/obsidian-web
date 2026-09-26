@@ -313,6 +313,8 @@ measurement in the UI does not limit the report.
 Temperatures in the latest snapshot and history charts use Fahrenheit with the
 same conversion as `temp_f`. The latest CTS value uses Open/Closed text; an
 unrecognized state retains its raw value, and missing values are shown as N/A.
+All report plots follow History's rounded numeric tick intervals and
+clock-aligned time ticks, with label density adapted to the printed chart size.
 Motor-speed and PDS plots in History and the report include a labeled zero
 reference line, even when all readings lie on one side of zero. Axis bounds,
 ticks, and reference-line styling are presentation behavior; measurements,
