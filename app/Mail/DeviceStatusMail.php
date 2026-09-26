@@ -12,7 +12,6 @@ abstract class DeviceStatusMail extends AppUpdateMail
         return Device::where('serial_no', $this->serialNo)
             ->where('state', 'active')
             ->where('user_id', $recipient->id)
-            ->where('status_notification', true)
             ->exists();
     }
 }

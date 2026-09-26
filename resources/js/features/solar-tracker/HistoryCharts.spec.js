@@ -69,6 +69,7 @@ it('announces empty data without constructing charts', async () => {
     await flushPromises();
     expect(wrapper.text()).toContain('No telemetry was recorded');
     expect(Chart).not.toHaveBeenCalled();
+    wrapper.unmount();
 });
 it('redraws selected ranges and destroys every chart on navigation', async () => {
     Chart.mockClear();
@@ -195,6 +196,73 @@ it('waits until the history section is opened before initializing a chart', asyn
     await flushPromises();
     expect(Chart).toHaveBeenCalledTimes(1);
     wrapper.unmount();
+});
+
+it('redraws theme colors without changing the selected data and removes its theme listener on unmount', async () => {
+    const root = document.documentElement;
+    const previousStyle = root.getAttribute('style');
+    const previousTheme = root.getAttribute('data-theme');
+    Chart.mockClear();
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: 0, ps1: 8, ps2: 12 },
+                { epoch_ms: 7200000, ps1: 10, ps2: 14 },
+            ],
+        },
+    });
+    try {
+        await vi.dynamicImportSettled();
+        await wrapper.get('#history-metric').setValue('panels');
+        await wrapper.get('#history-view').setValue('custom');
+        await wrapper.get('#history-from').setValue('1969-12-31T17:00:00');
+        await flushPromises();
+        const before = Chart.mock.calls.at(-1)[1];
+        root.dataset.theme = 'dark';
+        for (const [name, value] of Object.entries({
+            text: '#f8f9fa',
+            'text-muted': '#b9bec6',
+            border: '#484848',
+            surface: '#1c1c1c',
+        })) {
+            root.style.setProperty(`--obsidian-${name}`, value);
+        }
+
+        window.dispatchEvent(new CustomEvent('obsidian:theme-changed'));
+        await flushPromises();
+
+        const after = Chart.mock.calls.at(-1)[1];
+        expect(after.data.datasets.map((dataset) => dataset.data)).toEqual(
+            before.data.datasets.map((dataset) => dataset.data),
+        );
+        expect(after.data.datasets.map((dataset) => dataset.borderColor)).toEqual([
+            '#65d89a',
+            '#bc9fff',
+        ]);
+        expect(after.options.scales.x.min).toBe(before.options.scales.x.min);
+        expect(after.options.scales.x.max).toBe(before.options.scales.x.max);
+        expect(after.options.scales.x.ticks.color).toBe('#b9bec6');
+        expect(after.options.scales.y.grid.color).toBe('#484848');
+        expect(after.options.plugins.legend.labels.color).toBe('#b9bec6');
+        expect(after.options.plugins.tooltip).toMatchObject({
+            backgroundColor: '#1c1c1c',
+            bodyColor: '#f8f9fa',
+            titleColor: '#f8f9fa',
+        });
+        expect(wrapper.get('#history-view').element.value).toBe('custom');
+        expect(wrapper.get('#history-metric').element.value).toBe('panels');
+        wrapper.unmount();
+        const count = Chart.mock.calls.length;
+        window.dispatchEvent(new CustomEvent('obsidian:theme-changed'));
+        await flushPromises();
+        expect(Chart).toHaveBeenCalledTimes(count);
+    } finally {
+        wrapper.unmount();
+        if (previousStyle === null) root.removeAttribute('style');
+        else root.setAttribute('style', previousStyle);
+        if (previousTheme === null) root.removeAttribute('data-theme');
+        else root.setAttribute('data-theme', previousTheme);
+    }
 });
 
 it('defaults to now, validates datetimes, and restores the current last 24 hours', async () => {
@@ -333,7 +401,7 @@ it('shows the zero reference only for PDS and motor speed when switching measure
             wrapper.get('canvas').attributes('aria-label').includes('y-axis includes zero'),
         ).toBe(showZero);
         if (showZero) {
-            expect(options.options.scales.y.grid).toBeUndefined();
+            expect(options.options.scales.y.grid).toEqual({ color: '#dee2e6' });
         }
     }
     wrapper.unmount();

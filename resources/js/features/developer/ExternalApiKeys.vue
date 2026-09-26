@@ -633,19 +633,19 @@ thead th {
     border-radius: 0.25rem;
     font-size: 0.75rem;
     font-weight: 600;
-    background: #f0f3f7;
-    color: #47566d;
+    background: var(--obsidian-surface-subtle, #f0f3f7);
+    color: var(--obsidian-text-muted, #47566d);
 }
 .key-status-active {
-    background: #e8f5ee;
-    color: #216044;
+    background: var(--obsidian-success-bg, #e8f5ee);
+    color: var(--obsidian-success, #216044);
 }
 .key-status-expired {
-    background: #fff3df;
-    color: #79500e;
+    background: var(--obsidian-warning-bg, #fff3df);
+    color: var(--obsidian-warning, #79500e);
 }
 .key-status-revoked {
-    background: #fcecef;
-    color: #913447;
+    background: var(--obsidian-danger-bg, #fcecef);
+    color: var(--obsidian-danger, #913447);
 }
 </style>

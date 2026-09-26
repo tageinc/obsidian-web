@@ -8,16 +8,19 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class SolarTrackerRemoteControlTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private Device $device;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         $user = User::create([
             'name' => 'Owner', 'email' => 'owner@example.test',
             'password' => 'test-hash', 'email_verified_at' => now(),

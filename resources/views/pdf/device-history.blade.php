@@ -10,10 +10,10 @@
         h2 { margin: 0 0 8pt; font-size: 13pt; line-height: 1.3; }
         h3 { margin: 0; font-size: 12pt; line-height: 1.3; }
         p { margin: 0; }
-        .eyebrow { color: #2862c4; font-size: 8pt; letter-spacing: 1.4pt; font-weight: bold; }
+        .eyebrow { color: #1c1c1c; font-size: 8pt; letter-spacing: 1.4pt; font-weight: bold; }
         .muted { color: #52627a; }
         .small { font-size: 8pt; }
-        .intro { padding-bottom: 12pt; border-bottom: 2pt solid #2862c4; margin-bottom: 15pt; }
+        .intro { padding-bottom: 12pt; border-bottom: 2pt solid #1c1c1c; margin-bottom: 15pt; }
         .created { margin-top: 7pt; font-size: 8pt; }
         .section { margin-bottom: 14pt; }
         .device-name { margin-bottom: 7pt; font-size: 15pt; font-weight: bold; overflow-wrap: break-word; }
@@ -21,7 +21,7 @@
         .details td { vertical-align: top; padding: 5pt 10pt 5pt 0; border-bottom: 0.5pt solid #e1e7ee; overflow-wrap: break-word; }
         .details .label { color: #52627a; font-size: 7.5pt; display: block; margin-bottom: 2pt; }
         .details .value { font-size: 9pt; }
-        .range { background: #eff4fa; border: 0.6pt solid #d9e3ef; padding: 9pt 12pt; }
+        .range { background: #f0f0f0; border: 0.6pt solid #767676; padding: 9pt 12pt; }
         .range-row { margin-top: 5pt; }
         .range-label { color: #52627a; display: inline-block; width: 37pt; }
         .reading-time { margin: -4pt 0 6pt; font-size: 8pt; color: #52627a; }

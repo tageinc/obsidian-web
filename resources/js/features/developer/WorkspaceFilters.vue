@@ -269,25 +269,25 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    border: 1px solid #dce1e9;
-    background: #fff;
-    color: #414b5b;
+    border: 1px solid var(--obsidian-border, #dce1e9);
+    background: var(--obsidian-surface, #fff);
+    color: var(--obsidian-text, #414b5b);
     font-size: 0.875rem;
     min-height: 2.5rem;
     white-space: nowrap;
 }
 .release-filter-trigger:hover,
 .release-filter-trigger[aria-expanded='true'] {
-    background: #f0f3fa;
-    border-color: #b4bfd3;
+    background: var(--obsidian-accent-soft);
+    border-color: var(--obsidian-accent-border);
 }
 .release-filter-count {
     display: inline-grid;
     place-items: center;
     border-radius: 1rem;
     min-width: 1.25rem;
-    background: #e4ebfb;
-    color: #084298;
+    background: var(--obsidian-accent);
+    color: var(--obsidian-accent-ink);
     font-size: 0.75rem;
 }
 .release-filter-panel {
@@ -296,9 +296,9 @@ onBeforeUnmount(() => {
     right: 0;
     width: min(30rem, 100%);
     padding: 1rem;
-    border: 1px solid #dce1e9;
+    border: 1px solid var(--obsidian-border, #dce1e9);
     border-radius: 0.75rem;
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     box-shadow: 0 10px 30px #17233c1f;
     z-index: 20;
 }
@@ -327,13 +327,13 @@ onBeforeUnmount(() => {
     gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #edf0f4;
+    border-top: 1px solid var(--obsidian-border, #edf0f4);
 }
 :deep(.ts-control),
 :deep(.ts-dropdown) {
-    border-color: #cbd3df;
-    background: #fff;
-    color: #212b3b;
+    border-color: var(--obsidian-border, #cbd3df);
+    background: var(--obsidian-surface, #fff);
+    color: var(--obsidian-text, #212b3b);
     border-radius: 0.375rem;
     font-size: 0.8125rem;
 }
@@ -344,28 +344,28 @@ onBeforeUnmount(() => {
     padding: 0.45rem 0.5rem;
 }
 :deep(.ts-wrapper.multi .ts-control .item) {
-    background: #eef2f8;
+    background: var(--obsidian-accent-soft);
     border-radius: 0.2rem;
-    color: #24334b;
+    color: var(--obsidian-accent-strong);
     overflow-wrap: anywhere;
 }
 :deep(.ts-control input) {
-    color: #212b3b;
+    color: var(--obsidian-text, #212b3b);
     min-width: 3rem;
 }
 :deep(.ts-control input::placeholder) {
-    color: #657184;
+    color: var(--obsidian-text-muted, #657184);
     opacity: 1;
 }
 :deep(.ts-dropdown .active) {
-    color: #084298;
-    background: #edf2ff;
+    color: var(--obsidian-accent-strong);
+    background: var(--obsidian-accent-soft);
 }
 :deep(.ts-dropdown-content) {
     max-height: 12rem;
 }
 :deep(.ts-wrapper.focus .ts-control) {
-    outline: 2px solid #526cbd;
+    outline: 2px solid var(--obsidian-accent-strong);
     outline-offset: 2px;
 }
 @media (max-width: 575.98px) {

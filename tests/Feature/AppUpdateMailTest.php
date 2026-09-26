@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SendAppUpdateMail;
 use App\Mail\AppUpdateMail;
+use App\Mail\DeviceStatusChangedMail;
 use App\Mail\LowVoltageMail;
 use App\Mail\TheftVandalismMail;
 use App\Models\Device;
@@ -119,6 +120,19 @@ class AppUpdateMailTest extends TestCase
         $this->assertDatabaseCount('failed_jobs', 0);
     }
 
+    public function test_account_activity_email_opt_out_is_rechecked_after_any_activity_mail_is_queued(): void
+    {
+        $user = User::factory()->create();
+        app(AppUpdateDelivery::class)->queue([$user], new FixtureAppUpdateMail());
+        $user->settings()->create(['receive_app_activity_emails' => false]);
+
+        $this->workOnce();
+
+        $this->assertCount(0, $this->sent);
+        $this->assertDatabaseCount('jobs', 0);
+        $this->assertDatabaseCount('failed_jobs', 0);
+    }
+
     public function test_rate_limited_mail_is_released_and_delivered_after_the_limit_resets(): void
     {
         RateLimiter::for('outbound-mail', fn () => Limit::perMinute(1)->by('bounded-outbound-mail'));
@@ -206,32 +220,36 @@ class AppUpdateMailTest extends TestCase
     }
 
     /** @dataProvider deviceMailClasses */
-    public function test_device_alerts_recheck_current_ownership_preferences_and_device_existence(string $mailClass): void
+    public function test_device_alerts_recheck_current_ownership_preferences_and_device_existence(string $mailClass, array $statusArguments = []): void
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
+        $optedOutOwner = User::factory()->create();
         $devices = [];
-        foreach (['valid', 'transferred', 'opted-out', 'deleted'] as $state) {
+        foreach (['valid', 'transferred', 'opted-out', 'inactive', 'legacy-disabled'] as $state) {
+            $recipient = $state === 'opted-out' ? $optedOutOwner : $owner;
             $devices[$state] = Device::create([
-                'user_id' => $owner->id,
+                'user_id' => $recipient->id,
                 'serial_no' => 'mail-'.$state,
-                'status_notification' => true,
+                'status_notification' => $state !== 'legacy-disabled',
             ]);
-            app(AppUpdateDelivery::class)->queue([$owner], new $mailClass(
-                $owner->name, 'mail-'.$state, 'Private fixture address', 34.0522, -118.2437
+            app(AppUpdateDelivery::class)->queue([$recipient], new $mailClass(
+                $recipient->name, 'mail-'.$state, 'Private fixture address', 34.0522, -118.2437, ...$statusArguments
             ));
         }
         $devices['transferred']->update(['user_id' => $other->id]);
-        $devices['opted-out']->update(['status_notification' => false]);
-        $devices['deleted']->update(['state' => 'inactive']);
+        $optedOutOwner->settings()->create(['receive_app_activity_emails' => false]);
+        $devices['inactive']->update(['state' => 'inactive']);
 
         foreach ($devices as $device) {
             $this->workOnce();
         }
 
-        $this->assertCount(1, $this->sent);
+        $this->assertCount(2, $this->sent);
         $this->assertSame([$owner->email], array_keys($this->sent[0]->getTo()));
         $this->assertStringContainsString('mail-valid', $this->sent[0]->getBody());
+        $this->assertSame([$owner->email], array_keys($this->sent[1]->getTo()));
+        $this->assertStringContainsString('mail-legacy-disabled', $this->sent[1]->getBody());
         $this->assertDatabaseCount('jobs', 0);
         $this->assertDatabaseCount('failed_jobs', 0);
     }
@@ -241,7 +259,26 @@ class AppUpdateMailTest extends TestCase
         return [
             'low voltage' => [LowVoltageMail::class],
             'theft or vandalism' => [TheftVandalismMail::class],
+            'other status changes' => [DeviceStatusChangedMail::class, ['online', 'offline']],
         ];
+    }
+
+    public function test_status_change_email_identifies_the_device_and_escapes_reported_statuses(): void
+    {
+        $mail = new DeviceStatusChangedMail(
+            'Fixture Owner', 'fixture-status-123', '1 Example Street', 34.0522, -118.2437,
+            'offline', '<script>alert("device-status")</script>'
+        );
+
+        $body = $mail->render();
+
+        $this->assertSame('Device Status Changed', $mail->subject);
+        $this->assertStringContainsString('Fixture Owner', $body);
+        $this->assertStringContainsString('fixture-status-123', $body);
+        $this->assertStringContainsString('1 Example Street', $body);
+        $this->assertStringContainsString('offline', $body);
+        $this->assertStringContainsString('&lt;script&gt;', $body);
+        $this->assertStringNotContainsString('<script>', $body);
     }
 
     private function workOnce(): void

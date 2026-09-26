@@ -4,6 +4,7 @@ RUN npm install --global npm@11.8.0
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY resources ./resources
+COPY public/css/accent.css ./public/css/accent.css
 COPY vite.config.mjs ./
 RUN npm run build
 

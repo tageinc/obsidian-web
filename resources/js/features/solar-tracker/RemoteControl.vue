@@ -173,17 +173,17 @@ async function save(mode, speed, toggle = false) {
     top: 0;
     width: 0;
     height: 0.35rem;
-    border-left: 1px solid #adb5bd;
+    border-left: 1px solid var(--obsidian-border, #adb5bd);
 }
 .motor-speed-tick-major {
     height: 0.5rem;
-    border-left-color: #6c757d;
+    border-left-color: var(--obsidian-text-muted, #6c757d);
 }
 .motor-speed-tick-label {
     position: absolute;
     top: 0.65rem;
     left: 0;
-    color: #6c757d;
+    color: var(--obsidian-text-muted, #6c757d);
     font-size: 0.7rem;
     line-height: 1;
     transform: translateX(-50%);

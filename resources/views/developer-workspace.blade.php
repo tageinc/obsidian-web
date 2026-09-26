@@ -84,7 +84,7 @@
 		<div class="row">
 			<!-- Firmware Upload and Table -->
 			<h3>Firmware Updates</h3>
-			<div class="col-md-12 firmware-section" style="background-color: #f2f2f2; border: 1px solid #cccccc; box-shadow: 0px 0px 10px #cccccc;">		
+			<div class="col-md-12 firmware-section" style="background-color: var(--obsidian-surface-subtle, #f2f2f2); border: 1px solid var(--obsidian-border, #cccccc); box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.12);">
 					<form action="{{ route('uploadFirmware') }}" method="post" enctype="multipart/form-data">
 						@csrf
 						<div class="form-group">
@@ -149,7 +149,7 @@
 		<div class="row">
 			<h3>Config Updates</h3>
 			<!-- Configuration Upload and Table -->
-			<div class="col-md-12 config-section" style="background-color: #f2f2f2; border: 1px solid #cccccc; box-shadow: 0px 0px 10px #cccccc;">
+			<div class="col-md-12 config-section" style="background-color: var(--obsidian-surface-subtle, #f2f2f2); border: 1px solid var(--obsidian-border, #cccccc); box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.12);">
 				<form action="{{ route('uploadConfig') }}" method="post" enctype="multipart/form-data">
 					@csrf
 					<div class="form-group">

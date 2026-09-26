@@ -158,19 +158,19 @@ onBeforeUnmount(() => {
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
     font-size: 1.5rem;
     line-height: 1;
 }
 .device-action-trigger:hover,
 .device-action-trigger[aria-expanded='true'] {
-    background: #e5e7eb;
-    color: #111827;
+    background: var(--obsidian-surface-subtle, #e5e7eb);
+    color: var(--obsidian-text, #111827);
 }
 .device-action-trigger:focus-visible,
 .device-action-menu a:focus-visible,
 .device-action-menu button:focus-visible {
-    outline: 2px solid #0d6efd;
+    outline: 2px solid var(--obsidian-accent-strong);
     outline-offset: 2px;
 }
 .device-action-menu {
@@ -180,7 +180,7 @@ onBeforeUnmount(() => {
     min-width: 0;
     max-width: calc(100vw - 16px);
     padding: 0.35rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 8px;
     box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
 }
@@ -199,9 +199,9 @@ onBeforeUnmount(() => {
 }
 .device-action-menu .dropdown-item:hover,
 .device-action-menu .dropdown-item:focus {
-    background: #f3f4f6;
+    background: var(--obsidian-surface-subtle, #f3f4f6);
 }
 .device-inactivate {
-    color: #b02a37;
+    color: var(--obsidian-danger, #b02a37);
 }
 </style>

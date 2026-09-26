@@ -12,10 +12,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class BrowserAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $owner;
     private User $admin;
@@ -25,6 +27,7 @@ class BrowserAuthorizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         config(['app.developer_email' => 'admin@example.test']);
         foreach (['owner', 'admin', 'other'] as $role) {
             $this->{$role} = User::create([

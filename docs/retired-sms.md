@@ -1,7 +1,10 @@
 # SMS retirement
 
 SMS notification delivery and Twilio are removed from the active application.
-Email device-status notifications remain enabled through `status_notification`.
+Email device-status notifications use the account-wide **Receive app activity
+emails** preference in User Settings. The legacy `status_notification` field
+remains for compatibility and no longer controls email delivery. See
+[app activity and email preferences](application-email.md).
 
 ## Existing settings and data
 

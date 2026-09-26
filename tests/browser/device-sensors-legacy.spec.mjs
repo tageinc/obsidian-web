@@ -53,7 +53,9 @@ test('legacy device sensors show Fahrenheit and CTS states without device comman
         await expect(sensors.locator('.cts-badge')).toHaveText('Closed');
         await expect(sensors.locator('.cts-badge')).toHaveCSS(
             'background-color',
-            'rgb(233, 236, 239)',
+            (await page.locator('html').getAttribute('data-theme')) === 'dark'
+                ? 'rgb(48, 48, 48)'
+                : 'rgb(233, 236, 239)',
         );
         await expect
             .poll(() =>
@@ -81,7 +83,10 @@ test('legacy device sensors show Fahrenheit and CTS states without device comman
                         scale.min <= 0 &&
                         scale.max >= 0 &&
                         String(zero?.label) === '0' &&
-                        grid.color === window.Chart.defaults.borderColor &&
+                        grid.color ===
+                            getComputedStyle(document.documentElement)
+                                .getPropertyValue('--obsidian-border')
+                                .trim() &&
                         grid.lineWidth === 1
                     );
                 }),

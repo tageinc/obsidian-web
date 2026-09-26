@@ -21,11 +21,11 @@
 <style>
     #legacy-device-view .cts-badge { display: inline-block; padding: .3rem .65rem; border-radius: 999px; font-size: .8rem; font-weight: 600; line-height: 1.25; }
     #legacy-device-view .cts-badge--open { color: #fff; background: #198754; }
-    #legacy-device-view .cts-badge--closed { color: #495057; background: #e9ecef; }
+    #legacy-device-view .cts-badge--closed { color: var(--obsidian-cts-closed-text, #495057); background: var(--obsidian-cts-closed-bg, #e9ecef); }
     #legacy-device-view .motor-speed-scale { position: relative; height: 2.1rem; margin: -.25rem .5rem 0; }
-    #legacy-device-view .motor-speed-tick { position: absolute; top: 0; width: 0; height: .35rem; border-left: 1px solid #adb5bd; }
-    #legacy-device-view .motor-speed-tick--major { height: .5rem; border-left-color: #6c757d; }
-    #legacy-device-view .motor-speed-tick-label { position: absolute; top: .65rem; left: 0; color: #6c757d; font-size: .7rem; line-height: 1; transform: translateX(-50%); white-space: nowrap; }
+    #legacy-device-view .motor-speed-tick { position: absolute; top: 0; width: 0; height: .35rem; border-left: 1px solid var(--obsidian-border, #adb5bd); }
+    #legacy-device-view .motor-speed-tick--major { height: .5rem; border-left-color: var(--obsidian-text-muted, #6c757d); }
+    #legacy-device-view .motor-speed-tick-label { position: absolute; top: .65rem; left: 0; color: var(--obsidian-text-muted, #6c757d); font-size: .7rem; line-height: 1; transform: translateX(-50%); white-space: nowrap; }
     #legacy-device-view .motor-speed-tick:first-child .motor-speed-tick-label { transform: none; }
     #legacy-device-view .motor-speed-tick:last-child .motor-speed-tick-label { transform: translateX(-100%); }
 </style>

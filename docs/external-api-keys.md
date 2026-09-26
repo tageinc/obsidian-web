@@ -110,8 +110,9 @@ when sending a real key.
 
 ## 3. Supported endpoints
 
-All paths below are relative to `/api/external/v1`. `{id}` is the numeric device
-ID returned by the device list. Remote-control requests instead use the device's
+All paths below are relative to `/api/external/v1`. Device `{id}` values are
+numeric IDs returned by the device list; activity `{id}` values are UUIDs
+returned by the personal feed. Remote-control requests instead use the device's
 `serial_no`. Download paths use a release's `version`, not its database `id`.
 
 | Method | Path | Result |
@@ -131,10 +132,96 @@ ID returned by the device list. Remote-control requests instead use the device's
 | GET | `/configuration` | Paginated configuration releases |
 | POST | `/configuration` | Upload a JSON configuration and create a release |
 | GET | `/configuration/{version}/download` | Download a configuration file |
+| GET | `/user-settings` | Acting user's app activity email and theme preferences |
+| PATCH | `/user-settings` | Save either or both of the acting user's preferences |
+| GET | `/app-activity` | Personal activity feed, unread count, and next cursor |
+| PATCH | `/app-activity/{id}/read` | Mark an owned activity read |
+| DELETE | `/app-activity/{id}` | Dismiss an owned activity |
+| DELETE | `/app-activity` | Clear the acting user's feed |
 
-External keys cannot manage other keys, register devices, change accounts, or
+External keys cannot manage other keys, register devices, change account identity/security fields, or
 inactivate/reactivate devices through this endpoint group. They do not work on
 the separate legacy/mobile API endpoint group or browser management routes.
+
+### User Settings
+
+`GET /user-settings` and `PATCH /user-settings` act only on the key owner's
+`UserSettings` record. They never accept a target user. App activity email
+defaults to `true` and `theme_mode` defaults to `adaptive` for new and existing
+users, including users without a saved settings row:
+
+```json
+{"data":{"receive_app_activity_emails":true,"theme_mode":"adaptive"}}
+```
+
+To stop app activity emails, send the following JSON with `PATCH /user-settings`:
+
+```json
+{"receive_app_activity_emails":false}
+```
+
+A successful save returns both persisted preferences in the same `data` shape.
+`PATCH` accepts either supported field or both and preserves omitted fields.
+An empty update, explicit null, or invalid supplied value returns 422 without
+changing either preference. The email preference applies to all
+owned active devices and replaces the legacy per-device notification flag as
+the email gate. It does not disable in-app activities, verification mail, or
+password resets. Pending mail rechecks the setting before delivery.
+
+`theme_mode` accepts `adaptive`, `light`, or `dark`. Adaptive uses Light from
+06:00 until 18:00 and Dark from 18:00 until 06:00 in the user's local time;
+Light and Dark select that appearance explicitly. For example, this update
+changes only the saved theme:
+
+```json
+{"theme_mode":"dark"}
+```
+
+Theme changes are personal presentation preferences and create no activity or
+email. The saved choice has the same read/update contract for browser clients
+and external keys. Rendering the chosen colors and Adaptive's local clock
+transitions are presentation only; they do not create business events or need
+additional activity/API operations.
+
+### Personal app activity
+
+`GET /app-activity` returns 20 newest-first notices, ordered by creation time
+and ID, together with the total personal unread count and an opaque next cursor:
+
+```json
+{
+  "data": [{
+    "id": "22222222-2222-4222-8222-222222222222",
+    "title": "Device status changed",
+    "body": "Roof tracker (SOLAR-EXAMPLE): online → offline",
+    "url": "/devices/123",
+    "created_at": "2026-09-26T12:00:00.000000Z",
+    "read_at": null
+  }],
+  "unread_count": 1,
+  "next_cursor": null
+}
+```
+
+When `next_cursor` is non-null, URL-encode it and pass `?cursor=...` to fetch
+another page. Invalid cursors return 422. An empty feed returns `data: []`,
+`unread_count: 0`, and `next_cursor: null`. Reading the list does not mark items
+read, create new activities, or send email.
+
+`PATCH /app-activity/{id}/read` sets `read_at` once and returns the updated entry
+in `data` plus `unread_count`. Repeating it leaves the read timestamp unchanged.
+`DELETE /app-activity/{id}` dismisses one notice; `DELETE /app-activity` clears
+the entire personal feed. Both return `unread_count`. Dismissal changes the
+feed only; it does not cancel queued email or change a device's status.
+Foreign or missing IDs return 404. The Developer's broad device access does
+not grant access to another recipient's activities or User Settings.
+
+The browser bell and settings modal use identical contracts under `/api`,
+authenticated by a verified session with CSRF on writes, or by an existing
+application-owned bearer token. External keys remain confined to
+`/api/external/v1`. Browser dropdown placement, keyboard focus, and local
+timestamp formatting are presentation details; all saved actions have these
+external equivalents.
 
 ## 4. List and read devices
 
@@ -158,6 +245,29 @@ across owners. Each row includes `id`, `serial_no`, `name`, `sku`, `state`,
 `longitude`, `created_at`, and `updated_at`. The single-device response additionally
 includes `order_no` and `status`; status is `"no geo data"` if no location status
 is available. Nullable fields can contain `null`.
+
+### Device status emails
+
+`GET /devices/{id}` exposes the saved communication `status` used by the
+hourly device status check. Whenever that check detects a different status on
+an active device, it records an activity for the owner and queues email if the
+owner's **Receive app activity emails** setting is enabled and their email
+address is valid. Activity is recorded even when email is disabled. This covers offline,
+online/recovery, low voltage, theft/vandalism, and other reported telemetry
+states. Unchanged statuses do not queue another email, and intermediate
+changes between hourly checks are not individually emailed. Low-voltage and
+theft/vandalism messages retain their specialized content; other transitions
+include the previous and new status. See [application emails](application-email.md)
+for delivery eligibility, queue pacing, and retries.
+
+This notification is a shared automated side effect of the status check,
+independent of whether an owner uses the browser or a Developer integration
+reads the device. Reading a device does not trigger email, and an external key
+does not become an additional recipient. Device-read contracts are unchanged;
+discovery includes the personal settings and activity endpoints above. Raw mail-queue inspection,
+dispatch, and retry are operator infrastructure and remain outside the external
+API; these operations can resend owner messages and are not device-read
+capabilities.
 
 ### Pagination
 

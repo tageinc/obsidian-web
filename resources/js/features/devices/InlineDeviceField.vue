@@ -118,8 +118,8 @@ async function save() {
     cursor: text;
 }
 .field-read:hover {
-    background: #eef0f4;
-    box-shadow: inset 2px 0 #cbd5e1;
+    background: var(--obsidian-surface-subtle, #eef0f4);
+    box-shadow: inset 2px 0 var(--obsidian-border, #cbd5e1);
 }
 .field-editor {
     display: flex;

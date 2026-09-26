@@ -7,14 +7,14 @@ use RuntimeException;
 
 class FrontendAssets
 {
-    public static function tags(): HtmlString
+    public static function tags(string $entry = 'resources/js/entries/app.js'): HtmlString
     {
         $dev = config('frontend.dev_server');
         if ($dev && app()->environment('local')) {
             if (!preg_match('#^http://(?:localhost|127\.0\.0\.1):[0-9]+$#', $dev)) {
                 throw new RuntimeException('The frontend development server must be local.');
             }
-            return new HtmlString('<script type="module" src="'.e($dev).'/@vite/client"></script><script type="module" src="'.e($dev).'/resources/js/entries/app.js"></script>');
+            return new HtmlString('<script type="module" src="'.e($dev).'/@vite/client"></script><script type="module" src="'.e($dev).'/'.e($entry).'"></script>');
         }
 
         $path = public_path('build/manifest.json');
@@ -22,12 +22,11 @@ class FrontendAssets
             throw new RuntimeException('Frontend assets are missing. Run npm ci and npm run build.');
         }
         $manifest = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-        return static::fromManifest($manifest);
+        return static::fromManifest($manifest, $entry);
     }
 
-    public static function fromManifest(array $manifest): HtmlString
+    public static function fromManifest(array $manifest, string $entry = 'resources/js/entries/app.js'): HtmlString
     {
-        $entry = 'resources/js/entries/app.js';
         $styles = [];
         $visited = [];
         $walk = function ($key) use (&$walk, &$styles, &$visited, $manifest) {

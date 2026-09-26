@@ -376,9 +376,9 @@ function navigateSection(event, index) {
 
 <style scoped>
 .device-page {
-    --device-muted: #5c6879;
-    --device-border: #e0e6ee;
-    color: #202e42;
+    --device-muted: var(--obsidian-text-muted, #5c6879);
+    --device-border: var(--obsidian-border, #e0e6ee);
+    color: var(--obsidian-text, #202e42);
     padding-bottom: 2rem;
 }
 .device-page-embedded {
@@ -424,7 +424,7 @@ function navigateSection(event, index) {
     margin: 0;
 }
 .device-identity span {
-    color: #35445b;
+    color: var(--obsidian-text, #35445b);
     margin-left: 0.3rem;
     overflow-wrap: anywhere;
 }
@@ -448,8 +448,8 @@ function navigateSection(event, index) {
     font-weight: 600;
 }
 .device-tabs button[aria-selected='true'] {
-    color: #084298;
-    border-bottom-color: #275bb5;
+    color: var(--obsidian-accent-strong);
+    border-bottom-color: var(--obsidian-accent-strong);
 }
 .section-heading {
     display: flex;
@@ -486,7 +486,7 @@ function navigateSection(event, index) {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.35fr);
     margin-bottom: 1.5rem;
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     border: 1px solid var(--device-border);
     border-radius: 0.8rem;
 }
@@ -543,7 +543,7 @@ function navigateSection(event, index) {
     gap: 1.5rem;
 }
 .device-surface {
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     border: 1px solid var(--device-border);
     border-radius: 0.8rem;
     padding: 1.5rem;
@@ -579,8 +579,8 @@ function navigateSection(event, index) {
     background: #198754;
 }
 .cts-badge-closed {
-    color: #495057;
-    background: #e9ecef;
+    color: var(--obsidian-cts-closed-text, #495057);
+    background: var(--obsidian-cts-closed-bg, #e9ecef);
 }
 .device-header-details {
     margin-top: 1.25rem;
@@ -616,12 +616,12 @@ function navigateSection(event, index) {
 .control-guide h3,
 .control-guide h4 {
     font-size: 0.9rem;
-    color: #202e42;
+    color: var(--obsidian-text, #202e42);
     font-weight: 650;
     margin-bottom: 1.25rem;
 }
 .control-guide dt {
-    color: #35445b;
+    color: var(--obsidian-text, #35445b);
     margin-bottom: 0.25rem;
 }
 .control-guide dd {

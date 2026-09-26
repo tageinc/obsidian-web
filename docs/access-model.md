@@ -91,13 +91,29 @@ rate-limit responses return 429 and `Retry-After`. No secrets are logged.
 | GET | `/firmware/{version}/download` | Download firmware |
 | GET / POST | `/configuration` | List releases / upload `config`, `description`, and `prefix` |
 | GET | `/configuration/{version}/download` | Download configuration |
+| GET / PATCH | `/user-settings` | Read / partially update the acting user's email and theme preferences |
+| GET | `/app-activity` | Read the acting user's activity feed and unread count |
+| PATCH | `/app-activity/{id}/read` | Mark one owned activity read |
+| DELETE | `/app-activity/{id}` | Dismiss one owned activity |
+| DELETE | `/app-activity` | Clear the acting user's activity feed |
 
 Uploads use multipart form data and return JSON 201 with a version and message.
 Lists omit storage paths. Device edits and commands reuse existing controllers
 and validation; there is no blanket bypass of application rules. Device
-registration, account changes, key management, and owner-only lifecycle actions
+registration, account identity/security changes, key management, and owner-only lifecycle actions
 are not exposed by this initial external endpoint group. Existing hardware and
 mobile endpoint URLs/payloads remain unchanged.
+
+User Settings and app activity are strictly personal. Developer keys access only
+their owner's settings and notices, despite broader device-read permissions.
+The same verified-user controllers serve browser/application requests under
+`/api` and external-key requests under `/api/external/v1`. Browser writes require
+CSRF protection; keys do not grant access to another user's feed or preferences.
+The email checkbox defaults to enabled and does not control account-security
+mail or in-app activity. Theme mode defaults to Adaptive and also supports Light
+and Dark; updating one preference preserves the other and creates no activity or
+email. Bell presentation and modal focus do not require
+separate API operations; all saved settings, list, read, and dismissal actions do.
 
 History's report button and the external report endpoint use the same data and
 PDF services. The browser route `GET /devices/{id}/report` requires a verified

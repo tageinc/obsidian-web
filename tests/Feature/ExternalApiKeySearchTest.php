@@ -7,10 +7,12 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class ExternalApiKeySearchTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $developer;
     private const KEYS = '/developer-workspace/api-keys';
@@ -18,6 +20,7 @@ class ExternalApiKeySearchTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         Carbon::setTestNow(Carbon::parse('2026-10-01 12:00:00', 'UTC'));
         $this->developer = User::factory()->create(['email' => 'developer@key-search.example.test']);
         config(['app.developer_email' => $this->developer->email]);

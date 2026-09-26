@@ -8,9 +8,11 @@ function verifyFrontendAssets(string $directory): int
         throw new RuntimeException('Frontend manifest is missing. Run npm ci and npm run build.');
     }
     $manifest = json_decode(file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
-    $entry = 'resources/js/entries/app.js';
-    if (!is_array($manifest) || empty($manifest[$entry]['isEntry']) || empty($manifest[$entry]['file'])) {
-        throw new RuntimeException('Frontend app entry is missing from the manifest.');
+    foreach (['app', 'activity'] as $name) {
+        $entry = 'resources/js/entries/'.$name.'.js';
+        if (!is_array($manifest) || empty($manifest[$entry]['isEntry']) || empty($manifest[$entry]['file'])) {
+            throw new RuntimeException('Frontend '.$name.' entry is missing from the manifest.');
+        }
     }
 
     $files = [];

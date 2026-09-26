@@ -28,7 +28,10 @@ async function expectZeroReference(page) {
                     scale.min <= 0 &&
                     scale.max >= 0 &&
                     String(zero?.label) === '0' &&
-                    grid.color === Chart.defaults.borderColor &&
+                    grid.color ===
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--obsidian-border')
+                            .trim() &&
                     grid.lineWidth === 1 &&
                     pixel >= chart.chartArea.top &&
                     pixel <= chart.chartArea.bottom

@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSessionStore } from '../../shared/stores/session';
+import ActivityControls from '../activity/ActivityControls.vue';
 const props = defineProps({
     name: { type: String, required: true },
     logo: { type: String, required: true },
@@ -67,6 +68,11 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
             <a class="navbar-brand" :href="links.home"
                 ><img :src="logo" alt="" class="obsidian-logo" /> {{ name }}</a
             >
+            <ActivityControls
+                v-if="session.signedIn && user?.verified"
+                class="navigation-activity"
+                :csrf-token="csrfToken"
+            />
             <button
                 class="navbar-toggler"
                 type="button"
@@ -79,7 +85,7 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
             </button>
             <div
                 id="primary-navigation"
-                class="collapse navbar-collapse"
+                class="collapse navbar-collapse ms-md-auto"
                 :class="{ show: expanded }"
             >
                 <ul class="navbar-nav ms-auto">
@@ -146,6 +152,10 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
 </template>
 
 <style scoped>
+.navigation-activity {
+    margin-left: auto;
+    margin-right: 0.25rem;
+}
 .account-toggle {
     border: 0;
     background: transparent;
@@ -171,6 +181,14 @@ onBeforeUnmount(() => document.removeEventListener('click', dismiss));
     .account-menu {
         width: 100%;
         margin-bottom: 0.5rem;
+    }
+}
+@media (min-width: 768px) {
+    #primary-navigation {
+        flex-grow: 0;
+    }
+    .navigation-activity + .navbar-toggler + #primary-navigation {
+        margin-left: 0 !important;
     }
 }
 </style>

@@ -1,8 +1,12 @@
 import 'vite/modulepreload-polyfill';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../css/frontend.css';
+import '../../../public/css/accent.css';
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
+import { startThemeRuntime } from '../shared/theme';
+
+startThemeRuntime();
 
 const modules = import.meta.glob('../features/**/*Page.vue');
 const pages = {

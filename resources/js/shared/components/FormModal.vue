@@ -101,10 +101,10 @@ onBeforeUnmount(() => {
     max-height: calc(100vh - 2rem);
     max-height: calc(100dvh - 2rem);
     padding: 0;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 12px;
-    color: #111827;
-    background: #fff;
+    color: var(--obsidian-text, #111827);
+    background: var(--obsidian-surface, #fff);
     box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
     overflow: hidden;
 }
@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
     flex: 0 0 auto;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--obsidian-border, #e5e7eb);
 }
 .form-modal-header .btn-close {
     flex: 0 0 auto;

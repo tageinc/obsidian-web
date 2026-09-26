@@ -194,6 +194,25 @@ let chart;
 let Chart;
 let alive = true;
 let revision = 0;
+const darkSeries = {
+    temp: '#79adff',
+    ps1: '#65d89a',
+    ps2: '#bc9fff',
+    pds: '#63d5e0',
+    ps_avg: '#dc9bea',
+    motor_speed: '#ffb46c',
+};
+
+function chartTheme() {
+    const styles = getComputedStyle(document.documentElement);
+    const token = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+    return {
+        text: token('--obsidian-text', '#212529'),
+        muted: token('--obsidian-text-muted', '#5e6570'),
+        border: token('--obsidian-border', '#dee2e6'),
+        surface: token('--obsidian-surface', '#fff'),
+    };
+}
 
 function destroy() {
     chart?.destroy();
@@ -211,9 +230,15 @@ async function draw() {
         Chart ||= (await import('chart.js/auto')).default;
         await nextTick();
         if (!alive || current !== revision || !props.active) return;
+        const dark = document.documentElement.dataset.theme === 'dark';
+        const series = selected.value.series.map(([field, label, color]) => [
+            field,
+            label,
+            dark ? darkSeries[field] : color,
+        ]);
         chart = new Chart(
             canvas.value,
-            chartOptions(visible.value, selected.value.series, range.value),
+            chartOptions(visible.value, series, range.value, chartTheme()),
         );
         state.value = 'ready';
     } catch {
@@ -224,8 +249,12 @@ async function draw() {
     }
 }
 watch([visible, metric, () => props.active], draw);
-onMounted(draw);
+onMounted(() => {
+    window.addEventListener('obsidian:theme-changed', draw);
+    void draw();
+});
 onBeforeUnmount(() => {
+    window.removeEventListener('obsidian:theme-changed', draw);
     reportController?.abort();
     alive = false;
     revision++;
@@ -493,19 +522,19 @@ onBeforeUnmount(() => {
 }
 .history-heading p {
     font-size: 0.85rem;
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     margin: 0;
 }
 .history-badge {
     font-size: 0.75rem;
-    color: #43546d;
-    background: #eaf0f8;
+    color: var(--obsidian-accent-strong);
+    background: var(--obsidian-accent-soft);
     padding: 0.4rem 0.65rem;
     border-radius: 0.4rem;
 }
 .history-surface {
-    border: 1px solid #e0e6ee;
-    background: #fff;
+    border: 1px solid var(--obsidian-border, #e0e6ee);
+    background: var(--obsidian-surface, #fff);
     border-radius: 0.8rem;
     overflow: hidden;
 }
@@ -537,7 +566,7 @@ onBeforeUnmount(() => {
     margin: 0;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #35445b;
+    color: var(--obsidian-text, #35445b);
 }
 .history-date-nav {
     display: flex;
@@ -554,7 +583,7 @@ onBeforeUnmount(() => {
     border: 0;
     border-radius: 0.3rem;
     background: transparent;
-    color: #526176;
+    color: var(--obsidian-text-muted, #526176);
 }
 .history-nav-icon svg {
     width: 16px;
@@ -566,11 +595,11 @@ onBeforeUnmount(() => {
     stroke-linejoin: round;
 }
 .history-nav-icon:hover:not(:disabled) {
-    background: #eaf0f8;
-    color: #084298;
+    background: var(--obsidian-accent-soft);
+    color: var(--obsidian-accent-strong);
 }
 .history-nav-icon:focus-visible {
-    outline: 2px solid #275bb5;
+    outline: 2px solid var(--obsidian-accent-strong);
     outline-offset: 2px;
 }
 .history-nav-icon:disabled {
@@ -583,7 +612,7 @@ onBeforeUnmount(() => {
     min-width: 0;
 }
 .history-filter-title {
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     font-size: 0.72rem;
     font-weight: 800;
     line-height: 1;
@@ -603,7 +632,7 @@ onBeforeUnmount(() => {
     max-width: 100%;
 }
 .history-filter-field label {
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -622,7 +651,7 @@ onBeforeUnmount(() => {
 }
 #history-timezone {
     font-size: 0.75rem;
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
 }
 #history-range-error {
     margin: 0;
@@ -648,14 +677,14 @@ onBeforeUnmount(() => {
     margin: 0;
 }
 .plot-heading h3 span {
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     font-size: 0.75rem;
     font-weight: 400;
     margin-left: 0.5rem;
 }
 .plot-heading p {
     font-size: 0.75rem;
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     margin: 0;
 }
 .chart-container {
@@ -664,12 +693,12 @@ onBeforeUnmount(() => {
 .history-empty {
     padding: 4rem 1rem;
     text-align: center;
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
 }
 .history-footer {
-    border-top: 1px solid #e0e6ee;
+    border-top: 1px solid var(--obsidian-border, #e0e6ee);
     padding: 1rem 1.5rem;
-    color: #5c6879;
+    color: var(--obsidian-text-muted, #5c6879);
     font-size: 0.75rem;
     line-height: 1.6;
 }

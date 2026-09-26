@@ -15,6 +15,9 @@ class ExternalApiController extends Controller
         return response()->json([
             'version' => 'v1', 'access' => 'developer',
             'endpoints' => [
+                'GET /api/external/v1/user-settings', 'PATCH /api/external/v1/user-settings',
+                'GET /api/external/v1/app-activity', 'PATCH /api/external/v1/app-activity/{id}/read',
+                'DELETE /api/external/v1/app-activity/{id}', 'DELETE /api/external/v1/app-activity',
                 'GET /api/external/v1/devices', 'GET /api/external/v1/devices/{id}',
                 'PATCH /api/external/v1/devices/{id}', 'GET /api/external/v1/devices/{id}/data',
                 'GET /api/external/v1/devices/{id}/report',

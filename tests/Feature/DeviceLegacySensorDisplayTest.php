@@ -7,16 +7,19 @@ use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class DeviceLegacySensorDisplayTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private Device $device;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         config(['frontend.vue3.view_device' => false]);
         $owner = User::factory()->create();
         $this->device = Device::factory()->create(['user_id' => $owner->id]);

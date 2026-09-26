@@ -48,6 +48,7 @@ class SendAppUpdateMail implements ShouldQueue, ShouldBeEncrypted
     {
         $recipient = User::find($this->recipientId);
         if (!$recipient || !filter_var($recipient->email, FILTER_VALIDATE_EMAIL)
+            || !$recipient->receivesAppActivityEmails()
             || !$this->mail->shouldSendTo($recipient)) {
             return;
         }

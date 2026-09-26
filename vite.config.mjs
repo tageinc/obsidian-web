@@ -18,6 +18,8 @@ export default defineConfig({
         emptyOutDir: true,
         manifest: 'manifest.json',
         sourcemap: false,
-        rolldownOptions: { input: 'resources/js/entries/app.js' },
+        rolldownOptions: {
+            input: ['resources/js/entries/app.js', 'resources/js/entries/activity.js'],
+        },
     },
 });

@@ -9,17 +9,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Tests\Concerns\UsesFrontendManifest;
 use Tests\TestCase;
 
 class VerificationSecurityTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         Notification::fake();
         $this->user = User::create(['name' => 'Recipient', 'email' => 'recipient@example.test', 'password' => 'hash']);
     }

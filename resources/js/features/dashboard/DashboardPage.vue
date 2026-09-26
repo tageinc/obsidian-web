@@ -403,10 +403,10 @@ watch(
 .device-manager {
     margin-top: 1rem;
     padding: 1.25rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 0.75rem;
-    background: #fff;
-    color: #111827;
+    background: var(--obsidian-surface, #fff);
+    color: var(--obsidian-text, #111827);
 }
 .device-search {
     display: flex;
@@ -425,15 +425,15 @@ watch(
     width: 100%;
     min-height: 2.5rem;
     padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 8px;
-    background: #fff;
-    color: #111827;
+    background: var(--obsidian-surface, #fff);
+    color: var(--obsidian-text, #111827);
     font: inherit;
     font-size: 0.9rem;
 }
 .device-search-input::placeholder {
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
 }
 .device-search-submit {
     position: absolute;
@@ -443,7 +443,7 @@ watch(
     place-items: center;
     border: 0;
     border-radius: 8px;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
     background: transparent;
 }
 .device-clear-search {
@@ -452,13 +452,13 @@ watch(
 .device-table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     font-size: 0.9rem;
 }
 .device-table thead th {
     padding: 0.75rem 0.5rem;
-    background: #fff;
-    color: #6b7280;
+    background: var(--obsidian-surface, #fff);
+    color: var(--obsidian-text-muted, #6b7280);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -466,7 +466,7 @@ watch(
 }
 .device-table th,
 .device-table td {
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--obsidian-border, #e5e7eb);
     text-align: left;
     vertical-align: middle;
 }
@@ -480,7 +480,7 @@ watch(
 }
 .device-table-row:hover,
 .device-table-row.is-expanded {
-    background: #f3f4f6;
+    background: var(--obsidian-surface-subtle, #f3f4f6);
 }
 .device-expand-column,
 .device-expand-cell {
@@ -497,7 +497,7 @@ watch(
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
 }
 .device-expand-button svg {
     transition: transform 0.15s;
@@ -507,25 +507,25 @@ watch(
 }
 .device-expand-button:hover,
 .device-search-submit:hover {
-    background: #e5e7eb;
-    color: #111827;
+    background: var(--obsidian-surface-subtle, #e5e7eb);
+    color: var(--obsidian-text, #111827);
 }
 .device-manager :is(a, button, input, select):focus-visible {
-    outline: 2px solid #0d6efd;
+    outline: 2px solid var(--obsidian-accent-strong);
     outline-offset: 2px;
 }
 .device-name {
-    color: #111827;
+    color: var(--obsidian-text, #111827);
     font-weight: 600;
     text-decoration: none;
     overflow-wrap: anywhere;
 }
 .device-name:hover {
-    color: #0b5ed7;
+    color: var(--obsidian-accent-strong-hover);
     text-decoration: underline;
 }
 .device-updated {
-    color: #4b5563;
+    color: var(--obsidian-text-muted, #4b5563);
 }
 .device-status {
     display: inline-flex;
@@ -546,9 +546,9 @@ watch(
 }
 .device-details-row > td {
     padding: 1rem;
-    border-left: 3px solid #e5e7eb;
-    border-right: 3px solid #e5e7eb;
-    background: #fff;
+    border-left: 3px solid var(--obsidian-border, #e5e7eb);
+    border-right: 3px solid var(--obsidian-border, #e5e7eb);
+    background: var(--obsidian-surface, #fff);
 }
 .device-details {
     display: grid;
@@ -561,7 +561,7 @@ watch(
 }
 .device-details dt {
     margin-bottom: 0.25rem;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
     font-size: 0.75rem;
     font-weight: 600;
 }
@@ -572,9 +572,9 @@ watch(
 .device-empty {
     margin: 0;
     padding: 2rem 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 5px;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
     text-align: center;
 }
 .device-table-footer {
@@ -589,14 +589,14 @@ watch(
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
 }
 .device-size-select {
     padding: 6px 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 8px;
-    color: #111827;
-    background: #fff;
+    color: var(--obsidian-text, #111827);
+    background: var(--obsidian-surface, #fff);
 }
 .device-pagination {
     display: flex;
@@ -610,31 +610,31 @@ watch(
     display: block;
     min-width: 34px;
     padding: 6px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 8px;
-    color: #111827;
-    background: #fff;
+    color: var(--obsidian-text, #111827);
+    background: var(--obsidian-surface, #fff);
     text-align: center;
     text-decoration: none;
 }
 .device-pagination a:hover {
-    background: #f3f4f6;
+    background: var(--obsidian-surface-subtle, #f3f4f6);
 }
 .device-pagination [aria-current='page'] {
-    border-color: #0d6efd;
-    background: #0d6efd;
-    color: #fff;
+    border-color: var(--obsidian-accent-border);
+    background: var(--obsidian-accent);
+    color: var(--obsidian-accent-ink);
 }
 .device-pagination a[aria-current='page']:hover {
-    background: #0b5ed7;
+    background: var(--obsidian-accent-hover);
 }
 .device-pagination [aria-disabled='true'] {
-    color: #6b7280;
-    background: #f7f9fa;
+    color: var(--obsidian-text-muted, #6b7280);
+    background: var(--obsidian-surface-subtle, #f7f9fa);
 }
 .device-result-count {
     margin: 0;
-    color: #6b7280;
+    color: var(--obsidian-text-muted, #6b7280);
 }
 .device-footer-summary {
     display: flex;
@@ -643,11 +643,11 @@ watch(
     margin-left: auto;
 }
 .device-inactive-toggle {
-    color: #dc3545;
+    color: var(--obsidian-danger, #dc3545);
     text-decoration: underline;
 }
 .device-inactive-toggle:hover {
-    color: #a52834;
+    color: var(--obsidian-danger-hover, #a52834);
 }
 @media (max-width: 768px) {
     .device-manager {
@@ -676,7 +676,7 @@ watch(
         display: block;
         margin-bottom: 0.5rem;
         padding: 0.5rem;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--obsidian-border, #e5e7eb);
         border-radius: 5px;
         box-shadow: 2px 2px 8px rgb(0 0 0 / 5%);
     }
@@ -699,7 +699,7 @@ watch(
     .device-field-label {
         display: block;
         margin-bottom: 0.25rem;
-        color: #4b5563;
+        color: var(--obsidian-text-muted, #4b5563);
         font-size: 0.75rem;
         font-weight: 600;
     }

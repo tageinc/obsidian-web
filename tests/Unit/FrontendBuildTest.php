@@ -15,7 +15,7 @@ class FrontendBuildTest extends TestCase
     {
         $this->directory = sys_get_temp_dir().'/obsidian-assets-'.bin2hex(random_bytes(8));
         mkdir($this->directory.'/assets', 0700, true);
-        foreach (['app.js', 'page.js', 'page.css'] as $file) {
+        foreach (['app.js', 'activity.js', 'page.js', 'page.css'] as $file) {
             file_put_contents($this->directory.'/assets/'.$file, 'fixture');
         }
         $this->manifest();
@@ -39,13 +39,26 @@ class FrontendBuildTest extends TestCase
             'resources/js/entries/app.js' => [
                 'file' => 'assets/app.js', 'isEntry' => true, 'dynamicImports' => [$page],
             ],
+            'resources/js/entries/activity.js' => ['file' => 'assets/activity.js', 'isEntry' => true],
             'page' => ['file' => 'assets/page.js', 'css' => [$css]],
         ]));
     }
 
     public function test_complete_build_including_lazy_styles_is_accepted(): void
     {
-        $this->assertSame(3, verifyFrontendAssets($this->directory));
+        $this->assertSame(4, verifyFrontendAssets($this->directory));
+    }
+
+    public function test_missing_activity_entry_is_rejected(): void
+    {
+        $path = $this->directory.'/manifest.json';
+        $manifest = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        unset($manifest['resources/js/entries/activity.js']);
+        file_put_contents($path, json_encode($manifest));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('activity entry is missing');
+        verifyFrontendAssets($this->directory);
     }
 
     public function test_missing_manifest_is_rejected(): void

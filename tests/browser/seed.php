@@ -79,6 +79,29 @@ for ($index = 1; $index <= 24; $index++) {
         'updated_at' => $created,
     ]);
 }
+$themeOwner = User::create([
+    'name' => 'Theme browser fixture', 'email' => 'theme@browser.example.test',
+    'password' => Hash::make('browser-test-password'), 'email_verified_at' => now(),
+]);
+for ($index = 1; $index <= 3; $index++) {
+    $themeDevice = Device::create([
+        'user_id' => $themeOwner->id, 'serial_no' => 'BROWSER-THEME-'.$index,
+        'name' => 'Theme simulator '.$index, 'sku' => 'FIXTURE', 'order_no' => 'THEME-ORDER-'.$index,
+        'address_1' => '1 Theme Fixture Street', 'city' => 'Test City', 'address_state' => 'CA',
+        'zip_code' => '90001', 'country' => 'US', 'latitude' => 33.7263, 'longitude' => -117.9190,
+    ]);
+    GeoCode::create(['serial_no' => $themeDevice->serial_no, 'status' => 'online', 'latitude' => 33.7263, 'longitude' => -117.9190]);
+    foreach ([0, 1, 2] as $hours) {
+        $reading = new DeviceLog([
+            'serial_no' => $themeDevice->serial_no, 'temp' => 20 + $hours,
+            'ps1' => 20 + $hours, 'ps2' => 30 + $hours, 'pds' => $hours - 1,
+            'motor_speed' => 0, 'cts' => 1, 'state' => 'solar-track',
+        ]);
+        $reading->created_at = now()->subHours($hours);
+        $reading->updated_at = $reading->created_at;
+        $reading->save();
+    }
+}
 fwrite(STDOUT, "Isolated browser fixtures ready.\n");
 } catch (Throwable $error) {
     fwrite(STDERR, get_class($error).': '.$error->getMessage().PHP_EOL);

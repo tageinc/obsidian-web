@@ -78,4 +78,21 @@ Illuminate\Support\Facades\Route::delete('/__browser-fixtures/telemetry/{id}', f
     return response()->noContent();
 });
 
+Illuminate\Support\Facades\Route::post('/__browser-fixtures/app-activity', function (Illuminate\Http\Request $request) {
+    $values = $request->validate(['count' => 'required|integer|min:1|max:12']);
+    $owner = $request->user();
+    abort_unless($owner && $owner->email === 'owner@browser.example.test', 403);
+    $device = App\Models\Device::where('serial_no', 'BROWSER-SIMULATOR-1')
+        ->where('user_id', $owner->id)->firstOrFail();
+    $ids = [];
+    for ($index = 1; $index <= $values['count']; $index++) {
+        $notice = new App\Notifications\DeviceStatusChangedActivity($device, 'online', 'fixture status '.$index);
+        $notice->id = (string) Illuminate\Support\Str::uuid();
+        $owner->notify($notice);
+        $ids[] = $notice->id;
+    }
+
+    return response()->json(['ids' => $ids], 201);
+})->middleware(['web', 'auth', 'verified']);
+
 return $app;

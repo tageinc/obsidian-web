@@ -82,6 +82,13 @@ Sources: [Vue recommendations](https://v3-migration.vuejs.org/recommendations),
 
 ## Build and coexistence
 
+`public/css/accent.css` defines the shared `#1C1C1C` accent, white text on filled
+controls, and neutral interaction states. The Vite entry imports it after
+Bootstrap and base styles; legacy layouts link it after their existing styles.
+The Docker frontend stage copies this source explicitly. Component accents use
+its CSS properties, while telemetry series and status colors retain their
+semantic palettes. PDF report accents use matching literal colors for Dompdf.
+
 1. Add Vite entries under `resources/js/entries/` and output to `public/build/`.
    A small tested Laravel 8 manifest adapter renders entry/import CSS and module
    tags. Do not assume modern Laravel's built-in `@vite` exists in this version.

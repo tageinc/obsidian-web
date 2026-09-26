@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Mail\LowVoltageMail;
+use App\Mail\DeviceStatusChangedMail;
+use App\Mail\TheftVandalismMail;
 use App\Jobs\SendAppUpdateMail;
 use App\Models\Api\DeviceLog;
 use App\Models\Device;
@@ -65,6 +67,12 @@ class DeviceCommunicationsTest extends TestCase
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamps();
         });
+        require_once database_path('migrations/2026_09_26_000000_create_user_settings_table.php');
+        require_once database_path('migrations/2026_09_26_000001_create_notifications_table.php');
+        require_once database_path('migrations/2026_09_26_000002_add_theme_mode_to_user_settings.php');
+        (new \CreateUserSettingsTable())->up();
+        (new \AddThemeModeToUserSettings())->up();
+        (new \CreateNotificationsTable())->up();
         Schema::create('hardware', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -240,6 +248,105 @@ class DeviceCommunicationsTest extends TestCase
         $this->assertStringNotContainsString('Twilio', file_get_contents(app_path('Console/Commands/UpdateDeviceStatus.php')));
     }
 
+    /** @dataProvider deviceStatusTransitions */
+    public function test_status_command_queues_each_status_transition_once(
+        string $previousStatus,
+        ?string $reportedStatus,
+        ?int $logAgeSeconds,
+        string $expectedStatus,
+        string $mailClass
+    ): void {
+        Mail::fake();
+        Queue::fake();
+        DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
+        DB::table('devices')->insert([
+            'serial_no' => 'status-transition', 'user_id' => 1,
+            'status_notification' => false, 'address_1' => '1 Main St',
+        ]);
+        DB::table('geocode')->insert([
+            'serial_no' => 'status-transition', 'status' => $previousStatus,
+            'latitude' => 34.0522, 'longitude' => -118.2437,
+        ]);
+        if ($logAgeSeconds !== null) {
+            $log = new DeviceLog(['serial_no' => 'status-transition', 'state' => $reportedStatus]);
+            $log->created_at = now()->subSeconds($logAgeSeconds);
+            $log->save();
+        }
+
+        $this->artisan('device:check-status')->assertExitCode(0);
+
+        $this->assertDatabaseHas('geocode', ['serial_no' => 'status-transition', 'status' => $expectedStatus]);
+        Queue::assertPushedOn('mail', SendAppUpdateMail::class, function ($job) use ($mailClass, $previousStatus, $expectedStatus) {
+            $this->assertSame('app-updates', $job->connection);
+            $this->assertSame(1, $job->recipientId);
+            $this->assertInstanceOf($mailClass, $job->mail);
+            $this->assertSame('status-transition', $job->mail->serialNo);
+            $this->assertSame('1 Main St', $job->mail->address1);
+            if ($job->mail instanceof DeviceStatusChangedMail) {
+                $this->assertSame($previousStatus, $job->mail->previousStatus);
+                $this->assertSame($expectedStatus, $job->mail->status);
+            }
+            return true;
+        });
+
+        $this->artisan('device:check-status')->assertExitCode(0);
+
+        Queue::assertPushed(SendAppUpdateMail::class, 1);
+        $this->assertDatabaseCount('notifications', 1);
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => 1, 'notifiable_type' => \App\Models\User::class]);
+        Mail::assertNothingSent();
+    }
+
+    public static function deviceStatusTransitions(): array
+    {
+        return [
+            'stale telemetry goes offline' => ['online', 'online', 601, 'offline', DeviceStatusChangedMail::class],
+            'missing telemetry goes offline' => ['online', null, null, 'offline', DeviceStatusChangedMail::class],
+            'fresh telemetry recovers online' => ['offline', 'online', 0, 'online', DeviceStatusChangedMail::class],
+            'fresh telemetry without state is online' => ['offline', null, 0, 'online', DeviceStatusChangedMail::class],
+            'normal operating state changes' => ['online', 'solar track', 0, 'solar track', DeviceStatusChangedMail::class],
+            'custom device state changes' => ['solar track', 'maintenance', 0, 'maintenance', DeviceStatusChangedMail::class],
+            'low voltage alert remains specialized' => ['online', 'low voltage', 0, 'low voltage', LowVoltageMail::class],
+            'theft alert remains specialized' => ['online', 'theft vandalism', 0, 'theft vandalism', TheftVandalismMail::class],
+        ];
+    }
+
+    /** @dataProvider ineligibleDeviceStatusRecipients */
+    public function test_status_changes_respect_active_devices_notification_preferences_and_valid_owners(
+        string $deviceState,
+        bool $notificationsEnabled,
+        ?string $ownerEmail
+    ): void {
+        Queue::fake();
+        if ($ownerEmail !== null) {
+            DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => $ownerEmail]);
+            DB::table('user_settings')->insert(['user_id' => 1, 'receive_app_activity_emails' => $notificationsEnabled]);
+        }
+        DB::table('devices')->insert([
+            'serial_no' => 'ineligible', 'user_id' => 1,
+            'state' => $deviceState, 'status_notification' => true,
+        ]);
+        DB::table('geocode')->insert(['serial_no' => 'ineligible', 'status' => 'online']);
+
+        $this->artisan('device:check-status')->assertExitCode(0);
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseCount('notifications', $deviceState === 'active' && $ownerEmail !== null ? 1 : 0);
+        $this->assertDatabaseHas('geocode', [
+            'serial_no' => 'ineligible', 'status' => $deviceState === 'active' ? 'offline' : 'online',
+        ]);
+    }
+
+    public static function ineligibleDeviceStatusRecipients(): array
+    {
+        return [
+            'notifications disabled' => ['active', false, 'owner@example.test'],
+            'inactive device' => ['inactive', true, 'owner@example.test'],
+            'missing owner' => ['active', true, null],
+            'invalid owner email' => ['active', true, 'invalid-address'],
+        ];
+    }
+
     public function test_failed_enqueue_does_not_consume_the_status_transition(): void
     {
         DB::table('users')->insert(['id' => 1, 'name' => 'Owner', 'email' => 'owner@example.test']);
@@ -261,6 +368,7 @@ class DeviceCommunicationsTest extends TestCase
         }
 
         $this->assertDatabaseHas('geocode', ['serial_no' => 'solar', 'status' => 'offline']);
+        $this->assertDatabaseCount('notifications', 0);
     }
 
     public function test_sms_deactivation_is_explicit_and_non_destructive(): void

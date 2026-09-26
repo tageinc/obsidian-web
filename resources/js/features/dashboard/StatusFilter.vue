@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
     padding: 0.4rem;
     background: none;
     border: none;
-    color: #525a62;
+    color: var(--obsidian-text-muted, #525a62);
     font-weight: 500;
     white-space: nowrap;
 }
@@ -205,21 +205,21 @@ onBeforeUnmount(() => {
     right: 0;
     width: min(300px, calc(100vw - 2rem));
     padding: 0.5rem 0.65rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--obsidian-border, #e5e7eb);
     border-radius: 8px;
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
     z-index: 1060;
 }
 :deep(.ts-control),
 :deep(.ts-dropdown) {
-    background-color: #fff;
-    border-color: #cbd5e1;
-    color: #111827;
+    background-color: var(--obsidian-surface, #fff);
+    border-color: var(--obsidian-border, #cbd5e1);
+    color: var(--obsidian-text, #111827);
 }
 :deep(.ts-control input),
 :deep(.ts-control .item),
 :deep(.ts-dropdown .option) {
-    color: #111827;
+    color: var(--obsidian-text, #111827);
 }
 </style>

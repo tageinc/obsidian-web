@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-mode="{{ Auth::check() ? Auth::user()->themeMode() : 'adaptive' }}">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('frontend.theme-bootstrap')
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -39,15 +40,17 @@
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/accent.css') }}" rel="stylesheet">
+    {{ \App\Support\FrontendAssets::tags('resources/js/entries/activity.js') }}
     @endif
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" @if ($centerContent ?? false) class="d-flex flex-column" style="min-height: 100vh; min-height: 100dvh;" @endif>
         @if ($usesVue ?? false)
             @include('frontend.mount', ['page' => 'navigation', 'props' => [
                 'name' => config('app.name'), 'logo' => asset('img/logo.png'),
-                'user' => Auth::check() ? ['name' => Auth::user()->name] : null,
+                'user' => Auth::check() ? ['name' => Auth::user()->name, 'verified' => Auth::user()->hasVerifiedEmail()] : null,
                 'csrfToken' => csrf_token(),
                 'links' => [
                     'home' => url('/'), 'dashboard' => route('dashboard'), 'profile' => route('profile'),
@@ -57,12 +60,15 @@
                 ],
             ]])
         @else
-        <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
+        <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm legacy-activity-navbar">
             <div class="container">
                 <a class="navbar-brand" href="{{ url('/') }}">
 					<img src="{{ asset('img/logo.png') }}" height="20%" width="20%"></img>
 					{{ config('app.name', 'Laravel') }}
                 </a>
+                @if (Auth::check() && Auth::user()->hasVerifiedEmail())
+                    <div data-app-activity-root data-csrf-token="{{ csrf_token() }}"></div>
+                @endif
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
                     aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
@@ -134,7 +140,7 @@
             </div>
         </nav>
         @endif
-        <main class="py-4" id="main-content">
+        <main class="py-4 {{ ($centerContent ?? false) ? 'd-flex flex-column justify-content-center flex-grow-1' : '' }}" id="main-content">
             @yield('content')
         </main>
     </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Notifications\CustomVerifyEmail;
@@ -13,6 +14,21 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, Notifiable;
 
     protected $hidden = ['password', 'remember_token'];
+
+    public function settings(): HasOne
+    {
+        return $this->hasOne(UserSettings::class)->withDefault();
+    }
+
+    public function receivesAppActivityEmails(): bool
+    {
+        return $this->settings()->first()?->receive_app_activity_emails ?? true;
+    }
+
+    public function themeMode(): string
+    {
+        return $this->settings()->first()?->theme_mode ?? 'adaptive';
+    }
 
     public function isDeveloper(): bool
     {

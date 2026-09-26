@@ -12,15 +12,16 @@ SQLite file and storage/cache/session directories under an OS temporary
 non-SQLite, non-temporary databases. It applies migrations only to that new
 empty file. It never runs the development or production database seeders.
 
-Accounts and the one device are synthetic. Mail uses Laravel's array transport,
+Accounts and devices are synthetic. Mail uses Laravel's array transport,
 logs are disabled, Redis workloads are disabled, and external browser requests
 are blocked (map tiles use a static fixture). Motor-command requests are blocked
 and asserted absent on mount/navigation. The dedicated speed-slider test
 fulfills commands with mocked responses and verifies that the fixture's stored
 command remains unchanged. Forms exercise rejected submissions; the device modal also
-saves and restores an address line on the synthetic fixture only. Screenshots,
-video, traces, stored login state and artifact uploads are disabled. Any failure
-context contains synthetic fixtures only. Temporary files are cleaned up on
+saves and restores an address line on the synthetic fixture only. Screenshots
+and traces are retained only for failures; video, stored login state and artifact
+uploads are disabled. Any failure context contains synthetic fixtures only.
+Temporary files are cleaned up on
 normal server exit; forced OS termination can leave a disposable fixture
 directory for the OS temporary-file cleanup policy.
 
@@ -46,7 +47,7 @@ reads real telemetry snapshots from the isolated backend. It verifies updated
 Overview values and History counts, the moving default 24-hour window, preserved
 custom dates and measurement selection, retained data after a temporary refresh
 failure, successful retry, and polling cleanup after leaving the device page.
-Temperature values use Fahrenheit; CTS changes exercise green Open, light-gray
+Temperature values use Fahrenheit; CTS changes exercise green Open, neutral-gray
 Closed, and missing-value displays with real telemetry snapshots.
 Test-only routes in the guarded fixture application create tagged synthetic
 readings and remove only those readings in cleanup. These routes are absent from
@@ -63,6 +64,21 @@ one-time secret display, reload persistence, revocation, CSRF rejection, and a
 real authenticated external device-list request against synthetic fixtures.
 The browser fixture developer is `developer@browser.example.test`. External
 remote-control endpoints are never invoked by these tests.
+
+Activity coverage exercises the navigation bell and User Settings dialog in
+both modern and legacy layouts. It saves and reloads the account email opt-out,
+checks that in-app activity remains available, and verifies read, dismiss,
+clear, keyboard focus, and overflow on desktop and mobile. A guarded fixture
+route creates synthetic database notifications for the fixture owner only;
+mail transport and physical-device effects are never exercised.
+
+Theme coverage uses a separate synthetic account and three devices to check
+saved Adaptive/Light/Dark modes, unchanged appearance after cancelled or failed
+drafts, local 06:00/18:00 Adaptive transitions, and preserved email preferences.
+Modern and legacy pages verify dark navigation, dialogs, forms, table rows, and
+chart surfaces, empty feeds, keyboard focus, text/switch contrast, and mobile
+overflow. Chart theme changes redraw
+the same readings and ranges without extra telemetry requests or device commands.
 
 Release-table coverage uses synthetic firmware/configuration records to verify
 full-history search, independent query state, searchable Tom Select prefix and

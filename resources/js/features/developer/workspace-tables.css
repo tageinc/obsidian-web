@@ -7,8 +7,8 @@
 .release-total {
     padding: 0.2rem 0.6rem;
     border-radius: 1rem;
-    color: #536175;
-    background: #f0f3f7;
+    color: var(--obsidian-text-muted, #536175);
+    background: var(--obsidian-surface-subtle, #f0f3f7);
     font-size: 0.75rem;
     font-weight: 500;
 }
@@ -35,28 +35,28 @@
     position: absolute;
     left: 0.75rem;
     top: 0.75rem;
-    color: #657184;
+    color: var(--obsidian-text-muted, #657184);
     pointer-events: none;
 }
 .release-search-field input {
     padding-left: 2.25rem;
     min-height: 2.5rem;
     font-size: 0.875rem;
-    border-color: #dce1e9;
+    border-color: var(--obsidian-border, #dce1e9);
 }
 .release-search-field input::placeholder {
-    color: #657184;
+    color: var(--obsidian-text-muted, #657184);
 }
 .release-search-button {
     font-size: 0.875rem;
-    border-color: #cbd3df;
+    border-color: var(--obsidian-border, #cbd3df);
 }
 .release-sort {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.8125rem;
-    color: #536175;
+    color: var(--obsidian-text-muted, #536175);
 }
 .release-sort label {
     white-space: nowrap;
@@ -64,7 +64,7 @@
 .release-sort select {
     width: auto;
     min-height: 2.5rem;
-    border-color: #dce1e9;
+    border-color: var(--obsidian-border, #dce1e9);
 }
 .release-active-filters {
     display: flex;
@@ -79,10 +79,10 @@
     gap: 0.5rem;
     max-width: 100%;
     padding: 0.25rem 0.6rem;
-    border: 1px solid #d7e0f0;
+    border: 1px solid var(--obsidian-accent-border);
     border-radius: 0.375rem;
-    background: #f1f5fc;
-    color: #304b79;
+    background: var(--obsidian-accent-soft);
+    color: var(--obsidian-accent-strong);
     font-size: 0.75rem;
 }
 .release-filter-chip span:first-child {
@@ -91,13 +91,14 @@
     text-align: left;
 }
 .release-filter-chip:hover {
-    background: #e4ebf8;
+    background: var(--obsidian-accent);
+    color: var(--obsidian-accent-ink);
 }
 .release-clear {
     font-size: 0.75rem;
 }
 .release-table-container {
-    border: 1px solid #e1e6ed;
+    border: 1px solid var(--obsidian-border, #e1e6ed);
     border-radius: 0.625rem;
 }
 .developer-history {
@@ -105,11 +106,11 @@
 }
 .developer-history > :not(caption) > * > * {
     padding: 1rem;
-    border-color: #edf0f4;
+    border-color: var(--obsidian-border, #edf0f4);
 }
 .developer-history thead th {
-    background: #f7f9fc;
-    color: #536175;
+    background: var(--obsidian-surface-subtle, #f7f9fc);
+    color: var(--obsidian-text-muted, #536175);
     font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
@@ -120,7 +121,7 @@
     border-bottom: 0;
 }
 .developer-history tbody tr:hover > * {
-    background: #fafbfd;
+    background: var(--obsidian-surface-subtle, #fafbfd);
 }
 .developer-history th {
     width: 7rem;
@@ -130,10 +131,10 @@
     padding: 0.25rem 0.6rem;
     min-width: 2.25rem;
     text-align: center;
-    border: 1px solid #dce5f5;
+    border: 1px solid var(--obsidian-accent-border);
     border-radius: 0.375rem;
-    background: #edf2fc;
-    color: #244e93;
+    background: var(--obsidian-accent-soft);
+    color: var(--obsidian-accent-strong);
     font-size: 0.8125rem;
     font-weight: 600;
 }
@@ -141,8 +142,8 @@
     display: inline-block;
     padding: 0.2rem 0.5rem;
     border-radius: 0.25rem;
-    background: #f0f3f7;
-    color: #47566d;
+    background: var(--obsidian-surface-subtle, #f0f3f7);
+    color: var(--obsidian-text-muted, #47566d);
     font-family: var(--bs-font-monospace);
     font-size: 0.75rem;
     overflow-wrap: anywhere;
@@ -151,7 +152,7 @@
 .developer-description {
     min-width: 14rem;
     width: 60%;
-    color: #455267;
+    color: var(--obsidian-text-muted, #455267);
     overflow-wrap: anywhere;
     white-space: pre-line;
 }
@@ -160,25 +161,25 @@
     white-space: nowrap;
     font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
-    color: #455267;
+    color: var(--obsidian-text-muted, #455267);
 }
 .release-time {
     display: block;
     margin-top: 0.15rem;
     font-size: 0.75rem;
-    color: #657184;
+    color: var(--obsidian-text-muted, #657184);
 }
 .developer-history .release-empty {
     padding: 3rem 1rem;
     text-align: center;
-    color: #536175;
+    color: var(--obsidian-text-muted, #536175);
 }
 .release-empty strong,
 .release-empty span {
     display: block;
 }
 .release-empty strong {
-    color: #34435a;
+    color: var(--obsidian-text, #34435a);
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
@@ -191,7 +192,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 1rem;
-    color: #536175;
+    color: var(--obsidian-text-muted, #536175);
     font-size: 0.8125rem;
 }
 .release-range {
@@ -203,7 +204,7 @@
     gap: 0.5rem;
 }
 .release-page-size select {
-    border-color: #dce1e9;
+    border-color: var(--obsidian-border, #dce1e9);
 }
 .pagination {
     gap: 0.25rem;

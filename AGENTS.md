@@ -15,6 +15,45 @@ These instructions apply throughout this repository.
 - Use Developer terminology consistently in UI labels, components, directories, controllers, tests, and documentation. The workspace page is `DeveloperPage.vue` under `resources/js/features/developer`, not `AdminPage`.
 - Preserve existing legacy URL and configuration compatibility only where required for deployed installations; compatibility aliases do not define an admin role or grant additional access.
 
+## Email and app activity notification parity
+
+- Application activity emails and in-app notifications must maintain 1:1
+  business-event parity for the same authorized recipients and affected record.
+  Add or change both channels in the same change set; a missing counterpart is
+  a defect. Presentation may differ, but event meaning and recipient scope must
+  match. A notification or its destination link must never grant additional access.
+- Honor UserSettings **Receive app activity emails**
+  (`receive_app_activity_emails`), enabled by default. Email opt-out or an invalid
+  email address must not suppress in-app activity. Recheck the current preference
+  and recipient eligibility when queued mail is sent.
+- Reuse the existing activity and mail delivery patterns. Persist activity once
+  at the originating event, within its transaction where applicable. Email
+  rendering and delivery retries must not create additional activities or mail
+  jobs. Unchanged device statuses and reading or dismissing activity must not
+  generate new notifications.
+- Authentication and account-access emails, including verification and password
+  resets, are excluded from this pairing and preference. Any other exception
+  must follow an explicit product requirement and be documented; do not silently
+  introduce a single-channel business-event notification.
+- Include meaningful tests for paired recipients and event content, unread
+  activity, authorization, email opt-out, delivery-time preference changes, and
+  duplicate prevention. Preserve the same notification outcomes for events
+  originating through the UI, external API, or scheduled/background work.
+- Update [docs/application-email.md](docs/application-email.md) and affected
+  integration documentation whenever notification behavior or contracts change.
+
+## Theme design and zebra protection
+
+- Theme the whole surface hierarchy together: page, navigation, filters, cards,
+  tables, charts, menus, dialogs, controls, and empty/loading/error states. Prevent
+  the "zebra effect" of leftover light panels inside Dark mode or dark panels
+  inside Light mode.
+- Use shared semantic `--obsidian-*` color tokens and follow the theme rules in
+  [agents/styling.md](agents/styling.md). Preserve meaningful status colors and
+  readable text, focus, hover, and disabled states in both themes.
+- Verify Adaptive, Light, and Dark on modern and legacy pages, including live
+  switching, saved preferences, canvas redraws, and desktop/mobile layouts.
+
 ## Instruction map
 
 Always read [agents/rules.md](agents/rules.md),

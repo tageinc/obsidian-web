@@ -7,16 +7,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class ProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         Notification::fake();
         $this->user = User::create([
             'name' => 'Original Owner',

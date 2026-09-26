@@ -106,7 +106,17 @@ function submitForm(event, target) {
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-7">
                 <div class="card">
-                    <div class="card-header">
+                    <div
+                        class="card-header"
+                        :class="{
+                            'bg-primary': [
+                                'login',
+                                'password-email',
+                                'password-reset',
+                                'verify',
+                            ].includes(mode),
+                        }"
+                    >
                         <h1 class="h5 mb-0">{{ page.title }}</h1>
                     </div>
                     <div class="card-body">

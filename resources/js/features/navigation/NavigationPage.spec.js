@@ -52,6 +52,31 @@ it('shows the canonical Developer Workspace link when the server grants access',
     expect(wrapper.get('a[href="/developer-workspace"]').text()).toBe('Developer Workspace');
     wrapper.unmount();
 });
+it('places verified-user activity controls outside collapsed mobile navigation', () => {
+    const wrapper = mount(NavigationPage, {
+        props: { ...props, user: { name: 'Verified user', verified: true } },
+        global: {
+            plugins: [createPinia()],
+            stubs: { ActivityControls: { template: '<div data-activity-controls />' } },
+        },
+    });
+    expect(
+        wrapper.get('[data-activity-controls]').element.closest('#primary-navigation'),
+    ).toBeNull();
+    expect(wrapper.get('[aria-controls="primary-navigation"]').attributes('aria-expanded')).toBe(
+        'false',
+    );
+});
+it('does not mount personal activity controls for unverified users', () => {
+    const wrapper = mount(NavigationPage, {
+        props: { ...props, user: { name: 'Unverified user', verified: false } },
+        global: {
+            plugins: [createPinia()],
+            stubs: { ActivityControls: { template: '<div data-activity-controls />' } },
+        },
+    });
+    expect(wrapper.find('[data-activity-controls]').exists()).toBe(false);
+});
 it('keeps app links inside a collapsed account dropdown with keyboard navigation and Escape recovery', async () => {
     const wrapper = mount(NavigationPage, {
         props: { ...props, user: { name: 'Synthetic user' } },

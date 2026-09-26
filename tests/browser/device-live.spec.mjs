@@ -68,7 +68,9 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         await expect(metric(/^CTS$/)).toHaveText('Closed');
         await expect(metric(/^CTS$/).locator('.cts-badge')).toHaveCSS(
             'background-color',
-            'rgb(233, 236, 239)',
+            (await page.locator('html').getAttribute('data-theme')) === 'dark'
+                ? 'rgb(48, 48, 48)'
+                : 'rgb(233, 236, 239)',
         );
         await expect(versions.locator('dd')).toHaveText(['001.020', '0']);
         await expect(versions).toBeVisible();

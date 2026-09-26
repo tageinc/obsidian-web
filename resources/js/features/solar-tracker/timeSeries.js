@@ -109,7 +109,7 @@ export function zeroReferenceScale() {
         },
     };
 }
-export function chartOptions(points, series, range = null) {
+export function chartOptions(points, series, range = null, theme = null) {
     const showZero = series.some(([field]) => field === 'pds' || field === 'motor_speed');
     const first = range?.start ?? points[0]?.epoch_ms;
     const last = range?.end ?? points.at(-1)?.epoch_ms;
@@ -153,7 +153,7 @@ export function chartOptions(points, series, range = null) {
               ]
             : [];
     });
-    return {
+    const configuration = {
         type: 'scatter',
         data: {
             datasets: [...readings, ...trends],
@@ -199,6 +199,24 @@ export function chartOptions(points, series, range = null) {
             },
         },
     };
+    if (theme) {
+        configuration.options.color = theme.muted;
+        for (const scale of Object.values(configuration.options.scales)) {
+            scale.ticks = { ...scale.ticks, color: theme.muted };
+            scale.grid = { color: theme.border };
+            scale.border = { color: theme.border };
+            if (scale.title) scale.title.color = theme.muted;
+        }
+        configuration.options.plugins.legend.labels.color = theme.muted;
+        Object.assign(configuration.options.plugins.tooltip, {
+            backgroundColor: theme.surface,
+            titleColor: theme.text,
+            bodyColor: theme.text,
+            borderColor: theme.border,
+            borderWidth: 1,
+        });
+    }
+    return configuration;
 }
 
 // Keep numeric epoch positioning, but choose clock-aligned ticks instead of decimal epoch rounding.

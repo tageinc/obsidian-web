@@ -2,19 +2,26 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendAppUpdateMail;
+use App\Mail\DeviceStatusChangedMail;
 use App\Models\ApiToken;
 use App\Models\Device;
 use App\Models\ExternalApiKey;
+use App\Models\GeoCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Concerns\UsesFrontendManifest;
 
 class ExternalApiKeysTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesFrontendManifest;
 
     private User $developer;
     private const KEYS = '/developer-workspace/api-keys';
@@ -22,6 +29,7 @@ class ExternalApiKeysTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->useFrontendManifest();
         $this->developer = User::factory()->create(['email' => 'developer@example.test']);
         config(['app.developer_email' => $this->developer->email]);
     }
@@ -122,6 +130,37 @@ class ExternalApiKeysTest extends TestCase
         $this->bearer($secret)->getJson('/api/external/v1')->assertStatus(429);
         [, $second] = ExternalApiKey::issue($this->developer, 'Independent', null);
         $this->bearer($second)->getJson('/api/external/v1')->assertOk();
+    }
+
+    public function test_status_transition_mail_and_external_device_reads_share_the_persisted_status(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        $owner = User::factory()->create(['email' => 'status-owner@example.test']);
+        $device = Device::factory()->create([
+            'user_id' => $owner->id, 'serial_no' => 'status-parity', 'status_notification' => true,
+        ]);
+        GeoCode::create(['serial_no' => $device->serial_no, 'status' => 'online']);
+        [, $secret] = ExternalApiKey::issue($this->developer, 'Status integration', null);
+
+        $this->bearer($secret)->getJson('/api/external/v1/devices/'.$device->id)
+            ->assertOk()->assertJsonPath('data.status', 'online');
+        Queue::assertNothingPushed();
+
+        $this->artisan('device:check-status')->assertExitCode(0);
+
+        $external = $this->bearer($secret)->getJson('/api/external/v1/devices/'.$device->id)
+            ->assertOk()->assertJsonPath('data.status', 'offline');
+        $application = $this->bearer(ApiToken::issue($owner))->getJson('/api/devices/'.$device->id)
+            ->assertOk()->assertJsonPath('data.status', 'offline');
+        $this->assertSame($application->json('data'), $external->json('data'));
+        $this->assertDatabaseHas('geocode', ['serial_no' => $device->serial_no, 'status' => 'offline']);
+        Queue::assertPushed(SendAppUpdateMail::class, 1);
+        Queue::assertPushed(SendAppUpdateMail::class, fn ($job) =>
+            $job->recipientId === $owner->id && $job->mail instanceof DeviceStatusChangedMail
+            && $job->mail->previousStatus === 'online' && $job->mail->status === 'offline'
+        );
+        Mail::assertNothingSent();
     }
 
     private function bearer(string $token): self

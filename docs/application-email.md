@@ -1,34 +1,93 @@
-# Application update emails
+# App activity and email preferences
 
 Obsidian adapts TAGCSOFT's `AppUpdateDelivery`, dedicated mail job and shared
 outbound pacing pattern. An application update means an event in the app, such
-as a device alert. This does not create a release-announcement broadcast or
-email users for every deployment.
+as a device communication-status change. This does not create a release-announcement
+broadcast or email users for every deployment.
+
+## Device status notifications
+
+The hourly `device:check-status` command records an activity for the device owner
+whenever the newly classified communication status differs from its saved
+status. This includes going offline, coming online, recovering from an alert,
+low voltage, theft/vandalism, and other reported telemetry states. The device
+must be active, have an existing location status record, and have an owner.
+An unchanged status creates no additional activity or email. Email is also
+queued when the owner's **Receive app activity emails** preference is enabled
+and the owner has a valid email address. An invalid email address does not
+prevent the activity from appearing in the bell.
+
+The existing low-voltage and theft/vandalism messages retain their content.
+Other transitions use `DeviceStatusChangedMail`, which includes the previous
+and new status and the device's identifying information. This concerns
+communication status, not edits to a device's name, address, or lifecycle state.
+
+Checks still run at the top of every hour; the mail worker runs every minute.
+The check compares the latest classified status with the last saved status, so
+intermediate changes between checks are not individually emailed. Missing or
+stale telemetry classifies as offline; fresh telemetry uses its reported state
+or online when no state is reported. Normal queue pacing and retries can add
+delivery time.
+
+## User Settings and the activity bell
+
+The navigation gear opens **User Settings**. Its **Receive app activity emails**
+checkbox defaults to checked for existing and new users. Settings are stored
+in a one-to-one `UserSettings` record in `user_settings`; a user without a saved
+record receives the same default. Saving unchecked stops app activity emails,
+including already queued messages whose worker has not sent them yet.
+Verification, password-reset, and other account-access emails keep their
+existing behavior. Turning email off never disables the activity bell.
+
+User Settings also offers **Adaptive**, **Light**, and **Dark** theme modes.
+Adaptive is the default: Light from 06:00 until 18:00 and Dark from 18:00 until
+06:00 in the user's local time.
+The saved theme is independent of email delivery: changing either preference
+preserves the other, and saving a theme creates no activity or email.
+Adaptive's automatic local-time appearance changes also create no events.
+
+This account-wide preference applies to all of the user's active devices.
+The legacy `devices.status_notification` field and its compatibility endpoints
+remain stored and callable, but that field no longer controls app activity
+emails. New device registration does not require a separate notification opt-in.
+
+The bell follows TAGCSOFT's notification design: a red unread badge capped at
+`9+`, a viewport-constrained dropdown, unread dots and stronger titles, and
+local timestamps. It loads on mount and when opened, with no polling. Pages
+contain 20 newest-first activities, with cursor-based loading on scroll or
+**Load more**. Selecting an activity marks it read before opening its device;
+failed marking leaves it unread and does not navigate. Opening the bell alone
+does not mark items read. Each item can be dismissed; **Clear all** clears the
+signed-in user's feed. Settings and activity controls are also available in
+the legacy layout through a separate lightweight frontend entry.
+
+Activities use Laravel database notifications and belong to their recipient.
+The Developer sees their own feed, not other users' notices. Browser and
+external clients share the same [settings and activity API](external-api-keys.md).
 
 ## Delivery
 
 `App\Services\AppUpdateDelivery::queue()` accepts already-authorized User models
 and an `App\Mail\AppUpdateMail`. It deduplicates user IDs and creates one
 `App\Jobs\SendAppUpdateMail` per recipient on the `app-updates` database
-connection, `mail` queue. Existing low-voltage and theft/vandalism emails use
-this path. Their content, status-change rules and device notification setting
-are preserved. Authentication, verification, password-reset and invitation
-messages keep their existing delivery path.
+connection, `mail` queue. All device status-change emails use this path and
+respect the recipient's User Settings. Authentication, verification,
+password-reset and invitation messages keep their existing delivery path.
 
 Each job resolves the recipient's current email. Deleted users and invalid
-addresses are skipped. Device alerts also recheck current ownership, device
-existence and the notification setting before delivery. The message contains
-the device information captured when the alert occurred. The worker sends
+addresses are skipped. Device status emails also recheck current ownership,
+device existence, active state and the latest user email preference before delivery.
+The message contains the device information captured when the status changed. The worker sends
 directly, without creating another queued mailable. To/CC/BCC values on a reused
 mailable cannot expand the selected audience.
 
-Jobs use the same database as application records. The status change and job
-insert occur in one transaction, with a lock on the status row: an enqueue
-failure rolls back the transition, and an unchanged status does not enqueue
-another alert. Keep `queue.connections.app-updates.connection` at `null` and
+Jobs use the same database as application records. The status change, activity,
+and eligible email job insert occur in one transaction, with a lock on the status
+row: an enqueue failure rolls back the transition and activity, and an unchanged status does not enqueue
+another email. Keep `queue.connections.app-updates.connection` at `null` and
 `after_commit` at `false` to retain this guarantee. The queue row is invisible to
 other database connections until commit. SMTP failure later retries the saved
-job without rerunning the status transition.
+job without rerunning the status transition or creating another activity.
 
 ## Worker and retries
 
@@ -66,8 +125,10 @@ tests use the in-memory `array` mailer.
 
 ## Setup, operations and rollback
 
-Run the new `2026_09_21_000001_create_jobs_table` migration before starting the
-updated scheduler. The existing deployment script already runs migrations
+Run outstanding migrations, including the `jobs`, `user_settings`, and
+`notifications` tables and the additive `theme_mode` column on `user_settings`,
+before starting the updated scheduler and application.
+The existing deployment script already runs migrations
 under the scheduler lock. No additional service or production provisioning is
 needed. This change does not itself deploy or send a broadcast.
 
@@ -103,20 +164,24 @@ migration while pending jobs exist; older code cannot deserialize these jobs.
 ## Adding another application event
 
 Extend `AppUpdateMail`, implement the normal mailable `build()` method, and
-override `shouldSendTo(User $recipient)` if record access or preferences can
-change while queued. Pass only recipients selected by the authorized workflow:
+override `shouldSendTo(User $recipient)` if record access can change while queued.
+The shared delivery job checks the user email preference independently. Pass
+only recipients selected by the authorized workflow:
 
 ```php
 app(\App\Services\AppUpdateDelivery::class)->queue($authorizedUsers, $mail);
 ```
 
-For transactional mutations, call this inside the same default-database
-transaction. Keep mail payloads small and free of passwords/tokens. Do not use
+Record the corresponding database activity once at the originating event,
+independently of email opt-out. For transactional mutations, record it and queue
+eligible email inside the same default-database transaction. Delivery retries
+and rendering must never create activities. Keep mail payloads small and free of passwords/tokens. Do not use
 `ShouldQueue` or `Mail::queue()` as an additional dispatch layer. TAGCSOFT's
-company rules, Activity feed and user email-preference columns are not imported;
-Obsidian retains its device notification preference.
+company rules and role-based authorization are not imported; Obsidian retains
+its owner and Developer authorization boundaries.
 
 `AppUpdateMailTest`, `AppUpdateMailSchedulerTest`, `DeviceCommunicationsTest`
 and the existing authentication tests cover queue execution, encryption,
 recipient isolation, access/preferences, retries, pacing, transaction rollback,
-unchanged-status deduplication and the unchanged account email flows.
+all communication-status transitions, unchanged-status deduplication and the
+unchanged account email flows.

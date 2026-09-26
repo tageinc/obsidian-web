@@ -2,5 +2,9 @@
     "resources/js/entries/app.js": {
         "file": "assets/test-entry.js",
         "css": ["assets/test-entry.css"]
+    },
+    "resources/js/entries/activity.js": {
+        "file": "assets/test-activity.js",
+        "css": ["assets/test-activity.css"]
     }
 }

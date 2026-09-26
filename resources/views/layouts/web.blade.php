@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-mode="{{ Auth::check() ? Auth::user()->themeMode() : 'adaptive' }}">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('frontend.theme-bootstrap')
 
 	<!-- icon of the app -->
 	<link rel="shortcut icon" type="image/png" href="{{ asset('img/icon.png') }}"/>
@@ -364,36 +365,24 @@
             }
         }
 
-        @media (prefers-color-scheme:dark) {
-            .dark\:bg-gray-800 {
-                --bg-opacity: 1;
-                background-color: #2d3748;
-                background-color: rgba(45, 55, 72, var(--bg-opacity))
-            }
+        html[data-theme='dark'] .dark\:bg-gray-800 {
+            background-color: var(--obsidian-surface)
+        }
 
-            .dark\:bg-gray-900 {
-                --bg-opacity: 1;
-                background-color: #1a202c;
-                background-color: rgba(26, 32, 44, var(--bg-opacity))
-            }
+        html[data-theme='dark'] .dark\:bg-gray-900 {
+            background-color: var(--obsidian-page)
+        }
 
-            .dark\:border-gray-700 {
-                --border-opacity: 1;
-                border-color: #4a5568;
-                border-color: rgba(74, 85, 104, var(--border-opacity))
-            }
+        html[data-theme='dark'] .dark\:border-gray-700 {
+            border-color: var(--obsidian-border)
+        }
 
-            .dark\:text-white {
-                --text-opacity: 1;
-                color: #fff;
-                color: rgba(255, 255, 255, var(--text-opacity))
-            }
+        html[data-theme='dark'] .dark\:text-white {
+            color: var(--obsidian-text)
+        }
 
-            .dark\:text-gray-400 {
-                --text-opacity: 1;
-                color: #cbd5e0;
-                color: rgba(203, 213, 224, var(--text-opacity))
-            }
+        html[data-theme='dark'] .dark\:text-gray-400 {
+            color: var(--obsidian-text-muted)
         }
     </style>
 
@@ -424,11 +413,11 @@
 
     <style>
         :root {
-            --blue-light: #559dc5;
-            --orange-light: #f99d30;
-            --orange-dark: #e05b38;
-            --grey-light: #cccccc;
-            --grey-dark: #485868;
+            --blue-light: var(--obsidian-accent-strong);
+            --orange-light: var(--obsidian-accent);
+            --orange-dark: var(--obsidian-accent-active);
+            --grey-light: var(--obsidian-border);
+            --grey-dark: var(--obsidian-text);
         }
 
 
@@ -454,10 +443,10 @@
         .login-box a {
             text-align: center;
             width: 100%;
-            color: white;
+            color: var(--obsidian-accent-ink);
             padding: 20px;
             display: block;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: var(--obsidian-accent);
             border-radius: 4px;
         }
 
@@ -518,6 +507,8 @@
 
         }
     </style>
+    <link href="{{ asset('css/accent.css') }}" rel="stylesheet">
+    {{ \App\Support\FrontendAssets::tags('resources/js/entries/activity.js') }}
 </head>
 
 <body class="antialiased">

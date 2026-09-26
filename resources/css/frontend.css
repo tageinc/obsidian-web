@@ -2,12 +2,8 @@
     color-scheme: light;
 }
 body {
-    --bs-link-color: #084298;
-    --bs-link-color-rgb: 8, 66, 152;
-    --bs-link-hover-color: #06357a;
-    --bs-link-hover-color-rgb: 6, 53, 122;
-    color: #212529;
-    background: #f8f9fa;
+    color: var(--obsidian-text, #212529);
+    background: var(--obsidian-page, #f8f9fa);
     font-family:
         system-ui,
         -apple-system,
@@ -16,7 +12,7 @@ body {
         sans-serif;
 }
 .obsidian-nav {
-    background: #fff;
+    background: var(--obsidian-surface, #fff);
     box-shadow: 0 1px 4px #00000012;
 }
 .obsidian-logo {
@@ -28,7 +24,7 @@ body {
     margin-bottom: 0.4rem;
 }
 .form-text {
-    color: #5e6570;
+    color: var(--obsidian-text-muted, #5e6570);
 }
 .btn-outline-secondary {
     --bs-btn-color: #545b62;
@@ -39,15 +35,11 @@ body {
     --bs-btn-active-border-color: #545b62;
 }
 .card {
-    border-color: #dee2e6;
+    border-color: var(--obsidian-border, #dee2e6);
 }
 .map-panel {
     height: 400px;
     z-index: 0;
-}
-:focus-visible {
-    outline: 3px solid #526cbd;
-    outline-offset: 3px;
 }
 @media (max-width: 575.98px) {
     .obsidian-logo {

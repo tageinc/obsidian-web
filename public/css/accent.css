@@ -1,0 +1,524 @@
+/* Shared by the Vite frontend and legacy Blade layouts. */
+:root {
+    color-scheme: light;
+    --obsidian-page: #f8f9fa;
+    --obsidian-surface: #ffffff;
+    --obsidian-surface-subtle: #f3f4f6;
+    --obsidian-surface-hover: #eef0f4;
+    --obsidian-text: #212529;
+    --obsidian-text-muted: #5e6570;
+    --obsidian-border: #dee2e6;
+    --obsidian-danger: #b02a37;
+    --obsidian-danger-hover: #a52834;
+    --obsidian-danger-bg: #fcecef;
+    --obsidian-success: #146c43;
+    --obsidian-success-bg: #e8f5ee;
+    --obsidian-warning: #79500e;
+    --obsidian-warning-bg: #fff3df;
+    --obsidian-cts-closed-bg: #e9ecef;
+    --obsidian-cts-closed-text: #495057;
+    --obsidian-accent: #1c1c1c;
+    --obsidian-accent-hover: #303030;
+    --obsidian-accent-active: #111111;
+    --obsidian-accent-ink: #ffffff;
+    --obsidian-accent-strong: #1c1c1c;
+    --obsidian-accent-strong-hover: #080808;
+    --obsidian-accent-soft: #f0f0f0;
+    --obsidian-accent-border: #767676;
+    --obsidian-accent-rgb: 28, 28, 28;
+    --obsidian-accent-strong-rgb: 28, 28, 28;
+    --bs-primary: var(--obsidian-accent);
+    --bs-primary-rgb: var(--obsidian-accent-rgb);
+    --bs-primary-text-emphasis: var(--obsidian-accent-strong);
+    --bs-primary-bg-subtle: var(--obsidian-accent-soft);
+    --bs-primary-border-subtle: var(--obsidian-accent-border);
+    --bs-link-color: var(--obsidian-accent-strong);
+    --bs-link-color-rgb: var(--obsidian-accent-strong-rgb);
+    --bs-link-hover-color: var(--obsidian-accent-strong-hover);
+    --bs-link-hover-color-rgb: var(--obsidian-accent-strong-rgb);
+    --bs-focus-ring-color: rgba(var(--obsidian-accent-rgb), 0.25);
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --obsidian-page: #111111;
+    --obsidian-surface: #1c1c1c;
+    --obsidian-surface-subtle: #262626;
+    --obsidian-surface-hover: #303030;
+    --obsidian-text: #f8f9fa;
+    --obsidian-text-muted: #b9bec6;
+    --obsidian-border: #484848;
+    --obsidian-accent: #ffffff;
+    --obsidian-accent-hover: #e2e2e2;
+    --obsidian-accent-active: #cccccc;
+    --obsidian-accent-ink: #1c1c1c;
+    --obsidian-accent-strong: #ffffff;
+    --obsidian-accent-strong-hover: #dedede;
+    --obsidian-accent-soft: #303030;
+    --obsidian-accent-border: #898989;
+    --obsidian-accent-rgb: 255, 255, 255;
+    --obsidian-accent-strong-rgb: 255, 255, 255;
+    --obsidian-danger: #ff9fa8;
+    --obsidian-danger-hover: #ffc1c7;
+    --obsidian-danger-bg: #3c2226;
+    --obsidian-success: #8bdeb4;
+    --obsidian-success-bg: #183329;
+    --obsidian-warning: #f4ce88;
+    --obsidian-warning-bg: #392e1c;
+    --obsidian-cts-closed-bg: #303030;
+    --obsidian-cts-closed-text: #d4d7dc;
+    --bs-body-color: var(--obsidian-text);
+    --bs-body-color-rgb: 248, 249, 250;
+    --bs-body-bg: var(--obsidian-page);
+    --bs-body-bg-rgb: 17, 17, 17;
+    --bs-emphasis-color: var(--obsidian-text);
+    --bs-emphasis-color-rgb: 248, 249, 250;
+    --bs-secondary-color: var(--obsidian-text-muted);
+    --bs-secondary-color-rgb: 185, 190, 198;
+    --bs-secondary-bg: var(--obsidian-surface-subtle);
+    --bs-tertiary-bg: var(--obsidian-surface-hover);
+    --bs-border-color: var(--obsidian-border);
+    --bs-border-color-translucent: var(--obsidian-border);
+    --bs-heading-color: var(--obsidian-text);
+}
+
+a,
+.btn-link,
+.nav-link,
+.page-link {
+    color: var(--obsidian-accent-strong);
+}
+
+a:hover,
+.btn-link:hover,
+.nav-link:hover,
+.page-link:hover {
+    color: var(--obsidian-accent-strong-hover);
+}
+
+.btn-link {
+    --bs-btn-focus-shadow-rgb: var(--obsidian-accent-rgb);
+}
+
+.btn-primary,
+.btn-outline-primary {
+    --bs-btn-color: var(--obsidian-accent-ink);
+    --bs-btn-bg: var(--obsidian-accent);
+    --bs-btn-border-color: var(--obsidian-accent);
+    --bs-btn-hover-color: var(--obsidian-accent-ink);
+    --bs-btn-hover-bg: var(--obsidian-accent-hover);
+    --bs-btn-hover-border-color: var(--obsidian-accent-hover);
+    --bs-btn-focus-shadow-rgb: var(--obsidian-accent-rgb);
+    --bs-btn-active-color: var(--obsidian-accent-ink);
+    --bs-btn-active-bg: var(--obsidian-accent-active);
+    --bs-btn-active-border-color: var(--obsidian-accent-active);
+    --bs-btn-disabled-color: var(--obsidian-accent-ink);
+    --bs-btn-disabled-bg: var(--obsidian-accent);
+    --bs-btn-disabled-border-color: var(--obsidian-accent);
+    color: var(--bs-btn-color);
+    background-color: var(--bs-btn-bg);
+    border-color: var(--bs-btn-border-color);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--obsidian-accent-strong);
+    --bs-btn-bg: transparent;
+    --bs-btn-disabled-color: var(--obsidian-accent-strong);
+    --bs-btn-disabled-bg: transparent;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    color: var(--bs-btn-hover-color);
+    background-color: var(--bs-btn-hover-bg);
+    border-color: var(--bs-btn-hover-border-color);
+}
+
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled).active,
+.btn-outline-primary:not(:disabled):not(.disabled):active,
+.btn-outline-primary:not(:disabled):not(.disabled).active,
+.show > .btn-primary.dropdown-toggle,
+.show > .btn-outline-primary.dropdown-toggle,
+.btn-check:checked + .btn-primary,
+.btn-check:checked + .btn-outline-primary {
+    color: var(--bs-btn-active-color);
+    background-color: var(--bs-btn-active-bg);
+    border-color: var(--bs-btn-active-border-color);
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled,
+.btn-outline-primary:disabled,
+.btn-outline-primary.disabled {
+    color: var(--bs-btn-disabled-color);
+    background-color: var(--bs-btn-disabled-bg);
+    border-color: var(--bs-btn-disabled-border-color);
+}
+
+.btn-primary:focus,
+.btn-outline-primary:focus,
+.btn-primary:not(:disabled):not(.disabled):active:focus,
+.btn-outline-primary:not(:disabled):not(.disabled):active:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.25);
+}
+
+.form-control:focus,
+.form-select:focus,
+.custom-select:focus {
+    border-color: var(--obsidian-accent-border);
+    box-shadow: 0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.2);
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+    accent-color: var(--obsidian-accent);
+}
+
+.form-check-input:checked,
+.form-check-input[type='checkbox']:indeterminate,
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--obsidian-accent);
+    border-color: var(--obsidian-accent);
+}
+
+.form-check-input:focus,
+.custom-control-input:focus ~ .custom-control-label::before {
+    border-color: var(--obsidian-accent-border);
+    box-shadow: 0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.2);
+}
+
+.form-switch .form-check-input:focus:not(:checked) {
+    --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23767676'/%3e%3c/svg%3e");
+}
+
+.form-range::-webkit-slider-thumb {
+    background-color: var(--obsidian-accent);
+}
+
+.form-range::-moz-range-thumb {
+    background-color: var(--obsidian-accent);
+}
+
+.form-range:focus::-webkit-slider-thumb {
+    box-shadow:
+        0 0 0 1px #fff,
+        0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.25);
+}
+
+.form-range:focus::-moz-range-thumb {
+    box-shadow:
+        0 0 0 1px #fff,
+        0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.25);
+}
+
+.form-range::-webkit-slider-thumb:active {
+    background-color: var(--obsidian-accent-hover);
+}
+
+.form-range::-moz-range-thumb:active {
+    background-color: var(--obsidian-accent-hover);
+}
+
+.form-range:disabled::-webkit-slider-thumb {
+    background-color: var(--obsidian-accent-border);
+}
+
+.form-range:disabled::-moz-range-thumb {
+    background-color: var(--obsidian-accent-border);
+}
+
+.page-item.active .page-link,
+.page-link.active,
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link,
+.dropdown-item.active,
+.dropdown-item:active,
+.list-group-item.active {
+    color: var(--obsidian-accent-ink);
+    background-color: var(--obsidian-accent);
+    border-color: var(--obsidian-accent);
+}
+
+.page-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--obsidian-accent-rgb), 0.25);
+}
+
+.text-primary,
+.link-primary {
+    color: var(--obsidian-accent-strong) !important;
+}
+
+.link-primary:hover,
+.link-primary:focus,
+a.text-primary:hover,
+a.text-primary:focus {
+    color: var(--obsidian-accent-strong-hover) !important;
+}
+
+.bg-primary,
+.text-bg-primary,
+.badge-primary {
+    color: var(--obsidian-accent-ink) !important;
+    background-color: var(--obsidian-accent) !important;
+}
+
+.border-primary {
+    border-color: var(--obsidian-accent) !important;
+}
+
+.ts-dropdown .option.active {
+    color: var(--obsidian-accent-strong);
+    background-color: var(--obsidian-accent-soft);
+}
+
+.ts-dropdown .option[data-selectable] .highlight {
+    background-color: rgba(var(--obsidian-accent-rgb), 0.12);
+}
+
+.ts-wrapper.focus .ts-control {
+    border-color: var(--obsidian-accent-border);
+    outline: 2px solid var(--obsidian-accent-strong);
+    outline-offset: 2px;
+}
+
+:focus-visible,
+.btn:focus-visible {
+    outline: 3px solid var(--obsidian-accent-strong);
+    outline-offset: 3px;
+}
+
+/* Shared surfaces also cover Bootstrap 4 fallback pages, which lack color modes. */
+body {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-page);
+}
+.card,
+.modal-content,
+.list-group-item,
+.dropdown-menu,
+.popover,
+.toast {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface);
+    border-color: var(--obsidian-border);
+}
+.card-header,
+.card-footer,
+.modal-header,
+.modal-footer,
+.popover-header {
+    border-color: var(--obsidian-border);
+}
+.card-header,
+.card-footer,
+.popover-header {
+    background-color: var(--obsidian-surface-subtle);
+}
+.dropdown-item,
+.popover-body {
+    color: var(--obsidian-text);
+}
+.dropdown-item:hover,
+.dropdown-item:focus {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface-hover);
+}
+.dropdown-item.active,
+.dropdown-item:active {
+    color: var(--obsidian-accent-ink);
+    background-color: var(--obsidian-accent);
+}
+.dropdown-divider,
+hr {
+    border-color: var(--obsidian-border);
+}
+.form-control,
+.form-select,
+.custom-select,
+.ts-control,
+.ts-dropdown {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface);
+    border-color: var(--obsidian-border);
+}
+.form-control:focus,
+.form-select:focus,
+.custom-select:focus {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface);
+}
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled,
+.custom-select:disabled,
+.input-group-text {
+    color: var(--obsidian-text-muted);
+    background-color: var(--obsidian-surface-subtle);
+    border-color: var(--obsidian-border);
+}
+.form-control::placeholder,
+.ts-control input::placeholder {
+    color: var(--obsidian-text-muted);
+    opacity: 1;
+}
+.ts-control input,
+.ts-dropdown .optgroup-header {
+    color: var(--obsidian-text);
+    background: transparent;
+}
+.ts-wrapper.multi .ts-control > div {
+    color: var(--obsidian-text);
+    background: var(--obsidian-surface-subtle);
+    border-color: var(--obsidian-border);
+}
+.ts-wrapper.plugin-remove_button .item .remove {
+    border-color: var(--obsidian-border);
+}
+.table {
+    --bs-table-color: var(--obsidian-text);
+    --bs-table-bg: var(--obsidian-surface);
+    --bs-table-border-color: var(--obsidian-border);
+    --bs-table-striped-color: var(--obsidian-text);
+    --bs-table-striped-bg: var(--obsidian-surface-subtle);
+    --bs-table-active-color: var(--obsidian-text);
+    --bs-table-active-bg: var(--obsidian-surface-hover);
+    --bs-table-hover-color: var(--obsidian-text);
+    --bs-table-hover-bg: var(--obsidian-surface-hover);
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface);
+}
+.table th,
+.table td,
+.table thead th {
+    border-color: var(--obsidian-border);
+}
+.table .thead-light th {
+    color: var(--obsidian-text-muted);
+    background-color: var(--obsidian-surface-subtle);
+    border-color: var(--obsidian-border);
+}
+.table-hover tbody tr:hover {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface-hover);
+}
+.page-link,
+.page-item.disabled .page-link {
+    background-color: var(--obsidian-surface);
+    border-color: var(--obsidian-border);
+}
+.page-item.disabled .page-link {
+    color: var(--obsidian-text-muted);
+}
+.page-link:hover {
+    background-color: var(--obsidian-surface-hover);
+}
+.page-item.active .page-link {
+    background-color: var(--obsidian-accent);
+    border-color: var(--obsidian-accent);
+}
+.text-muted,
+.text-secondary {
+    color: var(--obsidian-text-muted) !important;
+}
+.text-danger,
+.invalid-feedback {
+    color: var(--obsidian-danger) !important;
+}
+.text-success {
+    color: var(--obsidian-success) !important;
+}
+:root[data-theme] .leaflet-container {
+    background-color: var(--obsidian-surface-subtle);
+}
+:root[data-theme] .leaflet-container a {
+    color: var(--obsidian-accent-strong);
+}
+:root[data-theme] .leaflet-container a.leaflet-popup-close-button {
+    color: var(--obsidian-text-muted);
+}
+:root[data-theme] .leaflet-popup-content-wrapper,
+:root[data-theme] .leaflet-popup-tip,
+:root[data-theme] .leaflet-control-layers,
+:root[data-theme] .leaflet-bar a,
+:root[data-theme] .leaflet-control-attribution {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface);
+}
+:root[data-theme] .leaflet-bar a:hover,
+:root[data-theme] .leaflet-bar a:focus {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface-hover);
+}
+:root[data-theme] .leaflet-bar a,
+:root[data-theme] .leaflet-control-layers {
+    border-color: var(--obsidian-border);
+}
+:root[data-theme='dark'] .bg-white,
+:root[data-theme='dark'] .bg-light,
+:root[data-theme='dark'] .bg-gray-100 {
+    background-color: var(--obsidian-surface) !important;
+}
+:root[data-theme='dark'] .text-dark,
+:root[data-theme='dark'] .text-gray-900 {
+    color: var(--obsidian-text) !important;
+}
+:root[data-theme='dark'] .text-gray-500,
+:root[data-theme='dark'] .text-gray-600,
+:root[data-theme='dark'] .text-gray-700 {
+    color: var(--obsidian-text-muted) !important;
+}
+:root[data-theme='dark'] .navbar-light .navbar-brand,
+:root[data-theme='dark'] .navbar-light .navbar-nav .nav-link,
+:root[data-theme='dark'] .navbar-light .navbar-toggler,
+:root[data-theme='dark'] .close {
+    color: var(--obsidian-text);
+}
+:root[data-theme='dark'] .navbar-toggler {
+    border-color: var(--obsidian-border);
+}
+:root[data-theme='dark'] .navbar-light .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23f8f9fa' stroke-linecap='round' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+:root[data-theme='dark'] .btn-outline-secondary {
+    --bs-btn-color: var(--obsidian-text-muted);
+    --bs-btn-border-color: var(--obsidian-text-muted);
+    color: var(--obsidian-text-muted);
+    border-color: var(--obsidian-text-muted);
+}
+:root[data-theme='dark'] .btn-outline-secondary:hover {
+    color: #fff;
+    background-color: #545b62;
+}
+:root[data-theme='dark'] .alert {
+    color: var(--obsidian-text);
+    background-color: var(--obsidian-surface-subtle);
+    border-color: var(--obsidian-border);
+}
+:root[data-theme='dark'] .alert-danger {
+    color: var(--obsidian-danger);
+    background-color: var(--obsidian-danger-bg);
+}
+:root[data-theme='dark'] .alert-success {
+    color: var(--obsidian-success);
+    background-color: var(--obsidian-success-bg);
+}
+:root[data-theme='dark'] .alert-warning {
+    color: var(--obsidian-warning);
+    background-color: var(--obsidian-warning-bg);
+}
+:root[data-theme='dark'] .form-check-input:checked[type='checkbox'] {
+    --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%231c1c1c' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+}
+:root[data-theme='dark'] .form-switch .form-check-input:checked {
+    --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%231c1c1c'/%3e%3c/svg%3e");
+}
+:root[data-theme='dark'] .form-check-input:checked[type='radio'] {
+    --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2' fill='%231c1c1c'/%3e%3c/svg%3e");
+}
+:root[data-theme='dark'] .form-check-input[type='checkbox']:indeterminate {
+    --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%231c1c1c' stroke-linecap='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
+}

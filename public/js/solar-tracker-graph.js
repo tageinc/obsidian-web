@@ -6,6 +6,20 @@
 }(typeof window !== 'undefined' ? window : globalThis, function (root) {
     const TIME_ZONE = 'America/Los_Angeles';
     const FORMATTER_OPTIONS = { hour: 'numeric', minute: '2-digit', hour12: true };
+    const mountedGraphs = new WeakMap();
+
+    function chartTheme() {
+        const element = root.document && root.document.documentElement;
+        const styles = element && root.getComputedStyle ? root.getComputedStyle(element) : null;
+        function token(name, fallback) { return styles && styles.getPropertyValue(name).trim() || fallback; }
+        return {
+            dark: element && element.dataset.theme === 'dark',
+            text: token('--obsidian-text', '#212529'),
+            muted: token('--obsidian-text-muted', '#5e6570'),
+            border: token('--obsidian-border', '#dee2e6'),
+            surface: token('--obsidian-surface', '#fff')
+        };
+    }
 
     function asDate(value) { return new Date(typeof value === 'object' ? value.epoch_ms : value); }
 
@@ -118,6 +132,9 @@
 
     function makeChart(canvas, series, points) {
         if (!root.Chart) return null;
+        const theme = chartTheme();
+        const darkColors = { temp: '#79adff', ps1: '#65d89a', ps2: '#bc9fff', motor_speed: '#ffb46c' };
+        series = series.map(function (metric) { return { ...metric, color: theme.dark ? darkColors[metric.field] : metric.color }; });
         const includeDate = shouldIncludeDate(points);
         const usesZeroReference = series.some(function (metric) { return metric.field === 'motor_speed'; });
         const datasets = series.map(function (metric) {
@@ -129,7 +146,7 @@
             const metric = series[index];
             return [{ type: 'line', label: metric.label + ' — linear trend', data: fitted, borderColor: metric.color, backgroundColor: metric.color, showLine: true, pointRadius: 0, pointHoverRadius: 0, pointStyle: 'line', borderDash: [6, 4], borderWidth: 2, tension: 0, fill: false, order: 1, isTrend: true }];
         });
-        return new root.Chart(canvas.getContext('2d'), {
+        const configuration = {
             type: 'scatter',
             data: { datasets: datasets.concat(trends) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'nearest' }, scales: {
@@ -139,13 +156,29 @@
                 title: function (items) { return items.length ? formatTimestamp(items[0].parsed.x, true) : ''; },
                 afterLabel: function (item) { return item.raw.id != null ? 'Reading #' + item.raw.id : ''; }
             } }, legend: { display: true, labels: { usePointStyle: true } } } }
+        };
+        configuration.options.color = theme.muted;
+        Object.values(configuration.options.scales).forEach(function (scale) {
+            scale.ticks = { ...scale.ticks, color: theme.muted };
+            scale.grid = { color: theme.border };
+            scale.border = { color: theme.border };
+            if (scale.title) scale.title.color = theme.muted;
         });
+        configuration.options.plugins.legend.labels.color = theme.muted;
+        Object.assign(configuration.options.plugins.tooltip, {
+            backgroundColor: theme.surface, titleColor: theme.text, bodyColor: theme.text,
+            borderColor: theme.border, borderWidth: 1
+        });
+        return new root.Chart(canvas.getContext('2d'), configuration);
     }
 
     function render(container, rawPoints) {
+        if (mountedGraphs.has(container)) mountedGraphs.get(container)();
         const allPoints = normalizePoints(rawPoints);
         let charts = [];
+        let selectedHours = 0;
         function redraw(hours) {
+            selectedHours = hours;
             charts.forEach(function (chart) { chart.destroy(); });
             const points = filteredPoints(allPoints, hours);
             container.querySelector('[data-graph-range-label]').textContent = rangeLabel(points);
@@ -160,8 +193,32 @@
                 makeChart(container.querySelector('[data-chart="motor"]'), [{ label: 'Motor speed', color: '#fd7e14', field: 'motor_speed' }], points)
             ].filter(Boolean) : [];
         }
-        container.querySelectorAll('[data-graph-hours]').forEach(function (button) { button.addEventListener('click', function () { redraw(Number(button.dataset.graphHours)); }); });
+        const controls = Array.from(container.querySelectorAll('[data-graph-hours]')).map(function (button) {
+            const listener = function () { redraw(Number(button.dataset.graphHours)); };
+            button.addEventListener('click', listener);
+            return { button: button, listener: listener };
+        });
+        function themeChanged() { redraw(selectedHours); }
+        function dispose() {
+            charts.forEach(function (chart) { chart.destroy(); });
+            charts = [];
+            controls.forEach(function (control) {
+                if (control.button.removeEventListener) control.button.removeEventListener('click', control.listener);
+            });
+            if (root.removeEventListener) {
+                root.removeEventListener('obsidian:theme-changed', themeChanged);
+                root.removeEventListener('pagehide', pageHidden);
+            }
+            mountedGraphs.delete(container);
+        }
+        function pageHidden(event) { if (!event.persisted) dispose(); }
+        if (root.addEventListener) {
+            root.addEventListener('obsidian:theme-changed', themeChanged);
+            root.addEventListener('pagehide', pageHidden);
+        }
+        mountedGraphs.set(container, dispose);
         redraw(0);
+        return dispose;
     }
 
     return { TIME_ZONE: TIME_ZONE, formatTime: formatTime, formatTimestamp: formatTimestamp, normalizePoints: normalizePoints, rangeLabel: rangeLabel, filteredPoints: filteredPoints, shouldIncludeDate: shouldIncludeDate, linearRegression: linearRegression, celsiusToFahrenheit: celsiusToFahrenheit, render: render };

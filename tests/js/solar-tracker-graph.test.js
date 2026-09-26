@@ -199,7 +199,7 @@ try {
   const negativeTicks = { ticks: [{ value: -10 }, { value: -5 }] };
   motorYAxis.afterBuildTicks(negativeTicks);
   assert.deepEqual(negativeTicks.ticks.map(tick => tick.value), [-10, -5, 0]);
-  assert.equal(motorYAxis.grid, undefined, 'Motor speed uses the default grid styling');
+  assert.deepEqual(motorYAxis.grid, { color: '#dee2e6' }, 'Motor speed uses the same theme grid as other measurements');
   closeTo(createdCharts[0].config.data.datasets[1].data[0].y, (258 / 13) * 9 / 5 + 32);
   closeTo(createdCharts[0].config.data.datasets[1].data[1].y, (306 / 13) * 9 / 5 + 32);
 
@@ -256,6 +256,41 @@ try {
     id: index, epoch_ms: latestEpoch, temp: value, ps1: value, ps2: null, motor_speed: null
   })));
   assert.ok(createdCharts.slice(-3).every(chart => chart.config.data.datasets.every(dataset => !dataset.isTrend)), 'Duplicate times alone cannot define a trend');
+
+  const originalGlobals = Object.fromEntries(['document', 'getComputedStyle', 'addEventListener', 'removeEventListener'].map(key => [key, globalThis[key]]));
+  const listeners = new Map();
+  const tokens = { '--obsidian-text': '#f8f9fa', '--obsidian-text-muted': '#b9bec6', '--obsidian-border': '#484848', '--obsidian-surface': '#1c1c1c' };
+  globalThis.document = { documentElement: { dataset: { theme: 'light' } } };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: name => tokens[name] || '' });
+  globalThis.addEventListener = (name, callback) => listeners.set(name, callback);
+  globalThis.removeEventListener = (name, callback) => { if (listeners.get(name) === callback) listeners.delete(name); };
+  try {
+    const themedContainer = graphContainer();
+    const dispose = graph.render(themedContainer, [2, 1, 0].map(hours => ({ epoch_ms: latestEpoch - hours * 3600000, temp: hours, ps1: hours, ps2: hours, motor_speed: hours })));
+    themedContainer.buttons[0].click();
+    const beforeTheme = createdCharts.slice(-3);
+    const pointsBeforeTheme = beforeTheme[0].config.data.datasets[0].data;
+    globalThis.document.documentElement.dataset.theme = 'dark';
+    listeners.get('obsidian:theme-changed')();
+    const afterTheme = createdCharts.slice(-3);
+    assert.ok(beforeTheme.every(chart => chart.destroyed));
+    assert.deepEqual(afterTheme[0].config.data.datasets[0].data, pointsBeforeTheme, 'Theme changes preserve the selected range and readings');
+    assert.equal(afterTheme[0].config.data.datasets[0].borderColor, '#79adff');
+    assert.equal(afterTheme[0].config.options.scales.x.ticks.color, '#b9bec6');
+    assert.equal(afterTheme[0].config.options.scales.y.grid.color, '#484848');
+    assert.equal(afterTheme[0].config.options.plugins.legend.labels.color, '#b9bec6');
+    assert.equal(afterTheme[0].config.options.plugins.tooltip.bodyColor, '#f8f9fa');
+    listeners.get('pagehide')({ persisted: true });
+    assert.equal(listeners.has('obsidian:theme-changed'), true, 'Back/forward cache keeps the chart alive');
+    dispose();
+    assert.ok(afterTheme.every(chart => chart.destroyed));
+    assert.equal(listeners.size, 0, 'Disposal removes theme and page lifecycle listeners');
+  } finally {
+    for (const [name, value] of Object.entries(originalGlobals)) {
+      if (value === undefined) delete globalThis[name];
+      else globalThis[name] = value;
+    }
+  }
 } finally {
   if (originalChart === undefined) delete globalThis.Chart;
   else globalThis.Chart = originalChart;

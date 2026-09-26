@@ -81,10 +81,18 @@ Registration identity remains read-only when editing because serial number and
 hardware identify telemetry and remote-control records. Device changes require
 the owner or configured developer (`DEVELOPER_EMAIL`).
 
-Register and Edit device no longer show notification opt-in controls. New web
-registrations have email/SMS notifications off; editing preserves existing
-notification preferences. The old per-field API routes remain available for
-existing clients.
+Register and Edit device do not show notification opt-in controls. The navigation
+gear opens **User Settings**, whose **Receive app activity emails** checkbox
+defaults to checked and applies to all owned active devices. Email opt-out does
+not disable the adjacent activity bell. The old per-device notification fields
+and API routes remain for client compatibility, but the user setting now governs
+app activity email delivery. See [app activity](application-email.md).
+
+User Settings also saves a personal theme: **Adaptive** (the default) uses Light
+from 06:00 until 18:00 and Dark from 18:00 until 06:00 in the user's local time.
+**Light** and **Dark** select a fixed appearance. Saving the theme preserves the
+email setting and creates no app activity or email. Both preferences use the
+same owner-scoped settings API.
 
 Device viewing uses `GET /devices/{id}` (`devices.show`) for the full View Device page. Authenticated API clients use `GET /api/devices/{id}` (`api.devices.show`). Both enforce owner/developer access and return 404 for missing devices. The former device-info route has been removed.
 

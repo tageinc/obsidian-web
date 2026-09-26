@@ -13,10 +13,18 @@ use App\Http\Controllers\EditDeviceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CreateDeviceController;
 use App\Http\Controllers\Api\ExternalApiController;
+use App\Http\Controllers\Api\AppActivityController;
+use App\Http\Controllers\Api\UserSettingsController;
 use App\Http\Controllers\DeveloperWorkspaceController;
 
 Route::prefix('external/v1')->name('external.')->middleware(['auth.external', 'throttle:external-api'])->group(function () {
     Route::get('/', [ExternalApiController::class, 'capabilities'])->name('capabilities');
+    Route::get('/user-settings', [UserSettingsController::class, 'show'])->name('user-settings.show');
+    Route::patch('/user-settings', [UserSettingsController::class, 'update'])->name('user-settings.update');
+    Route::get('/app-activity', [AppActivityController::class, 'index'])->name('app-activity.index');
+    Route::patch('/app-activity/{id}/read', [AppActivityController::class, 'read'])->name('app-activity.read');
+    Route::delete('/app-activity/{id}', [AppActivityController::class, 'destroy'])->name('app-activity.destroy');
+    Route::delete('/app-activity', [AppActivityController::class, 'clear'])->name('app-activity.clear');
     Route::get('/devices', [ExternalApiController::class, 'devices'])->name('devices');
     Route::get('/devices/{id}', [ViewDeviceController::class, 'apiShow'])->name('devices.show');
     Route::patch('/devices/{id}', [EditDeviceController::class, 'patch'])->name('devices.update');
@@ -66,6 +74,15 @@ Route::post('/create-device', [CreateDeviceController::class, 'apiCreateDevice']
 
 // Application-owned bearer tokens, or CSRF-protected same-origin browser sessions.
 Route::middleware(['log.requests', 'auth:api'])->group(function () {
+
+    Route::middleware('verified')->group(function () {
+        Route::get('/user-settings', [UserSettingsController::class, 'show'])->name('api.user-settings.show');
+        Route::patch('/user-settings', [UserSettingsController::class, 'update'])->name('api.user-settings.update');
+        Route::get('/app-activity', [AppActivityController::class, 'index'])->name('api.app-activity.index');
+        Route::patch('/app-activity/{id}/read', [AppActivityController::class, 'read'])->name('api.app-activity.read');
+        Route::delete('/app-activity/{id}', [AppActivityController::class, 'destroy'])->name('api.app-activity.destroy');
+        Route::delete('/app-activity', [AppActivityController::class, 'clear'])->name('api.app-activity.clear');
+    });
 
 
     // Profile Routes
