@@ -251,6 +251,9 @@ function upload(event, kind) {
     width: 1rem;
     height: 1rem;
 }
+:root[data-theme='dark'] .developer-software-icon {
+    filter: brightness(0) invert(1);
+}
 .developer-software-chevron {
     width: 0.75rem;
     height: 0.75rem;

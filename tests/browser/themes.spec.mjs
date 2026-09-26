@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import axe from 'axe-core';
 
 test.use({ timezoneId: 'America/New_York' });
 
@@ -32,9 +33,9 @@ test.beforeEach(async ({ context }) => {
     });
 });
 
-async function login(page) {
+async function login(page, email = 'theme@browser.example.test') {
     await page.goto('/login');
-    await page.getByLabel('Email address', { exact: true }).fill('theme@browser.example.test');
+    await page.getByLabel('Email address', { exact: true }).fill(email);
     await page.getByLabel('Password', { exact: true }).fill('browser-test-password');
     await page.getByRole('button', { name: 'Login', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
@@ -79,7 +80,14 @@ async function expectTheme(page, mode, resolved) {
     await expect(page.locator('html')).toHaveAttribute('data-bs-theme', resolved);
 }
 
-async function expectDarkContrast(locator, minimum = 4.5) {
+async function expectContrast(locator, minimum = 4.5) {
+    await locator.evaluate(async (element) => {
+        // Read the final transition colors, including focus and held active states.
+        getComputedStyle(element).color;
+        await Promise.all(
+            element.getAnimations().map((animation) => animation.finished.catch(() => {})),
+        );
+    });
     const result = await locator.evaluate((element) => {
         function rgba(value) {
             const parts = value.match(/[\d.]+/g).map(Number);
@@ -119,7 +127,79 @@ async function expectDarkContrast(locator, minimum = 4.5) {
         };
     });
     expect(result.ratio, JSON.stringify(result)).toBeGreaterThanOrEqual(minimum);
+    return result;
+}
+
+async function expectDarkContrast(locator, minimum = 4.5) {
+    const result = await expectContrast(locator, minimum);
     expect(result.background, 'Dark surfaces must not retain a white backdrop').toBeLessThan(0.2);
+}
+
+async function expectButtonStateContrast(page, button) {
+    await expect(button).toBeEnabled();
+    await button.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await button.evaluate((element) => element.blur());
+    await test.step('normal text contrast', () => expectContrast(button));
+
+    await button.hover();
+    await expect.poll(() => button.evaluate((element) => element.matches(':hover'))).toBe(true);
+    await test.step('hover text contrast', () => expectContrast(button));
+
+    await page.mouse.move(0, 0);
+    await button.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(button).toBeFocused();
+    await expect
+        .poll(() => button.evaluate((element) => element.matches(':focus-visible')))
+        .toBe(true);
+    await test.step('keyboard focus text contrast', () => expectContrast(button));
+
+    await page.keyboard.down('Space');
+    try {
+        await expect
+            .poll(() => button.evaluate((element) => element.matches(':active')))
+            .toBe(true);
+        await test.step('held active text contrast', () => expectContrast(button));
+    } finally {
+        // Blur before release to inspect native :active without activating the control.
+        await button.evaluate((element) => element.blur());
+        await page.keyboard.up('Space');
+    }
+}
+
+async function expectSoftwareIcons(page, dark) {
+    const icons = page.locator('.developer-software-icon');
+    await expect(icons).toHaveCount(2);
+    for (const icon of await icons.all()) {
+        await expect
+            .poll(() => icon.evaluate((element) => element.complete && element.naturalWidth > 0))
+            .toBe(true);
+        if (!dark) {
+            await expect(icon).toHaveCSS('filter', 'none');
+            continue;
+        }
+        const pixels = await icon.evaluate((element) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = element.naturalWidth;
+            canvas.height = element.naturalHeight;
+            const context = canvas.getContext('2d');
+            context.filter = getComputedStyle(element).filter;
+            context.drawImage(element, 0, 0);
+            const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            let opaque = 0;
+            let nonWhite = 0;
+            for (let index = 0; index < data.length; index += 4) {
+                if (data[index + 3] < 250) continue;
+                opaque++;
+                if (Math.min(data[index], data[index + 1], data[index + 2]) < 250) nonWhite++;
+            }
+            return { opaque, nonWhite };
+        });
+        expect(pixels.opaque).toBeGreaterThan(0);
+        expect(pixels.nonWhite).toBe(0);
+    }
 }
 
 async function chartSnapshot(page, legacy = false) {
@@ -373,3 +453,76 @@ test('legacy device surfaces and existing canvas charts follow saved theme chang
         await settingsApi(page, { theme_mode: 'adaptive', receive_app_activity_emails: true });
     }
 });
+
+for (const mode of ['light', 'dark', 'adaptive']) {
+    for (const legacy of [false, true]) {
+        test(`${legacy ? 'legacy' : 'modern'} API-key actions retain readable interaction states in ${mode} mode at night`, async ({
+            page,
+        }) => {
+            await page.clock.setFixedTime(new Date('2026-09-27T23:00:00-04:00'));
+            await login(page, 'developer@browser.example.test');
+            const original = await settingsApi(page);
+            const keyMutations = [];
+            await page.route('**/developer-workspace/api-keys**', async (route) => {
+                if (!['GET', 'HEAD'].includes(route.request().method())) {
+                    keyMutations.push(
+                        route.request().method() + ' ' + new URL(route.request().url()).pathname,
+                    );
+                    return route.abort();
+                }
+                return route.continue();
+            });
+            try {
+                await settingsApi(page, { theme_mode: mode });
+                await page.goto(
+                    legacy
+                        ? '/developer-workspace/api-keys'
+                        : '/developer-workspace?section=api-keys',
+                );
+                const dark = mode !== 'light';
+                await expectTheme(page, mode, dark ? 'dark' : 'light');
+                const content = legacy
+                    ? page.locator('main')
+                    : page.locator('.developer-workspace');
+                await expect(content.getByRole('rowheader').first()).toBeVisible();
+                if (!legacy) await expectSoftwareIcons(page, dark);
+
+                await expectButtonStateContrast(
+                    page,
+                    content.locator('button.btn-outline-danger:enabled').first(),
+                );
+                await expectButtonStateContrast(
+                    page,
+                    content.getByRole('button', {
+                        name: legacy ? 'Create Key' : 'Search',
+                        exact: true,
+                    }),
+                );
+                expect(keyMutations).toEqual([]);
+
+                await page.addScriptTag({ content: axe.source });
+                const violations = await page.evaluate(
+                    async (selector) =>
+                        (
+                            await axe.run(document.querySelector(selector), {
+                                runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                            })
+                        ).violations.map(({ id, nodes }) => ({
+                            id,
+                            nodes: nodes.map(({ target, failureSummary }) => ({
+                                target,
+                                failureSummary,
+                            })),
+                        })),
+                    legacy ? 'main' : '.developer-workspace',
+                );
+                expect(violations).toEqual([]);
+                expect((await settingsApi(page)).receive_app_activity_emails).toBe(
+                    original.receive_app_activity_emails,
+                );
+            } finally {
+                await settingsApi(page, { theme_mode: original.theme_mode });
+            }
+        });
+    }
+}

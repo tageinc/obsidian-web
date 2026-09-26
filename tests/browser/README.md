@@ -79,6 +79,11 @@ Modern and legacy pages verify dark navigation, dialogs, forms, table rows, and
 chart surfaces, empty feeds, keyboard focus, text/switch contrast, and mobile
 overflow. Chart theme changes redraw
 the same readings and ranges without extra telemetry requests or device commands.
+API-key pages also check Light, Dark, and a fixed Adaptive night on modern and
+legacy layouts, including normal, hover, keyboard-focus, and held-active button
+contrast. Software and Tools icons retain their white artwork in dark mode.
+These checks preserve the developer's saved theme, retain axe WCAG checks, and
+block and assert absent key mutations while inspecting button states.
 
 Release-table coverage uses synthetic firmware/configuration records to verify
 full-history search, independent query state, searchable Tom Select prefix and

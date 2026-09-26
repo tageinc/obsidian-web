@@ -486,12 +486,39 @@ hr {
 :root[data-theme='dark'] .btn-outline-secondary {
     --bs-btn-color: var(--obsidian-text-muted);
     --bs-btn-border-color: var(--obsidian-text-muted);
-    color: var(--obsidian-text-muted);
-    border-color: var(--obsidian-text-muted);
+    --bs-btn-hover-color: var(--obsidian-surface);
+    --bs-btn-hover-bg: var(--obsidian-text-muted);
+    --bs-btn-hover-border-color: var(--obsidian-text-muted);
+    --bs-btn-active-color: var(--obsidian-surface);
+    --bs-btn-active-bg: var(--obsidian-text-muted);
+    --bs-btn-active-border-color: var(--obsidian-text-muted);
 }
-:root[data-theme='dark'] .btn-outline-secondary:hover {
-    color: #fff;
-    background-color: #545b62;
+:root .btn-outline-danger {
+    --bs-btn-color: var(--obsidian-danger);
+    --bs-btn-border-color: var(--obsidian-danger);
+    --bs-btn-hover-color: var(--obsidian-accent-ink);
+    --bs-btn-hover-bg: var(--obsidian-danger-hover);
+    --bs-btn-hover-border-color: var(--obsidian-danger-hover);
+    --bs-btn-active-color: var(--obsidian-accent-ink);
+    --bs-btn-active-bg: var(--obsidian-danger-hover);
+    --bs-btn-active-border-color: var(--obsidian-danger-hover);
+}
+:root[data-theme='dark'] .btn-outline-secondary,
+:root .btn-outline-danger {
+    color: var(--bs-btn-color);
+    border-color: var(--bs-btn-border-color);
+}
+:root[data-theme='dark'] .btn-outline-secondary:not(:disabled):not(.disabled):hover,
+:root[data-theme='dark'] .btn-outline-secondary:not(:disabled):not(.disabled):focus,
+:root[data-theme='dark'] .btn-outline-secondary:not(:disabled):not(.disabled):active,
+:root[data-theme='dark'] .btn-outline-secondary:not(:disabled):not(.disabled).active,
+:root .btn-outline-danger:not(:disabled):not(.disabled):hover,
+:root .btn-outline-danger:not(:disabled):not(.disabled):focus,
+:root .btn-outline-danger:not(:disabled):not(.disabled):active,
+:root .btn-outline-danger:not(:disabled):not(.disabled).active {
+    color: var(--bs-btn-hover-color);
+    background-color: var(--bs-btn-hover-bg);
+    border-color: var(--bs-btn-hover-border-color);
 }
 :root[data-theme='dark'] .alert {
     color: var(--obsidian-text);
