@@ -100,9 +100,36 @@
         return fitted.every(function (point) { return Number.isFinite(point.y); }) ? fitted : [];
     }
 
+    function zeroReferenceYAxis() {
+        function isZeroTick(context) {
+            return Boolean(context && context.tick && Number(context.tick.value) === 0);
+        }
+
+        return {
+            beginAtZero: true,
+            afterBuildTicks: function (axis) {
+                if (!axis.ticks.some(function (tick) { return Number(tick.value) === 0; })) {
+                    axis.ticks.push({ value: 0 });
+                    axis.ticks.sort(function (a, b) { return Number(a.value) - Number(b.value); });
+                }
+            },
+            ticks: {
+                autoSkip: false,
+                maxTicksLimit: 7,
+                color: function (context) { return isZeroTick(context) ? '#334155' : '#666'; },
+                font: function (context) { return { weight: isZeroTick(context) ? 'bold' : 'normal' }; }
+            },
+            grid: {
+                color: function (context) { return isZeroTick(context) ? '#52627a' : '#e2e8f0'; },
+                lineWidth: function (context) { return isZeroTick(context) ? 2 : 1; }
+            }
+        };
+    }
+
     function makeChart(canvas, series, points) {
         if (!root.Chart) return null;
         const includeDate = shouldIncludeDate(points);
+        const usesZeroReference = series.some(function (metric) { return metric.field === 'motor_speed'; });
         const datasets = series.map(function (metric) {
             return { label: metric.label, data: points.map(function (point) { return { x: point.epoch_ms, y: metric.field === 'temp' ? (Object.prototype.hasOwnProperty.call(point, 'temp_f') ? point.temp_f : celsiusToFahrenheit(point.temp)) : point[metric.field], id: point.id }; }), borderColor: metric.color, backgroundColor: metric.color, showLine: false, pointRadius: 2, pointHoverRadius: 4, pointStyle: 'circle', tension: 0, spanGaps: false, order: 0 };
         });
@@ -117,7 +144,7 @@
             data: { datasets: datasets.concat(trends) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'nearest' }, scales: {
                 x: { type: 'linear', ticks: { maxTicksLimit: 7, callback: function (value) { return includeDate ? formatTimestamp(Number(value), true) : formatTime(Number(value)); } }, title: { display: true, text: 'Recorded time (Pacific Time)' } },
-                y: { beginAtZero: false }
+                y: usesZeroReference ? zeroReferenceYAxis() : { beginAtZero: false }
             }, plugins: { tooltip: { filter: function (item) { return !item.dataset.isTrend; }, callbacks: {
                 title: function (items) { return items.length ? formatTimestamp(items[0].parsed.x, true) : ''; },
                 afterLabel: function (item) { return item.raw.id != null ? 'Reading #' + item.raw.id : ''; }

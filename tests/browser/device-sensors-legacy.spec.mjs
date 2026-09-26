@@ -65,6 +65,19 @@ test('legacy device sensors show Fahrenheit and CTS states without device comman
                 }),
             )
             .toBe('Temperature (°F)');
+        await expect
+            .poll(() =>
+                page.evaluate(() => {
+                    const chart = window.Chart?.getChart(
+                        document.querySelector('[data-chart="motor"]'),
+                    );
+                    if (!chart) return false;
+                    const scale = chart.scales.y;
+                    const zero = scale.ticks.find((tick) => tick.value === 0);
+                    return scale.min <= 0 && scale.max >= 0 && String(zero?.label) === '0';
+                }),
+            )
+            .toBe(true);
 
         const response = await request.post('/__browser-fixtures/telemetry', {
             data: { temp: 0, ps_avg: 123, pds: 9, cts: 0 },

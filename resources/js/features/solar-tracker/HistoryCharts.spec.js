@@ -309,6 +309,34 @@ it('keeps invalid period input announced when entering a custom span', async () 
     wrapper.unmount();
 });
 
+it('shows the zero reference only for PDS and motor speed when switching measurements', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: 0, pds: -4, motor_speed: -20, temp: 21 },
+                { epoch_ms: 1000, pds: 2, motor_speed: 10, temp: 22 },
+            ],
+        },
+    });
+    await vi.dynamicImportSettled();
+    await flushPromises();
+    for (const metric of ['pds', 'motor', 'temperature', 'ps_avg', 'panels', 'pds']) {
+        await wrapper.get('#history-metric').setValue(metric);
+        await flushPromises();
+        const showZero = metric === 'pds' || metric === 'motor';
+        const options = Chart.mock.calls.at(-1)[1];
+        expect(options.options.scales.y.beginAtZero).toBe(showZero);
+        expect(wrapper.get('.history-footer').text().includes('marks y = 0')).toBe(showZero);
+        expect(wrapper.get('canvas').attributes('aria-label').includes('marks y = 0')).toBe(
+            showZero,
+        );
+        if (showZero) {
+            expect(options.options.scales.y.grid.lineWidth({ tick: { value: 0 } })).toBe(2);
+        }
+    }
+    wrapper.unmount();
+});
+
 it('advances the live last 24 hours after each successful refresh even without new readings', async () => {
     const wrapper = mount(HistoryCharts, {
         props: {

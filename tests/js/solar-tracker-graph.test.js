@@ -185,6 +185,28 @@ try {
   assert.equal(createdCharts[1].config.options.plugins.legend.display, true);
   assert.equal(createdCharts[0].config.options.plugins.legend.display, true);
   assert.deepEqual(createdCharts[2].config.data.datasets[0].data.map(point => point.y), [10, 0, 11, 12]);
+  assert.equal(createdCharts[0].config.options.scales.y.beginAtZero, false);
+  assert.equal(createdCharts[1].config.options.scales.y.beginAtZero, false);
+  const motorYAxis = createdCharts[2].config.options.scales.y;
+  assert.equal(motorYAxis.beginAtZero, true, 'Motor speed includes zero even when readings stay on one side');
+  assert.equal(motorYAxis.ticks.autoSkip, false, 'The zero label cannot be skipped');
+  assert.equal(motorYAxis.ticks.maxTicksLimit, 7);
+  const positiveTicks = { ticks: [{ value: 5 }, { value: 10 }] };
+  motorYAxis.afterBuildTicks(positiveTicks);
+  assert.deepEqual(positiveTicks.ticks.map(tick => tick.value), [0, 5, 10]);
+  motorYAxis.afterBuildTicks(positiveTicks);
+  assert.deepEqual(positiveTicks.ticks.map(tick => tick.value), [0, 5, 10], 'Zero is inserted only once');
+  const negativeTicks = { ticks: [{ value: -10 }, { value: -5 }] };
+  motorYAxis.afterBuildTicks(negativeTicks);
+  assert.deepEqual(negativeTicks.ticks.map(tick => tick.value), [-10, -5, 0]);
+  assert.equal(motorYAxis.ticks.color({ tick: { value: 0 } }), '#334155');
+  assert.equal(motorYAxis.ticks.color({ tick: { value: 5 } }), '#666');
+  assert.deepEqual(motorYAxis.ticks.font({ tick: { value: 0 } }), { weight: 'bold' });
+  assert.deepEqual(motorYAxis.ticks.font({ tick: { value: -5 } }), { weight: 'normal' });
+  assert.equal(motorYAxis.grid.color({ tick: { value: 0 } }), '#52627a');
+  assert.equal(motorYAxis.grid.color({ tick: { value: 5 } }), '#e2e8f0');
+  assert.equal(motorYAxis.grid.lineWidth({ tick: { value: 0 } }), 2);
+  assert.equal(motorYAxis.grid.lineWidth({ tick: { value: -5 } }), 1);
   closeTo(createdCharts[0].config.data.datasets[1].data[0].y, (258 / 13) * 9 / 5 + 32);
   closeTo(createdCharts[0].config.data.datasets[1].data[1].y, (306 / 13) * 9 / 5 + 32);
 

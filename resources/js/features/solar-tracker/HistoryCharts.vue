@@ -157,6 +157,7 @@ const metrics = {
     },
 };
 const selected = computed(() => metrics[metric.value]);
+const showZeroReference = computed(() => metric.value === 'pds' || metric.value === 'motor');
 const normalized = computed(() =>
     normalizePoints(
         props.points.map((point) =>
@@ -451,6 +452,7 @@ onBeforeUnmount(() => {
                             ', scatter plot with linear trend lines, ' +
                             visible.length +
                             ' raw readings. ' +
+                            (showZeroReference ? 'The solid horizontal line marks y = 0. ' : '') +
                             rangeLabel(visible)
                         "
                     />
@@ -462,6 +464,9 @@ onBeforeUnmount(() => {
                 <p>
                     Points show raw readings. Dashed lines fit all valid readings in the selected
                     range; a trend needs at least two distinct timestamps.
+                </p>
+                <p v-if="showZeroReference">
+                    The solid horizontal line marks y = 0 so you can see readings cross zero.
                 </p>
                 <p>
                     The default is the last 24 hours ending now. Ranges filter the latest 9,000

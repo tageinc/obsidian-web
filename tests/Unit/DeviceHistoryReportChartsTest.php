@@ -130,4 +130,81 @@ class DeviceHistoryReportChartsTest extends TestCase
         $this->assertSame([79.0043], array_column($chart['series'][0]['points'], 'y'));
         $this->assertSame(1, $chart['measurement_count']);
     }
+
+    /** @dataProvider zeroReferenceReadings */
+    public function test_signed_sensor_charts_show_a_labeled_zero_reference_without_losing_readings(array $values): void
+    {
+        $points = array_map(static fn ($value, $index) => [
+            'epoch_ms' => 1000 + $index * 1000,
+            'pds' => $value,
+            'motor_speed' => $value,
+            'ps_avg' => $value,
+        ], $values, array_keys($values));
+        $charts = (new DeviceHistoryReportCharts)->build($points, 1000, 1000 * count($values));
+        $expectedValues = array_values(array_map('floatval', array_filter($values, static fn ($value) => is_numeric($value) && is_finite((float) $value))));
+
+        foreach ([2, 4] as $index) {
+            $chart = $charts[$index];
+            $this->assertSame($expectedValues, array_column($chart['series'][0]['points'], 'y'));
+            $this->assertSame(count($expectedValues), $chart['measurement_count']);
+            $this->assertDoesNotMatchRegularExpression('/(?:nan|inf)/i', $chart['svg']);
+            $document = new \DOMDocument;
+            $this->assertTrue($document->loadXML($chart['svg']));
+            $xpath = new \DOMXPath($document);
+            $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
+            $lines = $xpath->query('//svg:line[@class="zero-reference"]');
+            $this->assertCount(1, $lines);
+            $line = $lines->item(0);
+            $zeroY = (float) $line->getAttribute('y1');
+            $this->assertGreaterThan(36, $zeroY);
+            $this->assertLessThan(204, $zeroY);
+            $this->assertSame($line->getAttribute('y1'), $line->getAttribute('y2'));
+            $this->assertSame('68.000', $line->getAttribute('x1'));
+            $this->assertSame('675.000', $line->getAttribute('x2'));
+            $this->assertSame('2', $line->getAttribute('stroke-width'));
+            $this->assertSame('#52627a', $line->getAttribute('stroke'));
+
+            $zeroLabels = $xpath->query('//svg:text[@x="59.000" and text()="0"]');
+            $this->assertCount(1, $zeroLabels);
+            $this->assertEqualsWithDelta($zeroY + 4, (float) $zeroLabels->item(0)->getAttribute('y'), 0.001);
+            foreach ($xpath->query('//svg:text[@x="59.000" and text()!="0"]') as $label) {
+                $this->assertGreaterThanOrEqual(13.999, abs((float) $label->getAttribute('y') - ($zeroY + 4)));
+            }
+
+            preg_match_all('/M[\d.-]+ ([\d.-]+)l0\.01 0/', $chart['svg'], $coordinates);
+            $this->assertCount(count($expectedValues), $coordinates[1]);
+            foreach ($expectedValues as $pointIndex => $value) {
+                $pointY = (float) $coordinates[1][$pointIndex];
+                if ($value > 0) {
+                    $this->assertLessThan($zeroY, $pointY);
+                } elseif ($value < 0) {
+                    $this->assertGreaterThan($zeroY, $pointY);
+                } else {
+                    $this->assertEqualsWithDelta($zeroY, $pointY, 0.001);
+                }
+            }
+            if (!$expectedValues) {
+                $this->assertStringContainsString('No valid measurements', $chart['svg']);
+            }
+        }
+
+        foreach ([0, 1, 3] as $index) {
+            $this->assertStringNotContainsString('class="zero-reference"', $charts[$index]['svg']);
+        }
+    }
+
+    public static function zeroReferenceReadings(): array
+    {
+        return [
+            'crossing zero between ordinary ticks' => [[-10, 25]],
+            'positive only' => [[6, 12]],
+            'negative only' => [[-12, -6]],
+            'all zero' => [[0, 0]],
+            'missing values' => [[null, 'missing', INF, NAN]],
+            'opposing finite extremes' => [[-PHP_FLOAT_MAX, PHP_FLOAT_MAX]],
+            'positive finite extremes' => [[PHP_FLOAT_MAX / 2, PHP_FLOAT_MAX]],
+            'negative finite extremes' => [[-PHP_FLOAT_MAX, -PHP_FLOAT_MAX / 2]],
+            'tiny finite readings' => [[-1e-305, 2e-305]],
+        ];
+    }
 }

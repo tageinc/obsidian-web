@@ -10,9 +10,9 @@ class DeviceHistoryReportCharts
     private const VIEWS = [
         ['title' => 'Temperature', 'unit' => '°F', 'series' => [['temp', 'Temperature', '#2862c4']]],
         ['title' => 'Panel sensors', 'unit' => '', 'series' => [['ps1', 'PS1', '#2862c4'], ['ps2', 'PS2', '#138369']]],
-        ['title' => 'PDS', 'unit' => '', 'series' => [['pds', 'PDS', '#8954b9']]],
+        ['title' => 'PDS', 'unit' => '', 'zero_reference' => true, 'series' => [['pds', 'PDS', '#8954b9']]],
         ['title' => 'PS average', 'unit' => '', 'series' => [['ps_avg', 'PS average', '#138369']]],
-        ['title' => 'Motor speed', 'unit' => '', 'series' => [['motor_speed', 'Motor speed', '#ba681b']]],
+        ['title' => 'Motor speed', 'unit' => '', 'zero_reference' => true, 'series' => [['motor_speed', 'Motor speed', '#ba681b']]],
     ];
 
     public function build(array $points, float $from, float $to): array
@@ -47,6 +47,7 @@ class DeviceHistoryReportCharts
                 'title' => $view['title'], 'unit' => $view['unit'], 'series' => $series,
                 'reading_count' => count($points), 'measurement_count' => $count,
                 'from' => $from, 'to' => $to,
+                'zero_reference' => $view['zero_reference'] ?? false,
             ];
             $chart['svg'] = $this->svg($chart);
 
@@ -118,17 +119,26 @@ class DeviceHistoryReportCharts
         $magnitude = $values ? max(1, max(array_map('abs', $values))) : 1;
         $minimum = $values ? min($values) / $magnitude : 0;
         $maximum = $values ? max($values) / $magnitude : 1;
+        if ($chart['zero_reference']) {
+            $minimum = min(0, $minimum);
+            $maximum = max(0, $maximum);
+        }
         $padding = $minimum === $maximum ? max(abs($minimum) * 0.1, 1 / $magnitude) : ($maximum - $minimum) * 0.08;
         $finiteBound = PHP_FLOAT_MAX / $magnitude;
         $minimum = max(-$finiteBound, $minimum - $padding);
         $maximum = min($finiteBound, $maximum + $padding);
         $x = static fn ($value) => $left + (($value - $from) / ($to - $from)) * $plotWidth;
         $y = static fn ($value) => $top + $plotHeight - (($value / $magnitude - $minimum) / ($maximum - $minimum)) * $plotHeight;
+        $zeroY = $chart['zero_reference'] ? $y(0) : null;
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="700" height="270" viewBox="0 0 700 270">';
         $svg .= '<rect width="700" height="270" fill="#ffffff"/>';
         for ($index = 0; $index <= 4; $index++) {
             $value = $minimum + ($maximum - $minimum) * $index / 4;
             $axisY = $top + $plotHeight - (($value - $minimum) / ($maximum - $minimum)) * $plotHeight;
+            // Keep the dedicated zero label legible when a regular tick is nearby.
+            if ($zeroY !== null && abs($axisY - $zeroY) < 14) {
+                continue;
+            }
             $svg .= $this->line($left, $axisY, $width - $right, $axisY, '#e2e8f0');
             $labelValue = $value * $magnitude;
             $label = is_finite($labelValue) ? $this->number($labelValue) : ($value < 0 ? '-' : '').sprintf('%.2e', PHP_FLOAT_MAX);
@@ -150,6 +160,10 @@ class DeviceHistoryReportCharts
             }
         }
         $svg .= $this->line($left, $height - $bottom, $width - $right, $height - $bottom, '#b7c5d8');
+        if ($zeroY !== null) {
+            $svg .= $this->line($left, $zeroY, $width - $right, $zeroY, '#52627a', ' class="zero-reference" stroke-width="2"');
+            $svg .= $this->text($left - 9, $zeroY + 4, '0', 'end', 11, '#52627a', ' font-weight="bold"');
+        }
         $svg .= $this->text($width / 2, $height - 9, 'Recorded time (Pacific Time)', 'middle', 11, '#52627a');
         $legendX = $left;
         foreach ($chart['series'] as $series) {
@@ -196,8 +210,8 @@ class DeviceHistoryReportCharts
         return '<line x1="'.$this->coordinate($x1).'" y1="'.$this->coordinate($y1).'" x2="'.$this->coordinate($x2).'" y2="'.$this->coordinate($y2).'" stroke="'.$color.'"'.$attributes.'/>';
     }
 
-    private function text(float $x, float $y, string $value, string $anchor = 'start', int $size = 12, string $color = '#26354b'): string
+    private function text(float $x, float $y, string $value, string $anchor = 'start', int $size = 12, string $color = '#26354b', string $attributes = ''): string
     {
-        return '<text x="'.$this->coordinate($x).'" y="'.$this->coordinate($y).'" text-anchor="'.$anchor.'" font-family="DejaVu Sans" font-size="'.$size.'" fill="'.$color.'">'.htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8').'</text>';
+        return '<text x="'.$this->coordinate($x).'" y="'.$this->coordinate($y).'" text-anchor="'.$anchor.'" font-family="DejaVu Sans" font-size="'.$size.'" fill="'.$color.'"'.$attributes.'>'.htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8').'</text>';
     }
 }

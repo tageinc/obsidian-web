@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LinearScale } from 'chart.js';
 import {
     normalizePoints,
     formatTime,
@@ -8,6 +9,7 @@ import {
     chartOptions,
     linearRegression,
     timeTicks,
+    zeroReferenceScale,
 } from './timeSeries';
 describe('raw solar tracker time series', () => {
     it('places a bounded number of clock-aligned ticks inside the plotted range', () => {
@@ -126,6 +128,70 @@ describe('raw solar tracker time series', () => {
             chart.options.plugins.tooltip.callbacks.title([{ parsed: { x: points[0].epoch_ms } }]),
         ).toContain('12:30 PM PDT');
     });
+});
+
+describe('zero reference for signed telemetry', () => {
+    it.each(['pds', 'motor_speed'])(
+        'includes zero for %s across crossing, one-sided, constant and missing readings',
+        (field) => {
+            for (const values of [[-3, 2], [12, 24], [-24, -12], [0, 0], [7], [null, null], []]) {
+                const points = normalizePoints(
+                    values.map((value, index) => ({ epoch_ms: index * 1000, [field]: value })),
+                );
+                const original = structuredClone(points);
+                const chart = chartOptions(points, [[field, field, 'blue']]);
+                const options = chart.options.scales.y;
+                // Exercise Chart.js's real data-limit behavior without needing a canvas.
+                const scale = new LinearScale({ id: 'y', type: 'linear', ctx: {}, chart: {} });
+                scale.options = options;
+                const numeric = values.filter((value) => Number.isFinite(value));
+                scale.getMinMax = () => ({
+                    min: Math.min(...numeric),
+                    max: Math.max(...numeric),
+                });
+                scale.determineDataLimits();
+                expect(scale.min).toBeLessThanOrEqual(0);
+                expect(scale.max).toBeGreaterThanOrEqual(0);
+                expect(scale.max).toBeGreaterThan(scale.min);
+                for (const value of numeric) {
+                    expect(value).toBeGreaterThanOrEqual(scale.min);
+                    expect(value).toBeLessThanOrEqual(scale.max);
+                }
+                expect(options.min).toBeUndefined();
+                expect(options.max).toBeUndefined();
+                expect(chart.data.datasets[0].data.map(({ y }) => y)).toEqual(values);
+                expect(points).toEqual(original);
+            }
+        },
+    );
+
+    it('keeps a labeled, emphasized zero tick when ordinary ticks miss it', () => {
+        const options = zeroReferenceScale();
+        const scale = { ticks: [{ value: -3 }, { value: -1 }, { value: 1 }, { value: 3 }] };
+        options.afterBuildTicks(scale);
+        options.afterBuildTicks(scale);
+        expect(scale.ticks.map(({ value }) => value)).toEqual([-3, -1, 0, 1, 3]);
+        expect(options.ticks.autoSkip).toBe(false);
+        expect(options.ticks.maxTicksLimit).toBe(7);
+        const zero = { tick: { value: 0 } };
+        const other = { tick: { value: 1 } };
+        expect(options.grid.color(zero)).toBe('#52627a');
+        expect(options.grid.lineWidth(zero)).toBe(2);
+        expect(options.grid.color(other)).toBe('#e2e8f0');
+        expect(options.grid.lineWidth(other)).toBe(1);
+        expect(options.ticks.font(zero).weight).toBe('bold');
+        expect(options.ticks.font(other).weight).toBe('normal');
+    });
+
+    it.each(['temp', 'ps1', 'ps2', 'ps_avg'])(
+        'preserves the existing automatic scale for %s',
+        (field) => {
+            const points = normalizePoints([{ epoch_ms: 0, [field]: 42 }]);
+            expect(chartOptions(points, [[field, field, 'blue']]).options.scales.y).toEqual({
+                beginAtZero: false,
+            });
+        },
+    );
 });
 
 describe('least-squares trends over all visible raw readings', () => {

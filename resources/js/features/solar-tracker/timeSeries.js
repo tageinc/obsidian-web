@@ -93,7 +93,30 @@ export function linearRegression(data) {
     }));
     return endpoints.every((point) => Number.isFinite(point.y)) ? endpoints : [];
 }
+export function zeroReferenceScale() {
+    return {
+        beginAtZero: true,
+        afterBuildTicks: (scale) => {
+            if (!scale.ticks.some((tick) => tick.value === 0)) {
+                scale.ticks.push({ value: 0 });
+                scale.ticks.sort((a, b) => a.value - b.value);
+            }
+        },
+        ticks: {
+            // Keep the zero label even when the chart is short on mobile.
+            autoSkip: false,
+            maxTicksLimit: 7,
+            color: ({ tick }) => (tick?.value === 0 ? '#334155' : '#666'),
+            font: ({ tick }) => ({ weight: tick?.value === 0 ? 'bold' : 'normal' }),
+        },
+        grid: {
+            color: ({ tick }) => (tick?.value === 0 ? '#52627a' : '#e2e8f0'),
+            lineWidth: ({ tick }) => (tick?.value === 0 ? 2 : 1),
+        },
+    };
+}
 export function chartOptions(points, series, range = null) {
+    const showZero = series.some(([field]) => field === 'pds' || field === 'motor_speed');
     const first = range?.start ?? points[0]?.epoch_ms;
     const last = range?.end ?? points.at(-1)?.epoch_ms;
     const label = axisFormatter(range ? [{ epoch_ms: first }, { epoch_ms: last }] : points);
@@ -167,7 +190,7 @@ export function chartOptions(points, series, range = null) {
                     },
                     title: { display: true, text: 'Recorded time (Pacific Time)' },
                 },
-                y: { beginAtZero: false },
+                y: showZero ? zeroReferenceScale() : { beginAtZero: false },
             },
             plugins: {
                 legend: { display: true, labels: { usePointStyle: true } },

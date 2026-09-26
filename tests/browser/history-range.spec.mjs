@@ -1,8 +1,37 @@
 import { test, expect } from '@playwright/test';
 import axe from 'axe-core';
+import { readFileSync } from 'node:fs';
 import { datetimeInput } from '../../resources/js/features/solar-tracker/historyRange.js';
 
 test.use({ timezoneId: 'Asia/Tokyo' });
+
+const manifest = JSON.parse(
+    readFileSync(new URL('../../public/build/manifest.json', import.meta.url), 'utf8'),
+);
+const chartModule = `/build/${manifest['node_modules/chart.js/auto/auto.js'].file}`;
+
+async function expectZeroReference(page) {
+    await expect
+        .poll(() =>
+            page.evaluate(async (moduleUrl) => {
+                const { default: Chart } = await import(moduleUrl);
+                const canvas = document.querySelector('.history-section canvas');
+                const chart = canvas && Chart.getChart(canvas);
+                if (!chart) return false;
+                const scale = chart.scales.y;
+                const zero = scale.ticks.find((tick) => tick.value === 0);
+                const pixel = scale.getPixelForValue(0);
+                return (
+                    scale.min <= 0 &&
+                    scale.max >= 0 &&
+                    String(zero?.label) === '0' &&
+                    pixel >= chart.chartArea.top &&
+                    pixel <= chart.chartArea.bottom
+                );
+            }, chartModule),
+        )
+        .toBe(true);
+}
 
 async function expectReportDownload(page, report, start, end) {
     const [response, download] = await Promise.all([
@@ -76,9 +105,12 @@ test('history ranges and PDF reports navigate, validate and retain state without
     await expect(report).toBeFocused();
     await expectReportDownload(page, report, now - 86400000, now);
     await expect(panel.getByRole('status')).toContainText('includes all measurements');
+    await panel.getByLabel('Measurement', { exact: true }).selectOption('pds');
+    await expectZeroReference(page);
     await panel.getByRole('button', { name: 'Previous time range' }).click();
     await expect(ending).toHaveValue(value(now - 86400000));
     await expect(panel.getByText('2 raw readings', { exact: true })).toBeVisible();
+    await expectZeroReference(page);
     await panel.getByRole('button', { name: 'Next time range' }).click();
     await expect(ending).toHaveValue(value(now));
     await panel.getByLabel('View', { exact: true }).selectOption('all');
@@ -95,12 +127,14 @@ test('history ranges and PDF reports navigate, validate and retain state without
     await expect(panel.getByRole('img')).toHaveAttribute('aria-label', /Panel sensors/);
     for (const [metric, label] of [
         ['pds', 'PDS'],
+        ['motor', 'Motor speed'],
         ['ps_avg', 'PS average'],
     ]) {
         await panel.getByLabel('Measurement', { exact: true }).selectOption(metric);
         await expect(panel.getByRole('img')).toHaveAttribute('aria-label', new RegExp(label));
         await expect(panel.getByRole('heading', { name: new RegExp(label) })).toBeVisible();
         await expect(panel.getByText('2 raw readings', { exact: true })).toBeVisible();
+        if (metric === 'pds' || metric === 'motor') await expectZeroReference(page);
     }
     await page.getByRole('tab', { name: 'Overview', exact: true }).click();
     await expect(report).not.toBeVisible();
