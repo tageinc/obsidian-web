@@ -39,6 +39,8 @@
                 'state' => $device->state,
                 'status' => $device->status,
                 'lastUpdated' => $device->last_updated,
+                'latitude' => $device->latitude ?? null,
+                'longitude' => $device->longitude ?? null,
                 'links' => [
                     'view' => route('devices.show', $device->id),
                     'edit' => route('edit-device', $device->id),

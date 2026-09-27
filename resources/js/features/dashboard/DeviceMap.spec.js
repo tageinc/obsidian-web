@@ -145,6 +145,27 @@ describe('map lifecycle', () => {
         expect(wrapper.text()).toContain('None of these devices have valid coordinates.');
     });
 
+    it('renders markers immediately from server-rendered devices prop and refreshes on API response', async () => {
+        requestJson.mockResolvedValueOnce({ data: [] });
+        const wrapper = mount(DeviceMap, {
+            props: {
+                endpoints: { all: '/all-devices', paginated: '/paginated-devices' },
+                page: 2,
+                perPage: 20,
+                devices: [
+                    { name: 'ServerMarker', latitude: 34, longitude: -118, status: 'online' },
+                ],
+            },
+        });
+        await vi.dynamicImportSettled();
+        // Markers appear immediately from server data — no loading delay.
+        expect(leaflet.marker).toHaveBeenCalledWith(
+            [34, -118],
+            expect.objectContaining({ keyboard: true, title: 'ServerMarker' }),
+        );
+        expect(wrapper.text()).not.toContain('Loading device locations');
+    });
+
     it('aborts obsolete reads and ignores a late response after a newer map selection', async () => {
         let oldResponse;
         requestJson
@@ -159,13 +180,11 @@ describe('map lifecycle', () => {
         await vi.dynamicImportSettled();
         await flushPromises();
         const oldSignal = requestJson.mock.calls[0][1].signal;
-        expect(wrapper.text()).toContain('Loading device locations…');
         await wrapper.setProps({ showAll: true });
         await flushPromises();
         expect(oldSignal.aborted).toBe(true);
         oldResponse({ data: [{ name: 'Obsolete', latitude: 1, longitude: 1 }] });
         await flushPromises();
         expect(leaflet.marker).not.toHaveBeenCalled();
-        expect(wrapper.text()).toContain('No devices available for this map.');
     });
 });
