@@ -125,6 +125,7 @@ watch(
                     :endpoints="mapEndpoints"
                     :page="pagination.currentPage"
                     :per-page="pagination.perPage"
+                    :devices="devices"
                 />
                 <section class="device-manager" aria-labelledby="device-manager-heading">
                     <h2 id="device-manager-heading" class="h5 mb-3">Device Manager</h2>

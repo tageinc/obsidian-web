@@ -8,9 +8,10 @@ const props = defineProps({
     page: { type: Number, default: 1 },
     perPage: { type: Number, default: 10 },
     showAll: { type: Boolean, default: false },
+    /** Server-rendered device data for immediate map rendering */
+    devices: { type: Array, default: () => [] },
 });
 const canvas = ref(null);
-const loading = ref(true);
 const error = ref('');
 const tileWarning = ref(false);
 const total = ref(0);
@@ -27,7 +28,6 @@ async function reload() {
     controller?.abort();
     controller = new AbortController();
     const signal = controller.signal;
-    loading.value = true;
     error.value = '';
     // Clear stale locations while switching between all/current-page requests.
     markers?.clearLayers();
@@ -53,6 +53,38 @@ async function reload() {
                 tileWarning.value = false;
             });
             markers = leaflet.layerGroup().addTo(map);
+        }
+        // Populate markers immediately from server-rendered device data so the
+        // map is usable before the API call completes for paginated views.
+        const serversideDevices = Array.isArray(props.devices) ? props.devices : [];
+        total.value = serversideDevices.length;
+        located.value = 0;
+        for (const device of serversideDevices) {
+            const point = coordinates(device);
+            if (!point) continue;
+            leaflet.marker(point, {
+                title: String(device.name ?? 'Device'),
+                alt: String(device.name ?? 'Device'),
+                keyboard: true,
+                icon: leaflet.divIcon({
+                    html: markerIcon(device.status),
+                    className: 'device-map-marker',
+                    iconSize: [30, 42],
+                    iconAnchor: [15, 42],
+                }),
+            })
+                .addTo(markers)
+                .bindPopup(devicePopup({
+                    name: device.name,
+                    address_1: device.address_1 ?? null,
+                    address_2: device.address_2 ?? null,
+                    city: device.city ?? null,
+                    address_state: device.address_state ?? null,
+                    zip_code: device.zip_code ?? null,
+                    country: device.country ?? null,
+                    last_updated: device.lastUpdated ?? '',
+                }));
+            located.value++;
         }
         const url = new URL(
             props.showAll ? props.endpoints.all : props.endpoints.paginated,
@@ -91,7 +123,9 @@ async function reload() {
             ? failure.message
             : 'Could not load device locations. Try again.';
     } finally {
-        if (!destroyed && current === generation) loading.value = false;
+        // Remove loading state entirely — the map container always shows
+        // content (markers from server devices or "No devices"/"None located")
+        // so there is no brief flash between mount and API completion.
     }
 }
 
@@ -115,14 +149,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <section aria-label="Device locations" :aria-busy="loading">
+    <section aria-label="Device locations">
         <div v-if="error" class="alert alert-danger" role="alert">
             {{ error }}
             <button type="button" class="btn btn-outline-danger btn-sm ms-2" @click="reload">
                 Retry map
             </button>
         </div>
-        <p v-else-if="loading" role="status" class="text-muted">Loading device locations…</p>
         <p v-else-if="total === 0" role="status" class="text-muted">
             No devices available for this map.
         </p>
