@@ -489,10 +489,20 @@ it('extends available history to include new telemetry without changing its view
 });
 
 it('supports all OB-19 View dropdown options and preserves the selected view', async () => {
-    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: -7200000, temp: 1 }, { epoch_ms: 0, temp: 2 }, { epoch_ms: 3600000, temp: 3 }] } });
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: -7200000, temp: 1 },
+                { epoch_ms: 0, temp: 2 },
+                { epoch_ms: 3600000, temp: 3 },
+            ],
+        },
+    });
     await flushPromises();
     const options = wrapper.get('#history-view').findAll('option');
-    expect(options.map((o) => o.attributes('value'))).toEqual(expect.arrayContaining(['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']));
+    expect(options.map((o) => o.attributes('value'))).toEqual(
+        expect.arrayContaining(['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']),
+    );
     for (const view of ['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']) {
         await wrapper.get('#history-view').setValue(view);
         expect(wrapper.get('#history-view').element.value).toBe(view);
@@ -501,7 +511,14 @@ it('supports all OB-19 View dropdown options and preserves the selected view', a
 });
 
 it('preserves the selected View option across refresh cycles for all OB-19 modes', async () => {
-    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: -7200000, temp: 1 }, { epoch_ms: 0, temp: 2 }] } });
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: -7200000, temp: 1 },
+                { epoch_ms: 0, temp: 2 },
+            ],
+        },
+    });
     await flushPromises();
     for (const view of ['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']) {
         await wrapper.get('#history-view').setValue(view);

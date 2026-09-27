@@ -67,18 +67,29 @@ describe('shorter time-window options (OB-19)', () => {
 
     it('shifts hour-mode ranges by one hour', () => {
         const range = lastNHours(1, Date.parse('2026-03-08T15:00:00Z'));
-        expect(shiftRange(range, 'hour', 1)).toEqual({ start: range.start + 3600000, end: range.end + 3600000 });
+        expect(shiftRange(range, 'hour', 1)).toEqual({
+            start: range.start + 3600000,
+            end: range.end + 3600000,
+        });
     });
 
     it('shifts twelve-hours mode ranges by one full window', () => {
         const range = lastNHours(12, Date.parse('2026-03-08T15:00:00Z'));
-        expect(shiftRange(range, 'twelveHours', 1)).toEqual({ start: range.start + 12 * 3600000, end: range.end + 12 * 3600000 });
+        expect(shiftRange(range, 'twelveHours', 1)).toEqual({
+            start: range.start + 12 * 3600000,
+            end: range.end + 12 * 3600000,
+        });
     });
 
     it('keeps fixed durations across DST boundaries', () => {
         const hourRange = lastNHours(1, Date.parse('2026-03-08T15:00:00Z'));
         const twelveHourRange = lastNHours(12, Date.parse('2026-03-08T15:00:00Z'));
-        expect(shiftRange(hourRange, 'hour', -1).end - shiftRange(hourRange, 'hour', -1).start).toBe(3600000);
-        expect(shiftRange(twelveHourRange, 'twelveHours', -1).end - shiftRange(twelveHourRange, 'twelveHours', -1).start).toBe(12 * 3600000);
+        expect(
+            shiftRange(hourRange, 'hour', -1).end - shiftRange(hourRange, 'hour', -1).start,
+        ).toBe(3600000);
+        expect(
+            shiftRange(twelveHourRange, 'twelveHours', -1).end -
+                shiftRange(twelveHourRange, 'twelveHours', -1).start,
+        ).toBe(12 * 3600000);
     });
 });

@@ -49,7 +49,10 @@ const to = ref(datetimeInput(initialRange.end));
 const selectedDate = ref(datetimeInput(initialRange.end).slice(0, 10));
 const rangeError = ref('');
 const customView = computed(() => view.value === 'custom');
-const periodNavigation = computed(() => !customView.value && view.value !== 'all' && ['day', 'week', 'month'].includes(view.value));
+const periodNavigation = computed(
+    () =>
+        !customView.value && view.value !== 'all' && ['day', 'week', 'month'].includes(view.value),
+);
 const hasRangeFilters = computed(
     () =>
         view.value !== 'day' ||
@@ -367,7 +370,10 @@ onBeforeUnmount(() => {
                                 <option value="custom">Custom span</option>
                             </select>
                         </div>
-                        <div v-if="view === 'day' || view === 'hour' || view === 'twelveHours'" class="history-filter-field">
+                        <div
+                            v-if="view === 'day' || view === 'hour' || view === 'twelveHours'"
+                            class="history-filter-field"
+                        >
                             <label for="history-ending">Ending at</label>
                             <input
                                 id="history-ending"
