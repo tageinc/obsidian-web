@@ -1,12 +1,7 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { requestJson } from "../../shared/api/client.js";
-import {
-  coordinates,
-  devicePopup,
-  mapDevices,
-  markerIcon,
-} from "./deviceMap.js";
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { requestJson } from '../../shared/api/client.js';
+import { coordinates, devicePopup, mapDevices, markerIcon } from './deviceMap.js';
 
 const props = defineProps({
   endpoints: { type: Object, required: true },
@@ -17,7 +12,7 @@ const props = defineProps({
   devices: { type: Array, default: () => [] },
 });
 const canvas = ref(null);
-const error = ref("");
+const error = ref('');
 const tileWarning = ref(false);
 const total = ref(0);
 const located = ref(0);
@@ -33,28 +28,25 @@ async function reload() {
   controller?.abort();
   controller = new AbortController();
   const signal = controller.signal;
-  error.value = "";
+  error.value = '';
   // Clear stale locations while switching between all/current-page requests.
   markers?.clearLayers();
   try {
     if (!map) {
-      const [module] = await Promise.all([
-        import("leaflet"),
-        import("leaflet/dist/leaflet.css"),
-      ]);
+      const [module] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]);
       if (destroyed || current !== generation) return;
       leaflet = module;
       map = leaflet.map(canvas.value).setView([33.7263, -117.919], 11);
       const tiles = leaflet
-        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution:
             'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
         })
         .addTo(map);
-      tiles.on("tileerror", () => {
+      tiles.on('tileerror', () => {
         tileWarning.value = true;
       });
-      tiles.on("tileload", () => {
+      tiles.on('tileload', () => {
         tileWarning.value = false;
       });
       markers = leaflet.layerGroup().addTo(map);
@@ -69,12 +61,12 @@ async function reload() {
       if (!point) continue;
       leaflet
         .marker(point, {
-          title: String(device.name ?? "Device"),
-          alt: String(device.name ?? "Device"),
+          title: String(device.name ?? 'Device'),
+          alt: String(device.name ?? 'Device'),
           keyboard: true,
           icon: leaflet.divIcon({
             html: markerIcon(device.status),
-            className: "device-map-marker",
+            className: 'device-map-marker',
             iconSize: [30, 42],
             iconAnchor: [15, 42],
           }),
@@ -89,7 +81,7 @@ async function reload() {
             address_state: device.address_state ?? null,
             zip_code: device.zip_code ?? null,
             country: device.country ?? null,
-            last_updated: device.lastUpdated ?? "",
+            last_updated: device.lastUpdated ?? '',
           }),
         );
       located.value++;
@@ -98,8 +90,8 @@ async function reload() {
       props.showAll ? props.endpoints.all : props.endpoints.paginated,
       window.location.origin,
     );
-    url.searchParams.set("page", String(props.page));
-    url.searchParams.set("show", String(props.perPage));
+    url.searchParams.set('page', String(props.page));
+    url.searchParams.set('show', String(props.perPage));
     const payload = await requestJson(url.pathname + url.search, { signal });
     if (destroyed || current !== generation) return;
     const devices = mapDevices(payload, props.showAll);
@@ -110,12 +102,12 @@ async function reload() {
       if (!point) continue;
       leaflet
         .marker(point, {
-          title: String(device.name ?? "Device"),
-          alt: String(device.name ?? "Device"),
+          title: String(device.name ?? 'Device'),
+          alt: String(device.name ?? 'Device'),
           keyboard: true,
           icon: leaflet.divIcon({
             html: markerIcon(device.status),
-            className: "device-map-marker",
+            className: 'device-map-marker',
             iconSize: [30, 42],
             iconAnchor: [15, 42],
           }),
@@ -125,16 +117,9 @@ async function reload() {
       located.value++;
     }
   } catch (failure) {
-    if (
-      destroyed ||
-      signal.aborted ||
-      current !== generation ||
-      failure.name === "AbortError"
-    )
+    if (destroyed || signal.aborted || current !== generation || failure.name === 'AbortError')
       return;
-    error.value = failure.status
-      ? failure.message
-      : "Could not load device locations. Try again.";
+    error.value = failure.status ? failure.message : 'Could not load device locations. Try again.';
   } finally {
     // Remove loading state entirely ? the map container always shows
     // content (markers from server devices or "No devices"/"None located")
@@ -144,13 +129,7 @@ async function reload() {
 
 onMounted(reload);
 watch(
-  () => [
-    props.page,
-    props.perPage,
-    props.showAll,
-    props.endpoints.all,
-    props.endpoints.paginated,
-  ],
+  () => [props.page, props.perPage, props.showAll, props.endpoints.all, props.endpoints.paginated],
   reload,
 );
 onBeforeUnmount(() => {
@@ -165,11 +144,7 @@ onBeforeUnmount(() => {
   <section aria-label="Device locations">
     <div v-if="error" class="alert alert-danger" role="alert">
       {{ error }}
-      <button
-        type="button"
-        class="btn btn-outline-danger btn-sm ms-2"
-        @click="reload"
-      >
+      <button type="button" class="btn btn-outline-danger btn-sm ms-2" @click="reload">
         Retry map
       </button>
     </div>
@@ -180,15 +155,9 @@ onBeforeUnmount(() => {
       None of these devices have valid coordinates.
     </p>
     <p v-if="tileWarning" role="status" class="text-muted small">
-      The map background is unavailable. Device details remain available in the
-      list.
+      The map background is unavailable. Device details remain available in the list.
     </p>
-    <div
-      id="map"
-      ref="canvas"
-      class="device-map mb-2"
-      aria-label="Map of device locations"
-    />
+    <div id="map" ref="canvas" class="device-map mb-2" aria-label="Map of device locations" />
   </section>
 </template>
 
