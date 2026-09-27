@@ -62,28 +62,31 @@ async function reload() {
         for (const device of serversideDevices) {
             const point = coordinates(device);
             if (!point) continue;
-            leaflet.marker(point, {
-                title: String(device.name ?? 'Device'),
-                alt: String(device.name ?? 'Device'),
-                keyboard: true,
-                icon: leaflet.divIcon({
-                    html: markerIcon(device.status),
-                    className: 'device-map-marker',
-                    iconSize: [30, 42],
-                    iconAnchor: [15, 42],
-                }),
-            })
+            leaflet
+                .marker(point, {
+                    title: String(device.name ?? 'Device'),
+                    alt: String(device.name ?? 'Device'),
+                    keyboard: true,
+                    icon: leaflet.divIcon({
+                        html: markerIcon(device.status),
+                        className: 'device-map-marker',
+                        iconSize: [30, 42],
+                        iconAnchor: [15, 42],
+                    }),
+                })
                 .addTo(markers)
-                .bindPopup(devicePopup({
-                    name: device.name,
-                    address_1: device.address_1 ?? null,
-                    address_2: device.address_2 ?? null,
-                    city: device.city ?? null,
-                    address_state: device.address_state ?? null,
-                    zip_code: device.zip_code ?? null,
-                    country: device.country ?? null,
-                    last_updated: device.lastUpdated ?? '',
-                }));
+                .bindPopup(
+                    devicePopup({
+                        name: device.name,
+                        address_1: device.address_1 ?? null,
+                        address_2: device.address_2 ?? null,
+                        city: device.city ?? null,
+                        address_state: device.address_state ?? null,
+                        zip_code: device.zip_code ?? null,
+                        country: device.country ?? null,
+                        last_updated: device.lastUpdated ?? '',
+                    }),
+                );
             located.value++;
         }
         const url = new URL(
@@ -123,7 +126,7 @@ async function reload() {
             ? failure.message
             : 'Could not load device locations. Try again.';
     } finally {
-        // Remove loading state entirely — the map container always shows
+        // Remove loading state entirely ? the map container always shows
         // content (markers from server devices or "No devices"/"None located")
         // so there is no brief flash between mount and API completion.
     }
