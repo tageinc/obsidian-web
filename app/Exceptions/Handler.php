@@ -41,6 +41,21 @@ class Handler extends ExceptionHandler
 
         // Custom render for specific exceptions
         $this->renderable(function (TokenMismatchException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'error'   => 'Session expired',
+                    'message' => 'Your session has expired. Please log in again.',
+                ], 419);
+            }
+
+            // Send the user to the recovery page; that page performs the refresh
+            // with an explicit POST and falls back to login when needed.
+            if ($request->user()) {
+                return redirect()->route('session.expired')
+                    ->with('error', 'Your session has expired. Please log in again.');
+            }
+
+            // Unauthenticated: redirect to login page.
             return redirect()->route('login')->with('message', 'Sorry, your session seems to have expired. Please try logging in again.');
         });
     }
