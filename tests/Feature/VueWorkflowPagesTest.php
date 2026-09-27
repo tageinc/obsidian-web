@@ -136,7 +136,7 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame('Saved device', $props['success']);
         $this->assertSame(route('all-devices'), $props['mapEndpoints']['all']);
         $this->assertSame(route('paginated-devices'), $props['mapEndpoints']['paginated']);
-        $this->assertSame(['id', 'name', 'serial', 'sku', 'address', 'state', 'status', 'lastUpdated', 'links'], array_keys($props['devices'][0]));
+        $this->assertSame(['id', 'name', 'serial', 'sku', 'address', 'state', 'status', 'lastUpdated', 'latitude', 'longitude', 'links'], array_keys($props['devices'][0]));
         $this->assertSame('OWNED-2', $props['devices'][0]['serial']);
         $this->assertSame('<SKU>', $props['devices'][0]['sku']);
         $this->assertSame('1 Device Street, Suite 2, Vancouver, BC, V6B 1A1, CA', $props['devices'][0]['address']);
