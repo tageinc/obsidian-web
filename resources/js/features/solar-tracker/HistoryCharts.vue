@@ -104,7 +104,8 @@ function editPeriod() {
     rangeError.value = anchor === null ? 'Enter a valid date and time in Pacific Time.' : '';
     if (rangeError.value) return;
     if (view.value === 'day') setRange(lastDay(anchor));
-    else if (shortWindowHours[view.value]) setRange(lastNHours(shortWindowHours[view.value], anchor));
+    else if (shortWindowHours[view.value])
+        setRange(lastNHours(shortWindowHours[view.value], anchor));
     else setRange(calendarRange(view.value, anchor));
 }
 function editRange() {
