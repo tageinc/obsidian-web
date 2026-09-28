@@ -26,7 +26,7 @@ function history() {
                     version: '2',
                     prefix: 'SP1',
                     description: 'A release',
-                    createdAt: '2026-09-01 12:00:00',
+                    createdAt: '2026-09-01T12:00:00+00:00',
                 },
             ],
             filters: {
@@ -58,6 +58,44 @@ afterEach(() => {
 });
 
 describe('release history filtering', () => {
+    it.each([
+        ['firmware', 'Firmware', 'firmware'],
+        ['config', 'Configuration', 'config'],
+    ])('offers actions on each %s release', async (kind, title, path) => {
+        history();
+        await wrapper.setProps({
+            kind,
+            title,
+            rows: [
+                {
+                    id: 42,
+                    version: '2',
+                    prefix: 'SP1',
+                    updateUrl: `/developer-workspace/${path}/42`,
+                    deleteUrl: `/developer-workspace/${path}/42`,
+                },
+            ],
+        });
+        expect(wrapper.findAll('tbody tr > *')).toHaveLength(5);
+        expect(wrapper.get('tbody button').attributes('aria-label')).toBe(
+            `Actions for ${title.toLowerCase()} 2`,
+        );
+    });
+
+    it('renders missing or invalid upload dates without a misleading epoch date', async () => {
+        history();
+        await wrapper.setProps({
+            rows: [null, '', 'invalid-date'].map((createdAt, index) => ({
+                version: String(index),
+                createdAt,
+            })),
+        });
+        for (const time of wrapper.findAll('time')) {
+            expect(time.text()).toBe('—');
+            expect(time.attributes('datetime')).toBeUndefined();
+        }
+    });
+
     it('discards unapplied selections on dismissal, then commits a combined filter without losing the other section', async () => {
         history();
         const trigger = wrapper.get('.release-filter-trigger');

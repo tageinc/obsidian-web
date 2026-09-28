@@ -67,6 +67,50 @@ external clients share the same [settings and activity API](external-api-keys.md
 
 ## Delivery
 
+### Account-access email delivery
+
+Password reset (`POST /password/email`) and email-verification resend
+(`POST /email/resend`) send synchronously through the configured Laravel mailer.
+They are excluded from app-activity pairing and the activity-email preference;
+opting out of app activity email does not prevent account recovery or verification.
+Production must use a working delivery transport: the `log` and `array` mailers
+do not deliver messages to recipients. The existing deployment preserves the
+server's SMTP settings and clears Laravel's configuration cache.
+
+If rendering or delivery of a reset email fails, the browser returns to its form
+with an email-field error; JSON requests receive the usual **422** validation
+envelope. The password remains unchanged and success is not reported. The reset
+token created for that failed attempt is removed if it is still the current
+token, allowing a retry without the normal successful-send throttle. A newer
+token from another request is preserved. Successful sends retain the broker's
+one-minute resend throttle and one-hour, single-use reset token contract.
+
+Verification resend preserves its generic failure feedback and leaves the user
+unverified on delivery failure. Successful verification links require a valid
+signature, the current email hash, and the one-hour expiration, including when
+opened after signing out. `APP_URL` and trusted proxy configuration must preserve
+the public HTTPS origin when links are generated and checked.
+
+Initial registration uses the same verification notification through the
+`Registered` event. If delivery fails after the account is created, the account
+remains unverified and the user reaches the verification notice with an explicit
+email-not-sent message and resend action. Verified-only pages remain inaccessible.
+The failure uses the same sanitized verification event with `source=registration`;
+it does not report verification success or create a second account on retry.
+
+Failures log only sanitized event names and exception classes:
+`auth.password_reset_delivery_failed`, `auth.password_reset_token_cleanup_failed`,
+and `auth.verification_delivery_failed`. Exception messages, credentials,
+recipient addresses, reset tokens, and signed links are not recorded by these
+handlers. In the production Compose deployment these events go to the app's
+stderr log. Inspect the effective mailer, SMTP host/port/encryption, and whether
+credentials are configured when diagnosing failures; do not expose their values.
+Tests render actual notification emails into the in-memory transport and follow
+synthetic links; that verifies application behavior, while production mailbox
+delivery still requires a separate authorized live check.
+
+### App activity delivery
+
 `App\Services\AppUpdateDelivery::queue()` accepts already-authorized User models
 and an `App\Mail\AppUpdateMail`. It deduplicates user IDs and creates one
 `App\Jobs\SendAppUpdateMail` per recipient on the `app-updates` database

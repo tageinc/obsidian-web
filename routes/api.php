@@ -35,9 +35,13 @@ Route::prefix('external/v1')->name('external.')->middleware(['auth.external', 't
     Route::post('/remote-control', [ViewDeviceController::class, 'updateSolarTracker'])->name('remote.update');
     Route::get('/firmware', [ExternalApiController::class, 'firmware'])->name('firmware');
     Route::post('/firmware', [DeveloperWorkspaceController::class, 'uploadFirmware'])->name('firmware.store');
+    Route::patch('/firmware/{firmware}', [DeveloperWorkspaceController::class, 'updateFirmware'])->whereNumber('firmware')->name('firmware.update');
+    Route::delete('/firmware/{firmware}', [DeveloperWorkspaceController::class, 'deleteFirmware'])->whereNumber('firmware')->name('firmware.destroy');
     Route::get('/firmware/{version}/download', [DeveloperWorkspaceController::class, 'serveFirmwareByVersion'])->name('firmware.download');
     Route::get('/configuration', [ExternalApiController::class, 'configuration'])->name('configuration');
     Route::post('/configuration', [DeveloperWorkspaceController::class, 'uploadConfig'])->name('configuration.store');
+    Route::patch('/configuration/{configuration}', [DeveloperWorkspaceController::class, 'updateConfig'])->whereNumber('configuration')->name('configuration.update');
+    Route::delete('/configuration/{configuration}', [DeveloperWorkspaceController::class, 'deleteConfig'])->whereNumber('configuration')->name('configuration.destroy');
     Route::get('/configuration/{version}/download', [DeveloperWorkspaceController::class, 'serveConfigByVersion'])->name('configuration.download');
 });
 

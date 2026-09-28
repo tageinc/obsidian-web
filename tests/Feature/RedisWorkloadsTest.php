@@ -189,7 +189,7 @@ class RedisWorkloadsTest extends TestCase
         Storage::fake('local');
         FirmwareVersions::create(['version' => '1', 'prefix' => 'solar']);
         $this->assertVersion('firmware', 'solar', '1');
-        $request = Request::create('/upload-firmware', 'POST', ['prefix' => 'solar', 'description' => 'synthetic']);
+        $request = Request::create('/upload-firmware', 'POST', ['version' => '2', 'prefix' => 'solar', 'description' => 'synthetic']);
         $request->files->set('firmware', UploadedFile::fake()->create('firmware.bin', 1));
         app(DeveloperWorkspaceController::class)->uploadFirmware($request);
         $this->assertVersion('firmware', 'solar', '2');

@@ -25,8 +25,10 @@ class ExternalApiController extends Controller
                 'GET /api/external/v1/remote-control?serial_no={serial}',
                 'POST /api/external/v1/remote-control',
                 'GET /api/external/v1/firmware', 'POST /api/external/v1/firmware',
+                'PATCH /api/external/v1/firmware/{firmware}', 'DELETE /api/external/v1/firmware/{firmware}',
                 'GET /api/external/v1/firmware/{version}/download',
                 'GET /api/external/v1/configuration', 'POST /api/external/v1/configuration',
+                'PATCH /api/external/v1/configuration/{configuration}', 'DELETE /api/external/v1/configuration/{configuration}',
                 'GET /api/external/v1/configuration/{version}/download',
             ],
         ]);

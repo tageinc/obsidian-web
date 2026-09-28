@@ -26,6 +26,7 @@ const props = defineProps({
 });
 defineEmits(['submit']);
 const firmware = computed(() => props.kind === 'firmware');
+const version = ref(props.values.version ?? '');
 const description = ref(props.values.description ?? '');
 const prefix = ref(props.values.prefix ?? '');
 const showUpload = ref(
@@ -143,6 +144,17 @@ function checkFile(event) {
                                 </div>
                             </div>
                         </div>
+                        <FormField
+                            :id="`${kind}-version`"
+                            v-model="version"
+                            name="version"
+                            :label="`${title} version`"
+                            type="number"
+                            min="1"
+                            step="1"
+                            required
+                            :errors="errors.version"
+                        />
                         <div class="mb-3">
                             <label :for="`${kind}-description`" class="form-label">{{
                                 firmware ? 'Firmware Description' : 'Config Description'
@@ -209,6 +221,7 @@ function checkFile(event) {
             </FormModal>
             <ReleaseHistory
                 :kind="kind"
+                :csrf-token="csrfToken"
                 :title="title"
                 :rows="rows"
                 :pagination="pagination"

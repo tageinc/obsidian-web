@@ -220,7 +220,10 @@ test('creating and revoking keys refreshes the filtered list without losing filt
     await page.reload();
     await expect(panel.getByRole('rowheader')).toHaveText([name]);
     await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
-    await panel.getByRole('button', { name: `Revoke ${name}`, exact: true }).click();
+    await panel.getByRole('button', { name: `Actions for API key ${name}`, exact: true }).click();
+    const menu = page.getByRole('menu', { name: `Actions for API key ${name}`, exact: true });
+    await expect(menu.getByRole('menuitem')).toHaveCount(1);
+    await menu.getByRole('menuitem', { name: `Revoke ${name}`, exact: true }).click();
     await page.getByRole('button', { name: 'Revoke key', exact: true }).click();
     await expect(panel.getByRole('rowheader')).toHaveCount(0);
     await expect(
@@ -235,6 +238,9 @@ test('creating and revoking keys refreshes the filtered list without losing filt
     await expect(
         panel.getByRole('row').filter({ has: page.getByRole('rowheader', { name, exact: true }) }),
     ).toContainText('Revoked');
+    await expect(
+        panel.getByRole('button', { name: `Actions for API key ${name}`, exact: true }),
+    ).toBeDisabled();
 });
 
 test('API-key asynchronous search and filter actions retain keyboard focus', async ({ page }) => {

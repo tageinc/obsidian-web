@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\FirmwareVersions;
 use App\Models\ConfigVersions;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class DeveloperWorkspaceController extends Controller
 {
@@ -69,7 +73,7 @@ class DeveloperWorkspaceController extends Controller
         foreach (['firmware' => FirmwareVersions::class, 'config' => ConfigVersions::class] as $kind => $model) {
             $state = $releaseStates[$kind];
             $records = $this->releaseQuery($model, $state['filters'])
-                ->paginate($state['perPage'], ['version', 'prefix', 'description', 'created_at'], $kind.'_page', $state['page'])
+                ->paginate($state['perPage'], ['id', 'version', 'prefix', 'description', 'created_at'], $kind.'_page', $state['page'])
                 ->appends(array_merge($releaseQueries['firmware'], $releaseQueries['config'], ['section' => $kind]));
             $otherKind = $kind === 'firmware' ? 'config' : 'firmware';
             $preservedQuery = [];
@@ -126,7 +130,7 @@ class DeveloperWorkspaceController extends Controller
         }
         if (in_array($filters['sort'], ['version_desc', 'version_asc'], true)) {
             $direction = $filters['sort'] === 'version_asc' ? 'asc' : 'desc';
-            $query->orderByRaw('CAST(version AS DECIMAL(20, 0)) '.$direction);
+            $query->orderByReleaseVersion($direction);
         } elseif ($filters['sort'] === 'prefix_asc') {
             $query->orderBy('prefix');
         }
@@ -136,109 +140,195 @@ class DeveloperWorkspaceController extends Controller
     }
 
 
-    /**
-     * Handle the firmware file upload.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function uploadFirmware(Request $request)
     {
-        $request->validate([
-            'firmware' => 'required|file|max:10240', // 10MB Max
-            'description' => 'required|string|max:255',
-            'prefix' => 'required|string|max:255' // Optional prefix field
-        ]);
-
-        $file = $request->file('firmware');
-        $version = $this->generateFirmwareVersionNumber();
-        $prefix = $request->input('prefix');
-        $filename = $prefix ? "{$prefix}_firmware_{$version}.bin" : "firmware_{$version}.bin";
-        $path = $file->storeAs('public/firmware', $filename);
-
-        if ($path) {
-            FirmwareVersions::create([
-                'version' => $version,
-                'prefix' => $prefix,
-                'file_path' => $path,
-                'description' => $request->input('description')
-            ]);
-
-            if ($request->expectsJson()) {
-                return response()->json(['version' => (string) $version, 'message' => 'Firmware uploaded successfully.'], 201);
-            }
-            $message = "Firmware v{$version} uploaded successfully!";
-            return back()->with('success', $message)->with('active_upload', 'firmware');
-        } else {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Unable to store firmware.'], 500);
-            }
-            return back()->with('error', 'There was an issue uploading the firmware file.')->with('active_upload', 'firmware')
-                ->withInput($request->only(['_upload_kind', 'description', 'prefix']));
-        }
+        return $this->uploadRelease($request, 'firmware', FirmwareVersions::class);
     }
 
-    /**
-     * Handle the JSON configuration file upload.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function uploadConfig(Request $request)
     {
-        $request->validate([
-            'config' => 'required|file|mimes:json|max:1024', // 1MB Max for JSON file
+        return $this->uploadRelease($request, 'config', ConfigVersions::class);
+    }
+
+    public function updateFirmware(Request $request, $firmware)
+    {
+        return $this->updateRelease($request, $firmware, 'firmware', FirmwareVersions::class);
+    }
+
+    public function updateConfig(Request $request, $configuration)
+    {
+        return $this->updateRelease($request, $configuration, 'config', ConfigVersions::class);
+    }
+
+    public function deleteFirmware(Request $request, $firmware)
+    {
+        return $this->deleteRelease($request, $firmware, 'firmware', FirmwareVersions::class);
+    }
+
+    public function deleteConfig(Request $request, $configuration)
+    {
+        return $this->deleteRelease($request, $configuration, 'config', ConfigVersions::class);
+    }
+
+    private function uploadRelease(Request $request, string $kind, string $model)
+    {
+        $title = $kind === 'firmware' ? 'Firmware' : 'Configuration';
+        $extension = $kind === 'firmware' ? 'bin' : 'json';
+        $this->normalizeReleaseVersion($request);
+        $rules = [
+            $kind => $kind === 'firmware' ? 'required|file|max:10240' : 'required|file|mimes:json|max:1024',
+            'version' => $this->releaseVersionRules($model),
             'description' => 'required|string|max:255',
-            'prefix' => 'required|string|max:255' // Optional prefix field
-        ]);
+            'prefix' => 'required|string|max:255',
+        ];
+        $request->validate($rules);
+        $path = null;
+        $committed = false;
+        try {
+            $record = DB::transaction(function () use ($request, $rules, $kind, $model, $extension, &$path, &$committed) {
+                $this->lockReleaseWrites($request);
+                $data = $request->validate($rules);
+                // The stored identity never depends on editable version text or user input.
+                $path = $request->file($kind)->storeAs('public/'.$kind, Str::uuid().'.'.$extension);
+                if (!$path) {
+                    return null;
+                }
+                DB::afterCommit(function () use (&$committed) {
+                    $committed = true;
+                });
 
-        $configFile = $request->file('config');
-        $configFileVersion = $this->generateConfigVersionNumber();
-        $prefix = $request->input('prefix');
-        $configFilename = $prefix ? "{$prefix}_config_{$configFileVersion}.json" : "config_{$configFileVersion}.json";
-        $configPath = $configFile->storeAs('public/config', $configFilename);
-
-        if ($configPath) {
-            ConfigVersions::create([
-                'file_path' => $configPath,
-                'prefix' => $prefix,
-                'version' => $configFileVersion,
-                'description' => $request->input('description') // Use description from the request
-            ]);
-
+                return $model::create([
+                    'version' => $data['version'], 'prefix' => $data['prefix'],
+                    'description' => $data['description'], 'file_path' => $path,
+                ]);
+            });
+        } catch (\Throwable $exception) {
+            // A post-commit cache failure must not remove an already-persisted release file.
+            if ($path && !$committed) {
+                Storage::delete($path);
+            }
+            throw $exception;
+        }
+        if (!$record) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unable to store '.strtolower($title).'.'], 500);
+            }
+            return back()->with('error', 'There was an issue uploading the '.strtolower($title).' file.')->with('active_upload', $kind)
+                ->withInput($request->only(['_upload_kind', 'version', 'description', 'prefix']));
+        }
+        if ($kind === 'config') {
             Log::info('device.config_uploaded');
-            if ($request->expectsJson()) {
-                return response()->json(['version' => (string) $configFileVersion, 'message' => 'Configuration uploaded successfully.'], 201);
+        }
+        if ($request->expectsJson()) {
+            return response()->json(['id' => $record->id, 'version' => (string) $record->version, 'message' => $title.' uploaded successfully.'], 201);
+        }
+
+        return back()->with('success', $title.' v'.$record->version.' uploaded successfully!')->with('active_upload', $kind);
+    }
+
+    private function updateRelease(Request $request, $id, string $kind, string $model)
+    {
+        $this->normalizeReleaseVersion($request);
+        $record = DB::transaction(function () use ($request, $id, $model) {
+            $this->lockReleaseWrites($request);
+            $record = $model::whereKey($id)->lockForUpdate()->firstOrFail();
+            $data = $request->validate([
+                'version' => array_merge(['sometimes'], $this->releaseVersionRules($model, $record->id)),
+                'description' => 'sometimes|required|string|max:255',
+                'prefix' => 'prohibited', 'firmware' => 'prohibited', 'config' => 'prohibited', 'file_path' => 'prohibited',
+                'created_at' => 'prohibited', 'updated_at' => 'prohibited', 'id' => 'prohibited',
+            ]);
+            $record->fill(Arr::only($data, ['version', 'description']))->save();
+
+            return $record;
+        });
+        $message = ($kind === 'firmware' ? 'Firmware' : 'Configuration').' updated successfully.';
+        if ($request->expectsJson()) {
+            $this->flashReleaseSuccess($request, $kind, $message);
+            return response()->json(['id' => $record->id, 'version' => (string) $record->version, 'message' => $message]);
+        }
+
+        return back()->with('success', $message)->with('active_upload', $kind);
+    }
+
+    private function deleteRelease(Request $request, $id, string $kind, string $model)
+    {
+        $path = null;
+        $staged = null;
+        $committed = false;
+        $otherModel = $kind === 'firmware' ? ConfigVersions::class : FirmwareVersions::class;
+        try {
+            DB::transaction(function () use ($request, $id, $kind, $model, $otherModel, &$path, &$staged, &$committed) {
+                $this->lockReleaseWrites($request);
+                $record = $model::whereKey($id)->lockForUpdate()->firstOrFail();
+                $path = $record->file_path;
+                // Shared legacy files remain available until their final reference is removed.
+                if ($path && !$model::where('file_path', $path)->whereKeyNot($record->id)->exists()
+                    && !$otherModel::where('file_path', $path)->exists() && Storage::exists($path)) {
+                    $extension = $kind === 'firmware' ? 'bin' : 'json';
+                    $destination = $kind.'-deletions/'.Str::uuid().'.'.$extension;
+                    if (!Storage::move($path, $destination)) {
+                        throw new \RuntimeException('Unable to stage release deletion.');
+                    }
+                    $staged = $destination;
+                }
+                DB::afterCommit(function () use (&$committed, &$staged, $id, $kind) {
+                    $committed = true;
+                    if ($staged) {
+                        try {
+                            if (!Storage::delete($staged)) {
+                                throw new \RuntimeException('Private cleanup failed.');
+                            }
+                        } catch (\Throwable $exception) {
+                            // The public file and release are gone; retain private recovery bytes.
+                            Log::warning($kind.'.private_deletion_cleanup_failed', ['release_id' => (string) $id]);
+                        }
+                    }
+                });
+                $record->delete();
+            });
+        } catch (\Throwable $exception) {
+            if ($staged && !$committed && !Storage::move($staged, $path)) {
+                Log::error($kind.'.deletion_restore_failed', ['release_id' => (string) $id]);
             }
-            return back()->with('success', "Config file uploaded successfully!")->with('active_upload', 'config');
-        } else {
-            if ($request->expectsJson()) {
-                return response()->json(['message' => 'Unable to store configuration.'], 500);
-            }
-            return back()->with('error', 'There was an issue uploading the config file.')->with('active_upload', 'config')
-                ->withInput($request->only(['_upload_kind', 'description', 'prefix']));
+            throw $exception;
+        }
+        $message = ($kind === 'firmware' ? 'Firmware' : 'Configuration').' deleted successfully.';
+        if ($request->expectsJson()) {
+            $this->flashReleaseSuccess($request, $kind, $message);
+            return response()->json(['message' => $message]);
+        }
+
+        return back()->with('success', $message)->with('active_upload', $kind);
+    }
+
+    private function normalizeReleaseVersion(Request $request): void
+    {
+        if (is_int($request->input('version'))) {
+            $request->merge(['version' => (string) $request->input('version')]);
         }
     }
-    /**
-     * Generate a new version number.
-     *
-     * @return string
-     */
-    private function generateFirmwareVersionNumber()
+
+    private function flashReleaseSuccess(Request $request, string $kind, string $message): void
     {
-        $latestVersion = FirmwareVersions::orderBy('version', 'desc')->first();
-        return $latestVersion ? (((int) $latestVersion->version) + 1) : '1';
+        if ($request->hasSession()) {
+            $request->session()->flash('success', $message);
+            $request->session()->flash('active_upload', $kind);
+        }
     }
 
-    /**
-     * Generate a new version number for config files.
-     *
-     * @return string
-     */
-    private function generateConfigVersionNumber()
+    private function releaseVersionRules(string $model, $ignore = null): array
     {
-        $latestConfigVersion = ConfigVersions::orderBy('version', 'desc')->first();
-        return $latestConfigVersion ? (((int) $latestConfigVersion->version) + 1) : '1';
+        return ['required', 'string', 'max:255', 'regex:/^[1-9][0-9]*$/D', Rule::unique((new $model)->getTable(), 'version')->ignore($ignore)];
+    }
+
+    private function lockReleaseWrites(Request $request): void
+    {
+        // Both authenticated entry points share one Developer. Serialize their writes so
+        // versions remain unique per release kind without rewriting duplicate legacy data.
+        if ($request->user()) {
+            $request->user()->newQuery()->whereKey($request->user()->getKey())->lockForUpdate()->firstOrFail();
+        }
     }
 
     /**
@@ -248,7 +338,7 @@ class DeveloperWorkspaceController extends Controller
      */
     public function getLatestConfigVersionNumber($prefix = null)
     {
-        $latestConfig = ConfigVersions::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+        $latestConfig = ConfigVersions::where('prefix', $prefix)->orderByReleaseVersion()->first();
 		if($latestConfig){
 			$latestVersion = array('version' => (string)$latestConfig->version);
 			$json = json_encode($latestVersion);
@@ -265,7 +355,7 @@ class DeveloperWorkspaceController extends Controller
      */
     public function getLatestFirmwareVersionNumber($prefix = null)
     {
-        $latestFirmware = FirmwareVersions::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+        $latestFirmware = FirmwareVersions::where('prefix', $prefix)->orderByReleaseVersion()->first();
 		if($latestFirmware){
 			$latestVersion = array('version' => (string)$latestFirmware->version);
 			$json = json_encode($latestVersion);
@@ -344,7 +434,7 @@ class DeveloperWorkspaceController extends Controller
         // Log::info('Full Request URL: ' . request()->fullUrl());
 
         if ($prefix) {
-            $firmware = FirmwareVersions::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+            $firmware = FirmwareVersions::where('prefix', $prefix)->orderByReleaseVersion()->first();
             if ($firmware) {
                 // Log::info('Specific firmware prefix requested: ' . $firmware->prefix);
             } else {
@@ -369,7 +459,7 @@ class DeveloperWorkspaceController extends Controller
         // Log::info('Full Request URL: ' . request()->fullUrl());
 
         if ($prefix) {
-            $config = ConfigVersions::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+            $config = ConfigVersions::where('prefix', $prefix)->orderByReleaseVersion()->first();
             if ($config) {
                 // Log::info('Specific config prefix requested: ' . $config->prefix);
             } else {

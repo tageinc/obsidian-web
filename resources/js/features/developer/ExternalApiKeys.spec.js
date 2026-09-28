@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { flushPromises, mount } from '@vue/test-utils';
+import { DOMWrapper, flushPromises, mount } from '@vue/test-utils';
 import ExternalApiKeys from './ExternalApiKeys.vue';
 import WorkspaceFilters from './WorkspaceFilters.vue';
 import { requestJson } from '../../shared/api/client.js';
@@ -36,6 +36,13 @@ async function page() {
     });
     await flushPromises();
     return wrapper;
+}
+async function openRevoke() {
+    await wrapper.get('[aria-label="Actions for API key Integration"]').trigger('click');
+    await flushPromises();
+    const menu = new DOMWrapper(document.body).get('[role="menu"]');
+    expect(menu.findAll('[role="menuitem"]')).toHaveLength(1);
+    await menu.get('[aria-label="Revoke Integration"]').trigger('click');
 }
 beforeEach(() => {
     vi.resetAllMocks();
@@ -92,7 +99,7 @@ describe('external API key errors and pending requests', () => {
             .mockResolvedValueOnce(list)
             .mockRejectedValueOnce(new Error('Please try again'));
         await page();
-        await wrapper.get('button[aria-label="Revoke Integration"]').trigger('click');
+        await openRevoke();
         await wrapper
             .findAll('button')
             .find((button) => button.text() === 'Revoke key')
@@ -103,8 +110,43 @@ describe('external API key errors and pending requests', () => {
         await wrapper.get('.test-close').trigger('click');
         await flushPromises();
         expect(document.activeElement).toBe(
-            wrapper.get('button[aria-label="Revoke Integration"]').element,
+            wrapper.get('button[aria-label="Actions for API key Integration"]').element,
         );
+    });
+
+    it('opens confirmation without revoking, restores focus on cancellation and guards duplicate revocation', async () => {
+        let resolve;
+        requestJson.mockResolvedValueOnce(list).mockImplementationOnce(
+            () =>
+                new Promise((done) => {
+                    resolve = done;
+                }),
+        );
+        await page();
+        await openRevoke();
+        expect(requestJson).toHaveBeenCalledTimes(1);
+        await wrapper.get('.test-close').trigger('click');
+        await flushPromises();
+        const trigger = wrapper.get('[aria-label="Actions for API key Integration"]');
+        expect(document.activeElement).toBe(trigger.element);
+        expect(requestJson).toHaveBeenCalledTimes(1);
+        await openRevoke();
+        const confirm = wrapper.findAll('button').find((button) => button.text() === 'Revoke key');
+        await confirm.trigger('click');
+        await confirm.trigger('click');
+        expect(requestJson).toHaveBeenCalledTimes(2);
+        expect(requestJson.mock.lastCall).toEqual([
+            '/developer-workspace/api-keys/1/revoke',
+            expect.objectContaining({ method: 'POST' }),
+        ]);
+        expect(trigger.element.disabled).toBe(true);
+        expect(wrapper.get('.test-close').element.disabled).toBe(true);
+        requestJson.mockResolvedValueOnce({ ...list, data: [{ ...record, status: 'Revoked' }] });
+        resolve({ data: { ...record, status: 'Revoked' } });
+        await flushPromises();
+        expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+        expect(trigger.element.disabled).toBe(true);
+        expect(wrapper.get('tbody').text()).toContain('Revoked');
     });
 });
 
@@ -184,7 +226,7 @@ describe('external API key filtering', () => {
             .mockResolvedValueOnce({ data: { ...record, status: 'Revoked' } })
             .mockResolvedValueOnce({ ...list, data: [], total: 0, from: null, to: null });
         await page();
-        await wrapper.get('[aria-label="Revoke Integration"]').trigger('click');
+        await openRevoke();
         await wrapper
             .findAll('button')
             .find((button) => button.text() === 'Revoke key')

@@ -38,12 +38,10 @@
                         <th scope="row">{{ $key['name'] }}</th><td>{{ $key['prefix'] }}…</td><td>{{ $key['status'] }}</td>
                         <td>{{ $key['last_used_at'] ?? 'Never' }}</td><td>{{ $key['expires_at'] ?? 'Never' }}</td>
                         <td>
-                            @if ($key['status'] !== 'Revoked')
-                                <form method="POST" action="{{ route('developer.api-keys.revoke', $key['id']) }}">
-                                    @csrf
-                                    <button class="btn btn-outline-danger btn-sm" type="submit" aria-label="Revoke {{ $key['name'] }}">Revoke</button>
-                                </form>
-                            @endif
+                            <form method="POST" action="{{ route('developer.api-keys.revoke', $key['id']) }}">
+                                @csrf
+                                <div data-api-key-actions data-props="{{ json_encode(['id' => $key['id'], 'name' => $key['name'], 'status' => $key['status']]) }}"></div>
+                            </form>
                         </td>
                     </tr>
                 @empty
