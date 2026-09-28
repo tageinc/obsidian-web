@@ -127,7 +127,7 @@ test('history ranges and PDF reports navigate, validate and retain state without
     await panel.getByLabel('View', { exact: true }).selectOption('custom');
     await expect(from).toHaveValue(value(now - 86400000));
     await expect(to).toHaveValue(value(now));
-    await from.fill(datetimeInput(now - 2 * 3600000));
+    await from.fill(value(now - 2 * 3600000));
     await expect(panel.getByLabel('View', { exact: true })).toHaveValue('custom');
     await expect(panel.getByText('2 raw readings', { exact: true })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Previous time range' })).toBeDisabled();
@@ -163,7 +163,7 @@ test('history ranges and PDF reports navigate, validate and retain state without
         0,
     );
     await expect(panel.getByLabel('Measurement', { exact: true })).toHaveValue('ps_avg');
-    await from.fill(datetimeInput(now + 3600000));
+    await from.fill(value(now + 3600000));
     await expect(rangeError).toContainText('before or equal');
     await expect(report).toBeDisabled();
     await expect(panel.getByRole('img')).not.toBeVisible();
@@ -264,7 +264,7 @@ for (const [viewName, hours] of [
         // Simulate the native Reset empty-input event; actual iOS picker needs manual testing.
         await ending.fill('');
         await expect(ending).toHaveValue(value(now));
-        await expect(panel.locator('#history-range-error')).toHaveCount(0);
+        await expect(panel.locator('#history-range-error')).toHaveText('');
         await expect(view).toHaveValue(viewName);
         await expect(metric).toHaveValue('pds');
         await expect(panel.getByRole('img')).toBeVisible();
