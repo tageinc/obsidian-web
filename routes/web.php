@@ -14,6 +14,8 @@ use App\Http\Controllers\ThankYouController;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\DeviceManagerController;
+use App\Http\Controllers\SessionExpiredController;
+use App\Http\Middleware\HandleExpiredSession;
 use App\Http\Controllers\Delta;
 
 
@@ -40,7 +42,7 @@ Route::post('/email/resend', [VerificationController::class, 'resend'])->name('v
 
 Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->name('verification.verify');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware([HandleExpiredSession::class, 'auth', 'verified'])->group(function () {
 
 Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
     Route::get('/dashboard', [DeviceManagerController::class, 'index'])->name('dashboard');
@@ -92,3 +94,8 @@ Route::get('/delta', [Delta::class, 'showDelta'])->name('delta');
 });
 
 Route::get('/contact-us', [ContactUsController::class, 'index'])->name('contact-us');
+
+// ---------- Expired-session handling (OB-18) ----------
+// Centralized session-expired page + refresh endpoint.
+Route::get('/session-expired', [SessionExpiredController::class, 'index'])->name('session.expired');
+Route::post('/session/refresh',   [SessionExpiredController::class, 'refresh'])->name('session.expire.refresh');

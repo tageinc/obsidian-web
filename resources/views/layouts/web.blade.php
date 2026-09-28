@@ -540,6 +540,9 @@
     @stack('modals')
     @stack('scripts')
     @livewireScripts
+
+    <!-- Global session-expired interceptor for native fetch / XHR -->
+    <script src="{{ asset('js/session-expired-interceptor.js') }}"></script>
 </body>
 
 </html>

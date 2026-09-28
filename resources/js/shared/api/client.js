@@ -10,6 +10,34 @@ export class RequestError extends Error {
     }
 }
 
+// ---- Global session-expired dispatcher (used by components, fetch fallback, etc.) ----
+const SESSION_EXPIRED_EVENT = 'session:expired';
+const _listeners = new Set();
+let _windowListenerInstalled = false;
+
+function installWindowListener() {
+    if (_windowListenerInstalled || typeof window === 'undefined') return;
+    window.addEventListener(SESSION_EXPIRED_EVENT, (event) => {
+        const status = event.detail?.status ?? event.detail ?? 401;
+        _listeners.forEach((listener) => listener(status));
+    });
+    _windowListenerInstalled = true;
+}
+
+export function onSessionExpired(cb) {
+    installWindowListener();
+    _listeners.add(cb);
+    return () => _listeners.delete(cb);
+}
+
+function emitSessionExpired(status = 401) {
+    if (typeof window === 'undefined') {
+        _listeners.forEach((listener) => listener(status));
+        return;
+    }
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { detail: status }));
+}
+
 export async function requestJson(
     url,
     { method = 'GET', data, signal, csrfToken, headers = {} } = {},
@@ -35,9 +63,11 @@ export async function requestJson(
             },
         });
         if (!response.headers['content-type']?.includes('application/json')) {
+            const status = response.status || 419;
+            if (status === 401 || status === 419) emitSessionExpired(status);
             throw new RequestError(
-                'Your session may have expired. Refresh this page and sign in again.',
-                419,
+                'Your session has expired. Refresh this page and sign in again.',
+                status,
             );
         }
         return response.data;
@@ -46,6 +76,10 @@ export async function requestJson(
             throw new DOMException('Request cancelled', 'AbortError');
         if (error instanceof RequestError) throw error;
         const status = error.response?.status || 0;
+
+        // Fire global session-expired event so components can react.
+        if (status === 401 || status === 419) emitSessionExpired(status);
+
         const messages = {
             401: 'Please sign in again to continue.',
             419: 'Your session has expired. Refresh this page and try again.',
