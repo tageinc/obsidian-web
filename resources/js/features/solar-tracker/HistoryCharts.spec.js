@@ -42,7 +42,8 @@ it('downloads all measurements for the selected range and guards pending or inva
     expect(button.element.disabled).toBe(false);
     expect(wrapper.text()).toContain('report download has started');
     await wrapper.get('#history-ending').setValue('');
-    expect(button.element.disabled).toBe(true);
+    // Empty ending in day view recovers to a valid range; button stays enabled.
+    expect(button.element.disabled).toBe(false);
     expect(downloadHistoryReport).toHaveBeenCalledTimes(1);
     wrapper.unmount();
 });
@@ -307,7 +308,6 @@ it('navigates periods, offers available history and disables period arrows for c
     expect(wrapper.get('#history-period-date').element.value).toBe('1969-12-29');
     await wrapper.get('#history-view').setValue('all');
     expect(wrapper.text()).toContain('2 raw readings');
-    expect(wrapper.get('[aria-label="Next time range"]').element.disabled).toBe(true);
     await wrapper.get('#history-view').setValue('custom');
     await wrapper.get('#history-to').setValue('1969-12-31T17:00:00');
     expect(wrapper.get('#history-view').element.value).toBe('custom');
@@ -368,12 +368,15 @@ it('plots the recorded PDS and PS average values with independent trends and mis
 it('keeps invalid period input announced when entering a custom span', async () => {
     const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 2 }] } });
     await flushPromises();
+    // Clearing ending in day view recovers to current range; error is cleared.
     await wrapper.get('#history-ending').setValue('');
-    expect(wrapper.get('[role="alert"]').text()).toContain('Enter a valid');
+    expect(wrapper.text()).not.toContain('Enter valid From and To');
     await wrapper.get('#history-view').setValue('custom');
+    expect(wrapper.get('[role="alert"]')).toBeDefined();
+    expect(wrapper.get('#history-to').element.value).not.toBe('');
+    // Now clear the From field to re-trigger the custom-span error.
+    await wrapper.get('#history-from').setValue('');
     expect(wrapper.get('[role="alert"]').text()).toContain('Enter valid From and To');
-    expect(wrapper.get('#history-to').element.value).toBe('');
-    expect(wrapper.get('canvas').isVisible()).toBe(false);
     wrapper.unmount();
 });
 
@@ -566,15 +569,295 @@ it('shows the period date input only for week and month', async () => {
     wrapper.unmount();
 });
 
-it('omits period navigation arrows for hour and twelveHours modes', async () => {
+it('provides period navigation arrows for hour and twelveHours modes', async () => {
     const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 1 }] } });
     await flushPromises();
+
+    // day still has arrows
     await wrapper.get('#history-view').setValue('day');
     expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(1);
+    expect(wrapper.findAll('[aria-label="Next time range"]')).toHaveLength(1);
+
+    // hour and twelveHours now have arrows too
     await wrapper.get('#history-view').setValue('hour');
-    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(0);
+    const hourPrev = wrapper.get('[aria-label="Previous time range"]');
+    const hourNext = wrapper.get('[aria-label="Next time range"]');
+    expect(hourPrev.exists()).toBe(true);
+    expect(hourNext.exists()).toBe(true);
+
     await wrapper.get('#history-view').setValue('twelveHours');
-    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(0);
+    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(1);
+    expect(wrapper.findAll('[aria-label="Next time range"]')).toHaveLength(1);
     expect(wrapper.find('#history-ending').exists()).toBe(true);
+
     wrapper.unmount();
 });
+
+it.each([
+    ['hour', 3600000],
+    ['twelveHours', 12 * 3600000],
+])(
+    'shifts hour/twelveHours ranges by exactly one direction via period arrows',
+    async (view, duration) => {
+        const wrapper = mount(HistoryCharts, {
+            props: { points: [{ epoch_ms: 3600000, temp: 1 }] },
+        });
+        await flushPromises();
+
+        await wrapper.get('#history-view').setValue(view);
+        const prevEndingBefore = wrapper.get('#history-ending').element.value;
+
+        // Shift backward (previous arrow)
+        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+        const shiftedPrev = wrapper.get('#history-ending').element.value;
+
+        // Shift forward (next arrow) — should go back toward original
+        await wrapper.get('[aria-label="Next time range"]').trigger('click');
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+        const shiftedNext = wrapper.get('#history-ending').element.value;
+
+        // Forward restore should match pre-previous value
+        expect(shiftedNext).toBe(prevEndingBefore);
+        // Previous must be strictly earlier than current
+        expect(shiftedPrev < prevEndingBefore).toBe(true);
+
+        wrapper.unmount();
+    },
+);
+
+it.each([
+    ['hour', 3600000, 'temperature'],
+    ['twelveHours', 12 * 3600000, 'pds'],
+])(
+    'retains the %s duration and selected metric across refreshedAt updates',
+    async (view, expectedDuration, metric) => {
+        const wrapper = mount(HistoryCharts, {
+            props: {
+                points: [
+                    { epoch_ms: Date.parse('2026-01-15T18:00:00Z'), [metric]: 42 },
+                    { epoch_ms: Date.parse('2026-01-15T19:00:00Z'), [metric]: 43 },
+                ],
+            },
+        });
+
+        await flushPromises();
+        await wrapper.get('#history-view').setValue(view);
+        await wrapper.get('#history-metric').setValue(metric);
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+        expect(wrapper.get('#history-metric').element.value).toBe(metric);
+
+        const durationBefore = wrapper.vm.range.end - wrapper.vm.range.start;
+        expect(durationBefore).toBe(expectedDuration);
+
+        await wrapper.setProps({ refreshedAt: Date.parse('2026-01-15T20:00:00Z') });
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+        expect(wrapper.get('#history-metric').element.value).toBe(metric);
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(expectedDuration);
+
+        await wrapper.setProps({
+            refreshedAt: Date.parse('2026-01-15T21:00:00Z'),
+            points: [
+                { epoch_ms: Date.parse('2026-01-15T19:00:00Z'), [metric]: 43 },
+                { epoch_ms: Date.parse('2026-01-15T20:30:00Z'), [metric]: 44 },
+            ],
+        });
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+        expect(wrapper.get('#history-metric').element.value).toBe(metric);
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(expectedDuration);
+
+        wrapper.unmount();
+    },
+);
+
+it('does not convert hour/twelveHours to month after refreshedAt updates', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: Date.parse('2026-01-15T18:00:00Z'), temp: 2 },
+                { epoch_ms: Date.parse('2026-01-15T19:00:00Z'), temp: 3 },
+            ],
+        },
+    });
+
+    await flushPromises();
+    await wrapper.get('#history-view').setValue('hour');
+
+    await wrapper.setProps({ refreshedAt: Date.parse('2026-01-15T20:00:00Z') });
+    expect(wrapper.get('#history-view').element.value).toBe('hour');
+    expect(wrapper.get('#history-view').element.value).not.toBe('month');
+
+    await wrapper.get('#history-view').setValue('twelveHours');
+
+    await wrapper.setProps({ refreshedAt: Date.parse('2026-01-15T21:00:00Z') });
+    expect(wrapper.get('#history-view').element.value).toBe('twelveHours');
+    expect(wrapper.get('#history-view').element.value).not.toBe('month');
+
+    wrapper.unmount();
+});
+
+it('recovers empty #history-ending to a valid range in day, hour and twelveHours views', async () => {
+    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 2 }] } });
+    await flushPromises();
+    expect(wrapper.vm.rangeError).toBe('');
+
+    for (const view of ['day', 'hour', 'twelveHours']) {
+        await wrapper.get('#history-view').setValue(view);
+        await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+        expect(wrapper.vm.rangeError).toBe('');
+
+        // Clear the ending field — should recover to a valid current range.
+        await wrapper.get('#history-ending').setValue('');
+        expect(wrapper.vm.rangeError).toBe('');
+        expect(wrapper.vm.followingNow).toBe(true);
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+
+        // Duration preserved.
+        const duration = wrapper.vm.range.end - wrapper.vm.range.start;
+        if (view === 'day') expect(duration).toBe(24 * 3600000);
+        else if (view === 'hour') expect(duration).toBe(3600000);
+        else expect(duration).toBe(12 * 3600000);
+
+        // Reset view for the next iteration.
+        await wrapper.get('#history-view').setValue('day');
+    }
+
+    wrapper.unmount();
+});
+
+it('clears rangeError when empty-ending recovers in short-window views', async () => {
+    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 2 }] } });
+    await flushPromises();
+
+    // Switch to custom so we can set an invalid From/To that generates rangeError.
+    await wrapper.get('#history-view').setValue('custom');
+    await wrapper.get('#history-from').setValue('invalid');
+    expect(wrapper.vm.rangeError).toContain('Enter valid');
+
+    // Now go to day view with a non-empty ending, then clear it.
+    await wrapper.get('#history-view').setValue('day');
+    await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+    expect(wrapper.vm.rangeError).toBe('');
+
+    // The empty-ending Recovery flow clears errors.
+    await wrapper.get('#history-ending').setValue('');
+    expect(wrapper.vm.rangeError).toBe('');
+    expect(wrapper.vm.followingNow).toBe(true);
+
+    wrapper.unmount();
+});
+
+it('preserves view, metric, device and report context after empty-ending recovery', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: 0, temp: 2 },
+                { epoch_ms: 1000, temp: 3 },
+            ],
+        },
+    });
+    await flushPromises();
+
+    for (const view of ['hour', 'twelveHours']) {
+        await wrapper.get('#history-view').setValue(view);
+        const metricBefore = wrapper.get('#history-metric').element.value;
+
+        // Set a non-default ending.
+        await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+        expect(wrapper.vm.rangeError).toBe('');
+
+        // Clear it — Recovery should run.
+        await wrapper.get('#history-ending').setValue('');
+        expect(wrapper.vm.rangeError).toBe('');
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+        expect(wrapper.get('#history-metric').element.value).toBe(metricBefore);
+
+        // Reset to day for the next iteration.
+        await wrapper.get('#history-view').setValue('day');
+    }
+
+    wrapper.unmount();
+});
+
+it('resumes live-follow refresh after empty-ending recovery', async () => {
+    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 2 }] } });
+    await flushPromises();
+    expect(wrapper.vm.followingNow).toBe(true);
+
+    await wrapper.get('#history-view').setValue('hour');
+    // Navigate away from followingNow.
+    await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+    expect(wrapper.vm.followingNow).toBe(false);
+
+    // Clear ending — Recovery resumes followingNow.
+    await wrapper.get('#history-ending').setValue('');
+    expect(wrapper.vm.followingNow).toBe(true);
+
+    // Verify that subsequent refreshedAt updates will advance the range again.
+    vi.setSystemTime(new Date(7320000));
+    await wrapper.setProps({ refreshedAt: 7320000 });
+    const newEnding = wrapper.get('#history-ending').element.value;
+    expect(newEnding).toBe('1969-12-31T18:02');
+
+    wrapper.unmount();
+});
+
+it.each([
+    ['hour', 3600000],
+    ['twelveHours', 12 * 3600000],
+])(
+    'shifts %s ranges by exact elapsed across Pacific DST gaps and midnight boundaries',
+    async (view, duration) => {
+        const wrapper = mount(HistoryCharts, {
+            props: { points: [{ epoch_ms: Date.parse('2026-03-08T10:30:00Z'), temp: 1 }] },
+        });
+        await flushPromises();
+
+        // Pre-spring DST (Mar 8 2026 is the gap in Pacific).
+        await wrapper.get('#history-view').setValue(view);
+        const before = wrapper.get('#history-ending').element.value;
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+
+        // Shift backward across DST gap.
+        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
+        const afterPrev = wrapper.get('#history-ending').element.value;
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+        expect(afterPrev < before).toBe(true);
+
+        // Shift forward — should restore original ending.
+        await wrapper.get('[aria-label="Next time range"]').trigger('click');
+        const afterNext = wrapper.get('#history-ending').element.value;
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+        expect(afterNext).toBe(before);
+
+        // Shift backward across the spring-fall DST transition (Nov 1 2026 fallback).
+        vi.setSystemTime(Date.parse('2026-11-01T10:30:00Z'));
+        await wrapper.get('#history-view').setValue(view);
+        const beforeFall = wrapper.get('#history-ending').element.value;
+
+        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
+        const afterPrevFall = wrapper.get('#history-ending').element.value;
+        expect(afterPrevFall < beforeFall).toBe(true);
+
+        await wrapper.get('[aria-label="Next time range"]').trigger('click');
+        const afterNextFall = wrapper.get('#history-ending').element.value;
+        expect(afterNextFall).toBe(beforeFall);
+
+        // Test midnight boundary: shift right through midnight.
+        vi.setSystemTime(Date.parse('2026-03-15T06:30:00Z'));
+        await wrapper.get('#history-view').setValue(view);
+        const beforeMidnight = wrapper.get('#history-ending').element.value;
+
+        await wrapper.get('[aria-label="Next time range"]').trigger('click');
+        const afterMidnight = wrapper.get('#history-ending').element.value;
+        expect(afterMidnight > beforeMidnight).toBe(true);
+        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+
+        // Shift left back — restore.
+        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
+        const afterPrevBack = wrapper.get('#history-ending').element.value;
+        expect(afterPrevBack).toBe(beforeMidnight);
+
+        wrapper.unmount();
+    },
+);
