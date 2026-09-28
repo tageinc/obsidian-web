@@ -30,7 +30,7 @@ for (const [name, time] of [
         await page.goto('/__browser-fixtures/legacy-login');
 
         const colors = await page
-            .getByRole('link', { name: 'Login', exact: true })
+            .locator('a.nav-link.square-button', { hasText: 'Login' })
             .evaluate((link) => ({
                 foreground: getComputedStyle(link).color,
                 background: getComputedStyle(link).backgroundColor,
