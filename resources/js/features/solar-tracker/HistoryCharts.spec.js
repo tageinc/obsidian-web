@@ -487,3 +487,94 @@ it('extends available history to include new telemetry without changing its view
     expect(wrapper.get('.history-range-display').text()).toContain('6:01 PM');
     wrapper.unmount();
 });
+
+it('supports all OB-19 View dropdown options and preserves the selected view', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: -7200000, temp: 1 },
+                { epoch_ms: 0, temp: 2 },
+                { epoch_ms: 3600000, temp: 3 },
+            ],
+        },
+    });
+    await flushPromises();
+    const options = wrapper.get('#history-view').findAll('option');
+    expect(wrapper.get('#history-view optgroup').attributes('label')).toBe('Windows');
+    expect(options.map((o) => o.attributes('value'))).toEqual(
+        expect.arrayContaining(['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']),
+    );
+    for (const view of ['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']) {
+        await wrapper.get('#history-view').setValue(view);
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+    }
+    wrapper.unmount();
+});
+
+it.each([
+    ['hour', 3600000],
+    ['twelveHours', 12 * 3600000],
+])('keeps the selected %s window when its ending time changes', async (view, duration) => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: Date.parse('2026-01-15T18:00:00Z'), temp: 1 },
+                { epoch_ms: Date.parse('2026-01-15T19:00:00Z'), temp: 2 },
+            ],
+        },
+    });
+    await flushPromises();
+
+    await wrapper.get('#history-view').setValue(view);
+    await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+
+    const summary = wrapper.get('.history-range-display').text();
+    expect(summary).toContain('Jan 15, 2026');
+    expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
+    wrapper.unmount();
+});
+
+it('preserves the selected View option across refresh cycles for all OB-19 modes', async () => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: -7200000, temp: 1 },
+                { epoch_ms: 0, temp: 2 },
+            ],
+        },
+    });
+    await flushPromises();
+    for (const view of ['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']) {
+        await wrapper.get('#history-view').setValue(view);
+        await wrapper.setProps({ refreshedAt: 7260000 });
+        expect(wrapper.get('#history-view').element.value).toBe(view);
+    }
+    wrapper.unmount();
+});
+
+it('shows the period date input only for week and month', async () => {
+    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 1 }] } });
+    await flushPromises();
+    for (const view of ['hour', 'twelveHours', 'day', 'all', 'custom']) {
+        await wrapper.get('#history-view').setValue(view);
+        expect(wrapper.find('#history-period-date').exists()).toBe(false);
+    }
+    for (const view of ['week', 'month']) {
+        await wrapper.get('#history-view').setValue(view);
+        expect(wrapper.find('#history-period-date').exists()).toBe(true);
+    }
+    wrapper.unmount();
+});
+
+it('omits period navigation arrows for hour and twelveHours modes', async () => {
+    const wrapper = mount(HistoryCharts, { props: { points: [{ epoch_ms: 0, temp: 1 }] } });
+    await flushPromises();
+    await wrapper.get('#history-view').setValue('day');
+    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(1);
+    await wrapper.get('#history-view').setValue('hour');
+    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(0);
+    await wrapper.get('#history-view').setValue('twelveHours');
+    expect(wrapper.findAll('[aria-label="Previous time range"]')).toHaveLength(0);
+    expect(wrapper.find('#history-ending').exists()).toBe(true);
+    wrapper.unmount();
+});

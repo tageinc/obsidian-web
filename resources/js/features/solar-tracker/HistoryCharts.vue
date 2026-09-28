@@ -6,6 +6,7 @@ import { celsiusToFahrenheit } from './sensorReadings';
 
 import {
     lastDay,
+    lastNHours,
     datetimeInput,
     parseDatetime,
     calendarRange,
@@ -48,7 +49,11 @@ const to = ref(datetimeInput(initialRange.end));
 const selectedDate = ref(datetimeInput(initialRange.end).slice(0, 10));
 const rangeError = ref('');
 const customView = computed(() => view.value === 'custom');
-const periodNavigation = computed(() => !customView.value && view.value !== 'all');
+const shortWindowHours = { hour: 1, twelveHours: 12 };
+const periodNavigation = computed(
+    () =>
+        !customView.value && view.value !== 'all' && ['day', 'week', 'month'].includes(view.value),
+);
 const hasRangeFilters = computed(
     () =>
         view.value !== 'day' ||
@@ -80,17 +85,28 @@ function chooseView() {
                 start: normalized.value[0].epoch_ms,
                 end: normalized.value.at(-1).epoch_ms,
             });
+    } else if (view.value === 'hour') {
+        followingNow.value = true;
+        setRange(lastNHours(1));
+    } else if (view.value === 'twelveHours') {
+        followingNow.value = true;
+        setRange(lastNHours(12));
     } else setRange(calendarRange(view.value, range.value.end));
 }
 function editPeriod() {
     followingNow.value = false;
     const anchor = parseDatetime(
-        view.value === 'day' ? to.value : `${selectedDate.value}T12:00:00`,
+        view.value === 'day' || shortWindowHours[view.value]
+            ? to.value
+            : `${selectedDate.value}T12:00:00`,
         'end',
     );
     rangeError.value = anchor === null ? 'Enter a valid date and time in Pacific Time.' : '';
     if (rangeError.value) return;
-    setRange(view.value === 'day' ? lastDay(anchor) : calendarRange(view.value, anchor));
+    if (view.value === 'day') setRange(lastDay(anchor));
+    else if (shortWindowHours[view.value])
+        setRange(lastNHours(shortWindowHours[view.value], anchor));
+    else setRange(calendarRange(view.value, anchor));
 }
 function editRange() {
     followingNow.value = false;
@@ -121,6 +137,8 @@ function goToday() {
     if (!periodNavigation.value) return;
     followingNow.value = true;
     if (view.value === 'day') resetRange();
+    else if (view.value === 'hour') setRange(lastNHours(1));
+    else if (view.value === 'twelveHours') setRange(lastNHours(12));
     else setRange(calendarRange(view.value, Date.now()));
 }
 const metric = ref('temperature');
@@ -301,6 +319,7 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
+                            v-if="view !== 'hour' && view !== 'twelveHours'"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Previous time range"
@@ -313,6 +332,7 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
+                            v-if="view !== 'hour' && view !== 'twelveHours'"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Next time range"
@@ -345,16 +365,23 @@ onBeforeUnmount(() => {
                                 class="form-select form-select-sm"
                                 @change="chooseView"
                             >
-                                <option value="day">24 hours</option>
-                                <option value="week">Week</option>
-                                <option value="month">Month</option>
+                                <optgroup label="Windows">
+                                    <option value="hour">1 hour</option>
+                                    <option value="twelveHours">12 hours</option>
+                                    <option value="day">24 hours</option>
+                                    <option value="week">Week</option>
+                                    <option value="month">Month</option>
+                                </optgroup>
                                 <option value="all" :disabled="!normalized.length">
                                     Available history
                                 </option>
                                 <option value="custom">Custom span</option>
                             </select>
                         </div>
-                        <div v-if="view === 'day'" class="history-filter-field">
+                        <div
+                            v-if="view === 'day' || view === 'hour' || view === 'twelveHours'"
+                            class="history-filter-field"
+                        >
                             <label for="history-ending">Ending at</label>
                             <input
                                 id="history-ending"
