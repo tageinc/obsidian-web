@@ -35,6 +35,12 @@ $app->make(Illuminate\Contracts\Debug\ExceptionHandler::class)->reportable(funct
 
 // These routes exist only behind the disposable-database checks above. The live
 // browser test removes only the tagged readings that it created.
+Illuminate\Support\Facades\Route::get('/__browser-fixtures/legacy-login', function () {
+    config(['frontend.vue3.auth' => false]);
+
+    return view('auth.login');
+})->middleware('web');
+
 Illuminate\Support\Facades\Route::get('/__browser-fixtures/devices/{id}/legacy', function ($id) {
     config(['frontend.vue3.view_device' => false, 'frontend.vue3.workspace' => false]);
 
