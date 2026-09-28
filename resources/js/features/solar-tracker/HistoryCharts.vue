@@ -333,7 +333,6 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
-                            v-if="periodNavigation"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Previous time range"
@@ -346,7 +345,6 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
-                            v-if="periodNavigation"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Next time range"

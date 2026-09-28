@@ -412,6 +412,15 @@ filter selections are presentation behavior and need no separate API operation.
 
 ### Download the History PDF report
 
+History's 1-hour and 12-hour windows use elapsed durations of 3,600 and 43,200
+seconds. Previous/next moves both inclusive bounds by that duration, including
+across Pacific daylight-saving transitions. Resetting an empty browser Ending
+at field restores the current instant and retains the chosen window and metric.
+These controls select existing report bounds; external clients use explicit
+`from` and `to` instants on the report endpoint below. Empty API parameters remain
+invalid (422), and omitting both still defaults to 24 hours. Native picker UI and
+live-follow scheduling are browser behavior, not separate API operations.
+
 `GET /devices/{id}/report` provides the same report as the printer button in the
 device's **History** tab. Success is an **application/pdf** attachment, not JSON.
 The PDF includes device name, serial number, SKU, order number, lifecycle state,

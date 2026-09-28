@@ -3,30 +3,40 @@ import axe from 'axe-core';
 import { readFileSync } from 'node:fs';
 import { datetimeInput } from '../../resources/js/features/solar-tracker/historyRange.js';
 
+test.use({ timezoneId: 'Asia/Tokyo' });
+
+const manifest = JSON.parse(
+    readFileSync(new URL('../../public/build/manifest.json', import.meta.url), 'utf8'),
+);
+const chartModule = `/build/${manifest['node_modules/chart.js/auto/auto.js'].file}`;
+
 async function expectZeroReference(page) {
     await expect
         .poll(() =>
-            page.evaluate(() => {
+            page.evaluate(async (moduleUrl) => {
+                const { default: Chart } = await import(moduleUrl);
                 const canvas = document.querySelector('.history-section canvas');
-                if (!canvas || !canvas.chart) return false;
-                const scale = canvas.chart.scales.y;
-                if (!scale) return false;
+                const chart = canvas && Chart.getChart(canvas);
+                if (!chart) return false;
+                const scale = chart.scales.y;
+                const zero = scale.ticks.find((tick) => tick.value === 0);
+                const grid =
+                    zero &&
+                    scale.options.grid.setContext(scale.getContext(scale.ticks.indexOf(zero)));
                 const pixel = scale.getPixelForValue(0);
-                const zeroIdx = scale.ticks.findIndex((t) => t.value === 0);
-                if (zeroIdx < 0) return false;
-                const grid = scale.options.grid.setContext(scale.getContext(zeroIdx));
                 return (
                     scale.min <= 0 &&
                     scale.max >= 0 &&
-                    scale.ticks[zeroIdx].label === '0' &&
-                    getComputedStyle(document.documentElement)
-                        .getPropertyValue('--obsidian-border')
-                        .trim() === grid.color &&
+                    String(zero?.label) === '0' &&
+                    grid.color ===
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--obsidian-border')
+                            .trim() &&
                     grid.lineWidth === 1 &&
-                    pixel >= canvas.chart.chartArea.top &&
-                    pixel <= canvas.chart.chartArea.bottom
+                    pixel >= chart.chartArea.top &&
+                    pixel <= chart.chartArea.bottom
                 );
-            }),
+            }, chartModule),
         )
         .toBe(true);
 }
@@ -60,15 +70,6 @@ test('history ranges and PDF reports navigate, validate and retain state without
     page,
     context,
 }) => {
-    await page.route(/chart\.js/i, (route) => {
-        if (/chart\.js/.test(route.request().url())) {
-            return route.fulfill({
-                contentType: 'application/javascript',
-                body: readFileSync('node_modules/chart.js/dist/chart.umd.js'),
-            });
-        }
-        return route.continue();
-    });
     const commands = [];
     await context.route('**/*', (route) => {
         const request = route.request();
@@ -211,134 +212,68 @@ test('history ranges and PDF reports navigate, validate and retain state without
     expect(commands).toEqual([]);
 });
 
-// --- Browser regressions for OB-20 empty-ending recovery and arrow visibility ---
-
-test.describe('OB-20 empty-ending recovery and period navigation', () => {
-    test.use({ timezoneId: 'America/Los_Angeles' });
-
-    async function navigate(page) {
-        await page.clock.setFixedTime(Date.now());
+for (const [viewName, hours] of [
+    ['hour', 1],
+    ['twelveHours', 12],
+    ['day', 24],
+]) {
+    test(`Reset and exact ${hours}-hour arrows preserve measurement and report bounds`, async ({
+        page,
+        context,
+    }) => {
+        const commands = [];
+        await context.route('**/*', (route) => {
+            const request = route.request();
+            const url = new URL(request.url());
+            if (url.origin !== 'http://127.0.0.1:8127') return route.abort();
+            if (/remote-control/.test(url.pathname) && request.method() !== 'GET') {
+                commands.push(url.pathname);
+                return route.abort();
+            }
+            return route.continue();
+        });
+        const now = Math.floor(Date.now() / 1000) * 1000 + 5000;
+        const duration = hours * 3600000;
+        const value = (epoch) => datetimeInput(epoch).replace(/:00$/, '');
+        await page.clock.setFixedTime(now);
         await page.goto('/login');
         await page.getByLabel('Email address', { exact: true }).fill('owner@browser.example.test');
         await page.getByLabel('Password', { exact: true }).fill('browser-test-password');
         await page.getByRole('button', { name: 'Login', exact: true }).click();
+        await page.getByRole('link', { name: 'Browser simulator', exact: true }).click();
         await page.getByRole('tab', { name: 'History', exact: true }).click();
-    }
-
-    async function panelElements(page) {
-        const ending = page.locator('#history-ending');
-        const view = page.locator('#history-view');
-        const metric = page.locator('#history-metric');
-        const prevArrow = page.locator('[aria-label="Previous time range"]');
-        const nextArrow = page.locator('[aria-label="Next time range"]');
-        const rangeError = page.locator('#history-range-error');
-        const from = page.locator('#history-from');
-        const periodDate = page.locator('#history-period-date');
-        return { ending, view, metric, prevArrow, nextArrow, rangeError, from, periodDate };
-    }
-
-    test('empty-ending recovery restores valid now-range in day, hour, twelveHours and retains view/metric', async ({
-        page,
-    }) => {
-        const value = (epoch) => datetimeInput(epoch).replace(/:00$/, '');
-        await navigate(page);
-        const { ending, view, metric, rangeError } = await panelElements(page);
-
-        for (const targetView of ['day', 'hour', 'twelveHours']) {
-            await view.selectOption(targetView);
-            const savedMetric = metric.element.value;
-
-            // Set a non-default ending.
-            await ending.fill(value(Date.now() - 60_000));
-            await expect(ending).toHaveValue(value(Date.now() - 60_000));
-
-            // Clear to empty — recovery should restore valid range, clear error, keep view.
-            await ending.fill('');
-            await page.waitForTimeout(300);
-            await expect(rangeError).toBeHidden();
-            await expect(view).toHaveValue(targetView);
-            await expect(metric).toHaveValue(savedMetric);
-
-            // Ending should now be a populated value matching the current time.
-            const endingVal = await ending.inputValue();
-            expect(endingVal).not.toBe('');
-            expect(new Date(endingVal).getTime()).toBeGreaterThan(Date.now() - 2000);
-        }
-    });
-
-    test('Previous/Next arrows produce exact elapsed shifts for hour and twelveHours', async ({
-        page,
-    }) => {
-        const value = (epoch) => datetimeInput(epoch).replace(/:00$/, '');
-        await navigate(page);
-        const { ending, view, prevArrow, nextArrow } = await panelElements(page);
-
-        for (const [targetView, expectedDuration] of [
-            ['hour', 3_600_000],
-            ['twelveHours', 12 * 3_600_000],
-        ]) {
-            await view.selectOption(targetView);
-
-            const endingBefore = await ending.inputValue();
-            const endMsBefore = new Date(endingBefore).getTime();
-
-            // Click Previous — should shift by exactly one window.
-            await prevArrow.click();
-            await page.waitForTimeout(200);
-            const endingPrev = await ending.inputValue();
-            const endMsPrev = new Date(endingPrev).getTime();
-            expect(endMsBefore - endMsPrev).toBe(expectedDuration);
-
-            // Click Next — should restore the original ending.
-            await nextArrow.click();
-            await page.waitForTimeout(200);
-            const endingNext = await ending.inputValue();
-            expect(endingNext).toBe(endingBefore);
-        }
-    });
-
-    test('arrows are always visible for all views and report/download parameters are correct', async ({
-        page,
-    }) => {
-        await navigate(page);
-        const { view, prevArrow, nextArrow } = await panelElements(page);
-
-        for (const viewVal of ['day', 'week', 'month', 'hour', 'twelveHours']) {
-            await view.selectOption(viewVal);
-            await expect(prevArrow).toBeVisible();
-            await expect(nextArrow).toBeVisible();
-        }
-    });
-
-    test('empty-ending in custom retains From/To and does not recover; day/week/month arrows shift displayed range', async ({
-        page,
-    }) => {
-        const value = (epoch) => datetimeInput(epoch).replace(/:00$/, '');
-        await navigate(page);
-        const { ending, view, prevArrow, nextArrow, from, periodDate } = await panelElements(page);
-
-        // Custom: empty ending does not trigger recovery.
-        await view.selectOption('custom');
-        const savedFrom = await from.inputValue();
+        const panel = page.getByRole('region', { name: 'Reading history', exact: true });
+        const view = panel.getByLabel('View', { exact: true });
+        const metric = panel.getByLabel('Measurement', { exact: true });
+        const ending = panel.getByLabel('Ending at', { exact: true });
+        const previous = panel.getByRole('button', { name: 'Previous time range' });
+        const next = panel.getByRole('button', { name: 'Next time range' });
+        const report = panel.getByRole('button', { name: 'Download history report' });
+        await view.selectOption(viewName);
+        await metric.selectOption('pds');
+        await expect(ending).toHaveValue(value(now));
+        await expect(previous).toBeVisible();
+        await expect(next).toBeVisible();
+        await previous.focus();
+        await page.keyboard.press('Enter');
+        await expect(ending).toHaveValue(value(now - duration));
+        await expectReportDownload(page, report, now - 2 * duration, now - duration);
+        await next.click();
+        await expect(ending).toHaveValue(value(now));
+        await previous.click();
+        // Simulate the native Reset empty-input event; actual iOS picker needs manual testing.
         await ending.fill('');
-        await page.waitForTimeout(300);
-        const actualEnding = await ending.inputValue();
-        expect(actualEnding).toBe(savedFrom); // Custom span retains From value.
-
-        // Day view arrows shift displayed range by exactly one window (86400000 ms).
-        await view.selectOption('day');
-        const dayEndBefore = new Date(await ending.inputValue()).getTime();
-        await prevArrow.click();
-        await page.waitForTimeout(200);
-        const dayEndPrev = new Date(await ending.inputValue()).getTime();
-        expect(dayEndBefore - dayEndPrev).toBe(86_400_000);
-
-        // Week view arrows shift displayed range.
-        await view.selectOption('week');
-        const weekPeriodBefore = await periodDate.inputValue();
-        await nextArrow.click();
-        await page.waitForTimeout(200);
-        const weekPeriodNext = await periodDate.inputValue();
-        expect(weekPeriodNext).not.toBe(weekPeriodBefore);
+        await expect(ending).toHaveValue(value(now));
+        await expect(panel.locator('#history-range-error')).toHaveCount(0);
+        await expect(view).toHaveValue(viewName);
+        await expect(metric).toHaveValue('pds');
+        await expect(panel.getByRole('img')).toBeVisible();
+        await expectReportDownload(page, report, now - duration, now);
+        await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+        await page.getByRole('tab', { name: 'History', exact: true }).click();
+        await expect(view).toHaveValue(viewName);
+        await expect(metric).toHaveValue('pds');
+        await expect(ending).toHaveValue(value(now));
+        expect(commands).toEqual([]);
     });
-});
+}

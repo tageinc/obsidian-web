@@ -116,10 +116,14 @@ describe('shorter time-window options (OB-19)', () => {
     });
 
     it('shifts hour/twelveHours by exact ±3600000/±43200000 across Pacific fall DST transition (Nov 1 2026)', () => {
-        // Fall-back: 2026-11-01T09:00:00Z becomes 02:00 PST.
-        const now = Date.parse('2026-11-01T15:00:00Z');
+        // Fall-back repeats 01:00 at 09:00Z; this hour crosses that boundary.
+        const now = Date.parse('2026-11-01T09:30:00Z');
         const hourRange = lastNHours(1, now);
         const twelveHourRange = lastNHours(12, now);
+        const prevTwelve = shiftRange(twelveHourRange, 'twelveHours', -1);
+        expect(prevTwelve.end).toBe(now - 43200000);
+        expect(prevTwelve.end - prevTwelve.start).toBe(43200000);
+        expect(shiftRange(prevTwelve, 'twelveHours', 1)).toEqual(twelveHourRange);
 
         const prevHour = shiftRange(hourRange, 'hour', -1);
         expect(prevHour.end - prevHour.start).toBe(3600000);
