@@ -66,15 +66,41 @@ test('developer creates, uses, and revokes an external key through Tools', async
         .filter({ has: page.getByRole('rowheader', { name: keyName, exact: true }) });
     await expect(row).toContainText('Active');
     await expect(row).not.toContainText(secret);
-    await row.getByRole('button', { name: `Revoke ${keyName}`, exact: true }).click();
+    const actions = row.getByRole('button', {
+        name: `Actions for API key ${keyName}`,
+        exact: true,
+    });
+    await expect(row.locator('td:last-child button')).toHaveCount(1);
+    await expect(actions).toHaveAttribute('aria-haspopup', 'menu');
+    await actions.focus();
+    await page.keyboard.press('ArrowDown');
+    const menu = page.getByRole('menu', { name: `Actions for API key ${keyName}`, exact: true });
+    const revoke = menu.getByRole('menuitem', { name: `Revoke ${keyName}`, exact: true });
+    await expect(menu.getByRole('menuitem')).toHaveCount(1);
+    await expect(revoke).toBeFocused();
+    await expect(revoke).toHaveText('Revoke');
+    const bounds = await menu.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+    await page.keyboard.press('ArrowUp');
+    await expect(revoke).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(actions).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(row.getByRole('button')).toBeFocused();
-    await row.getByRole('button').click();
+    await expect(actions).toBeFocused();
+    expect((await page.request.get('/api/external/v1', { headers })).status()).toBe(200);
+    await actions.click();
+    await revoke.click();
     await page.getByRole('button', { name: 'Revoke key', exact: true }).click();
     await expect(row).toContainText('Revoked');
+    await expect(actions).toBeDisabled();
     expect((await page.request.get('/api/external/v1', { headers })).status()).toBe(401);
     await page.goto('/developer-workspace?section=api-keys');
     await expect(page.getByRole('row').filter({ hasText: keyName })).toContainText('Revoked');
+    await expect(actions).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
     );
@@ -104,7 +130,28 @@ test('developer creates, uses, and revokes an external key through Tools', async
     ).toBe(200);
     await page.goto('/developer-workspace/api-keys');
     await expect(nativeKey).toHaveCount(0);
-    await page.getByRole('button', { name: `Revoke ${keyName} native`, exact: true }).click();
+    const nativeActions = page.getByRole('button', {
+        name: `Actions for API key ${keyName} native`,
+        exact: true,
+    });
+    await nativeActions.focus();
+    await page.keyboard.press('ArrowDown');
+    const nativeMenu = page.getByRole('menu', {
+        name: `Actions for API key ${keyName} native`,
+        exact: true,
+    });
+    const nativeRevoke = nativeMenu.getByRole('menuitem', {
+        name: `Revoke ${keyName} native`,
+        exact: true,
+    });
+    await expect(nativeMenu.getByRole('menuitem')).toHaveCount(1);
+    await expect(nativeRevoke).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(nativeMenu).toBeHidden();
+    await expect(nativeActions).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(nativeActions).toBeDisabled();
     expect(
         (
             await page.request.get('/api/external/v1', {
@@ -112,6 +159,11 @@ test('developer creates, uses, and revokes an external key through Tools', async
             })
         ).status(),
     ).toBe(401);
+    await page.reload();
+    await expect(nativeActions).toBeDisabled();
+    await expect(page.getByRole('row').filter({ hasText: `${keyName} native` })).toContainText(
+        'Revoked',
+    );
 });
 
 test('developer workspace navigation and upload dialogs remain accessible', async ({

@@ -25,13 +25,15 @@ class DeveloperReleaseSearchTest extends TestCase
         ]));
     }
 
-    private function release(string $model, string $version, string $prefix = 'SP1', string $description = 'Standard release', string $date = '2026-09-01 12:00:00'): void
+    private function release(string $model, string $version, string $prefix = 'SP1', string $description = 'Standard release', string $date = '2026-09-01 12:00:00'): \Illuminate\Database\Eloquent\Model
     {
         $record = $model::create([
             'version' => $version, 'prefix' => $prefix, 'description' => $description,
             'file_path' => 'private-storage-must-not-be-serialized',
         ]);
         $record->forceFill(['created_at' => $date])->save();
+
+        return $record;
     }
 
     private function workspace(array $query = []): array
@@ -176,15 +178,40 @@ class DeveloperReleaseSearchTest extends TestCase
             $this->assertNull($empty[$kind]['pagination']['to']);
             $this->assertSame(['search' => '', 'prefixes' => [], 'versions' => [], 'from' => '', 'to' => '', 'sort' => 'newest'], $empty[$kind]['filters']);
         }
-        $this->release(FirmwareVersions::class, '1');
-        $props = $this->workspace(['firmware_search' => '  ', 'firmware_show' => 100]);
-        $this->assertSame('', $props['firmware']['filters']['search']);
-        $this->assertCount(1, $props['firmware']['rows']);
-        $this->assertSame(['version', 'prefix', 'description', 'createdAt'], array_keys($props['firmware']['rows'][0]));
-        $props = $this->workspace(['firmware_search' => 'missing']);
-        $this->assertSame([], $props['firmware']['rows']);
-        $this->assertSame(0, $props['firmware']['pagination']['total']);
-        $this->assertSame(['SP1'], $props['firmware']['filterOptions']['prefixes']);
+        foreach (['firmware' => FirmwareVersions::class, 'config' => ConfigVersions::class] as $kind => $model) {
+            $release = $this->release($model, '1');
+            $props = $this->workspace([$kind.'_search' => '  ', $kind.'_show' => 100]);
+            $this->assertSame('', $props[$kind]['filters']['search']);
+            $this->assertCount(1, $props[$kind]['rows']);
+            $this->assertSame(['version', 'prefix', 'description', 'createdAt', 'id', 'updateUrl', 'deleteUrl'], array_keys($props[$kind]['rows'][0]));
+            $this->assertSame($release->id, $props[$kind]['rows'][0]['id']);
+            $this->assertSame(route('developer.'.$kind.'.update', $release->id), $props[$kind]['rows'][0]['updateUrl']);
+            $this->assertSame(route('developer.'.$kind.'.destroy', $release->id), $props[$kind]['rows'][0]['deleteUrl']);
+            $props = $this->workspace([$kind.'_search' => 'missing']);
+            $this->assertSame([], $props[$kind]['rows']);
+            $this->assertSame(0, $props[$kind]['pagination']['total']);
+            $this->assertSame(['SP1'], $props[$kind]['filterOptions']['prefixes']);
+        }
+    }
+
+    public function test_upload_timestamps_include_the_timezone_for_browser_local_formatting(): void
+    {
+        foreach ([FirmwareVersions::class, ConfigVersions::class] as $model) {
+            $this->release($model, '1', 'SP1', 'Winter release', '2026-01-01 00:30:00');
+            $this->release($model, '2', 'SP1', 'Summer release', '2026-07-01 00:30:00');
+        }
+        $props = $this->workspace();
+        foreach (['firmware', 'config'] as $kind) {
+            $this->assertSame([
+                '2026-07-01T00:30:00+00:00',
+                '2026-01-01T00:30:00+00:00',
+            ], array_column($props[$kind]['rows'], 'createdAt'));
+        }
+
+        config(['frontend.vue3.developer' => false]);
+        $this->get('/developer-workspace')->assertOk()
+            ->assertSee('datetime="2026-07-01T00:30:00+00:00"', false)
+            ->assertSee('datetime="2026-01-01T00:30:00+00:00"', false);
     }
 
     public function test_invalid_filters_dates_sort_and_pagination_are_rejected(): void

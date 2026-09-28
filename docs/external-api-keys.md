@@ -39,7 +39,8 @@ If Developer Workspace is unavailable, confirm that you are signed in to the
 verified account matching the configured developer email. A regular user
 cannot create keys. Deployments using the legacy interface can manage keys at
 `/developer-workspace/api-keys` after signing in. That page displays ISO timestamps
-in UTC and its **Revoke** button applies immediately without a confirmation dialog.
+in UTC. Open a key's three-dot **Actions** menu and choose **Revoke**; the legacy
+action applies immediately without a confirmation dialog.
 
 ## 2. Authenticate your first request
 
@@ -127,10 +128,14 @@ returned by the personal feed. Remote-control requests instead use the device's
 | GET | `/remote-control?serial_no=...` | Stored control mode and motor speed |
 | POST | `/remote-control` | Save control mode and motor speed |
 | GET | `/firmware` | Paginated firmware releases |
-| POST | `/firmware` | Upload a firmware file and create a release |
+| POST | `/firmware` | Upload a firmware file with a selected positive integer version |
+| PATCH | `/firmware/{firmware}` | Edit a firmware version and/or description by immutable database ID |
+| DELETE | `/firmware/{firmware}` | Delete a firmware release by immutable database ID |
 | GET | `/firmware/{version}/download` | Download a firmware file |
 | GET | `/configuration` | Paginated configuration releases |
-| POST | `/configuration` | Upload a JSON configuration and create a release |
+| POST | `/configuration` | Upload a JSON configuration with a selected positive integer version |
+| PATCH | `/configuration/{configuration}` | Edit a configuration version and/or description by immutable database ID |
+| DELETE | `/configuration/{configuration}` | Delete a configuration release by immutable database ID |
 | GET | `/configuration/{version}/download` | Download a configuration file |
 | GET | `/user-settings` | Acting user's app activity email and theme preferences |
 | PATCH | `/user-settings` | Save either or both of the acting user's preferences |
@@ -533,7 +538,7 @@ Success returns HTTP **200** with `success: true`, a `message`, and the saved
 `mode` and `motor_speed`. This confirms that Obsidian saved the command; it does
 not confirm that hardware received or completed it.
 
-## 8. List, upload, and download software releases
+## 8. Manage software releases
 
 ### List releases
 
@@ -553,6 +558,16 @@ Both lists use the pagination format described above and return the newest
 database ID first. Each record contains `id`, `version`, `prefix`, `description`,
 and `created_at`. Internal storage paths are not returned.
 
+Firmware and configuration tables in both the modern and legacy Developer
+Workspace display upload dates in the browser's local timezone, including a
+timezone label. This is a presentation-only exclusion: `created_at` remains an
+ISO-8601 UTC timestamp in the external API. Stored timestamps and upload-date
+filter boundaries remain UTC.
+
+The tables display versions as plain text with a decorative `v` prefix, such as
+`v10`. This presentation-only prefix is not part of the stored version, numeric
+form inputs, filters, or external API request and response values.
+
 ### Upload a release
 
 Uploads use `multipart/form-data`. Let curl set the multipart content type and
@@ -560,8 +575,8 @@ boundary; do not add a JSON `Content-Type` header.
 
 | Endpoint | Required file field | File size limit | Other required fields |
 | --- | --- | --- | --- |
-| `POST /firmware` | `firmware` | 10 MiB (10,240 KiB) | `prefix`, `description`: nonempty strings, maximum 255 characters each |
-| `POST /configuration` | `config` | 1 MiB (1,024 KiB), JSON file | Same |
+| `POST /firmware` | `firmware` | 10 MiB (10,240 KiB) | `version`: selected positive integer; `prefix`, `description`: nonempty strings, maximum 255 characters each |
+| `POST /configuration` | `config` | 1 MiB (1,024 KiB), JSON file | `version`: selected positive integer; `prefix`, `description`: nonempty strings, maximum 255 characters each |
 
 Firmware is intended to be a `.bin` file. The current firmware endpoint checks
 that it is a file and enforces the size limit; it does not verify the binary's
@@ -574,6 +589,7 @@ curl --silent --show-error --fail-with-body \
   -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
   -H 'Accept: application/json' \
   -F 'firmware=@./release.bin' \
+  --form-string 'version=13' \
   --form-string 'prefix=SP1' \
   --form-string 'description=Firmware release for SP1' \
   "$OBSIDIAN_API/firmware"
@@ -582,25 +598,108 @@ curl --silent --show-error --fail-with-body \
   -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
   -H 'Accept: application/json' \
   -F 'config=@./configuration.json;type=application/json' \
+  --form-string 'version=7' \
   --form-string 'prefix=SP1' \
   --form-string 'description=Configuration release for SP1' \
   "$OBSIDIAN_API/configuration"
 ```
 
-Success returns HTTP **201** with `version` and `message`. The server assigns the
-version; do not send your own. For example, a firmware upload might return:
+Both release types require an explicit version of at least **1**. Send a decimal
+string matching `[1-9][0-9]*`, with at most 255 digits (the database column length),
+without signs, decimal points, exponents, or leading zeroes. Keep version values
+as strings to avoid JavaScript integer precision loss. Versions must be unique
+across all prefixes within their release type because download URLs identify
+releases by version. Firmware and configuration have independent version spaces.
+A collision returns **422** with `errors.version`. Existing legacy version
+strings remain stored and downloadable unchanged.
+
+Success returns HTTP **201** with `id`, `version`, and `message` for either type.
+For example:
 
 ```json
 {
+  "id": 42,
   "version": "13",
   "message": "Firmware uploaded successfully."
 }
 ```
 
-Configuration uses the message `"Configuration uploaded successfully."`.
+The configuration success message is `"Configuration uploaded successfully."`.
 Uploading stores a release; it does not itself confirm installation on a device.
-After an uncertain timeout, inspect the release list before retrying: a second
-successful upload creates another version.
+After an uncertain timeout, inspect the release list before retrying. Repeating
+a successful version within the same release type is rejected. Clients that
+previously omitted the configuration version must now supply it explicitly;
+the application no longer assigns firmware or configuration versions.
+
+### Edit or delete a release
+
+Use the immutable `id` from the corresponding list or upload response for
+management operations. The `{firmware}` and `{configuration}` path parameters
+are database IDs; download paths continue to use the editable version.
+Both operations require the current verified Developer, through the same
+authorization as uploads.
+
+```bash
+FIRMWARE_ID=42
+curl --silent --show-error --fail-with-body \
+  -X PATCH \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  --data '{"version":"14","description":"Updated firmware description"}' \
+  "$OBSIDIAN_API/firmware/$FIRMWARE_ID"
+
+curl --silent --show-error --fail-with-body \
+  -X DELETE \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/json' \
+  "$OBSIDIAN_API/firmware/$FIRMWARE_ID"
+
+CONFIGURATION_ID=24
+curl --silent --show-error --fail-with-body \
+  -X PATCH \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  --data '{"version":"8","description":"Updated configuration description"}' \
+  "$OBSIDIAN_API/configuration/$CONFIGURATION_ID"
+
+curl --silent --show-error --fail-with-body \
+  -X DELETE \
+  -H "Authorization: Bearer $OBSIDIAN_API_KEY" \
+  -H 'Accept: application/json' \
+  "$OBSIDIAN_API/configuration/$CONFIGURATION_ID"
+```
+
+PATCH accepts `version` and/or `description`. New version values follow the same
+positive-integer and per-release-type uniqueness rules as uploads. Descriptions
+must be nonempty strings of at most 255 characters. Omit `version` to edit only the
+description of a legacy release. Prefix, uploaded file, immutable ID, and
+upload timestamp cannot be changed. Success returns **200** with `id`, `version`,
+and `message`. The stored file keeps its original identity; changing the
+version moves the by-version download URL without replacing bytes or changing
+`created_at`. A missing ID returns **404**.
+
+DELETE returns **200** with `message` and removes the release. Its stored file is
+removed after the final firmware/configuration reference is deleted; legacy
+records sharing a path keep the file while another reference remains. Deletion
+stages the last file privately before the database commit and restores it if
+the database operation fails. A staging failure leaves the release available
+and returns **500**, so it can be retried. After a successful deletion, a private
+cleanup failure does not turn success into an error: the record and original
+download path are gone, and a sanitized `firmware.private_deletion_cleanup_failed`
+or `config.private_deletion_cleanup_failed` event identifies the release ID.
+Operators can inspect the corresponding private `firmware-deletions/` or
+`config-deletions/` directory on the configured storage disk for retained
+recovery files. Both mutations invalidate the existing version cache after
+database commit.
+
+Firmware and configuration latest-version and prefix-download selection compare
+canonical integer versions without numeric conversion, including values larger
+than JavaScript or PHP integer limits. Canonical integers sort ahead of legacy
+text when descending; legacy versions retain lexical order within their group.
+Release management sends neither activity email nor in-app activity, consistent
+with the existing software-upload behavior.
 
 ### Download a release
 
@@ -665,8 +764,9 @@ succeeded: authentication can succeed before endpoint validation fails.
 1. Create a replacement key and save its complete value.
 2. Update the integration's secret configuration.
 3. Verify the new key with the read-only `GET /api/external/v1` request.
-4. Select **Revoke** on the old key and confirm **Revoke key** in Developer
-   Workspace. The legacy page revokes directly without that confirmation.
+4. Open the old key's three-dot **Actions** menu, select **Revoke**, and confirm
+   **Revoke key** in Developer Workspace. The legacy page revokes directly
+   without that confirmation.
 
 Revocation rejects subsequent requests immediately. Revoked keys remain listed
 and cannot be reactivated. There is no key-edit or expiration-extension action;

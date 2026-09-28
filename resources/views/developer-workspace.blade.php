@@ -8,12 +8,15 @@
     @php
         $developerPageData = function ($records, $size, $section) use ($releaseData) {
             return [
-                'rows' => $records->getCollection()->map(function ($record) {
+                'rows' => $records->getCollection()->map(function ($record) use ($section) {
                     return [
                         'version' => $record->version,
                         'prefix' => $record->prefix,
                         'description' => $record->description,
-                        'createdAt' => optional($record->created_at)->format('Y-m-d H:i:s'),
+                        'createdAt' => optional($record->created_at)->toIso8601String(),
+                        'id' => $record->id,
+                        'updateUrl' => route('developer.'.$section.'.update', $record->id),
+                        'deleteUrl' => route('developer.'.$section.'.destroy', $record->id),
                     ];
                 })->values()->all(),
                 'filters' => $releaseData[$section]['filters'],
@@ -33,7 +36,7 @@
                 ],
             ];
         };
-        $uploadErrors = array_intersect_key($errors->messages(), array_flip(['firmware', 'config', 'description', 'prefix']));
+        $uploadErrors = array_intersect_key($errors->messages(), array_flip(['firmware', 'config', 'version', 'description', 'prefix']));
         $failedUpload = session('error') && in_array(session('active_upload'), ['firmware', 'config'], true) ? session('active_upload') : null;
         $activeUpload = $failedUpload ?? old('_upload_kind', session('active_upload', $errors->has('config') ? 'config' : request('section', 'firmware')));
         $activeUpload = $activeUpload === 'config' ? 'config' : 'firmware';
@@ -53,12 +56,19 @@
         'activeUpload' => $activeUpload,
         'activeSection' => request('section') === 'api-keys' && !$initiallyOpenUpload ? 'api-keys' : $activeUpload,
         'initiallyOpenUpload' => $initiallyOpenUpload,
-        'values' => ['description' => old('description'), 'prefix' => old('prefix')],
+        'values' => ['version' => old('version'), 'description' => old('description'), 'prefix' => old('prefix')],
         'errors' => $uploadErrors,
         'success' => session('success'),
         'sessionError' => session('error'),
     ]])
 @else
+@php
+    $legacyUploadKind = session('error') && in_array(session('active_upload'), ['firmware', 'config'], true)
+        ? session('active_upload') : old('_upload_kind');
+    $legacyUploadValue = function ($kind, $field) use ($legacyUploadKind) {
+        return $legacyUploadKind === $kind ? old($field) : null;
+    };
+@endphp
 
 <div class="container">
     <h2>Developer Workspace</h2>
@@ -69,12 +79,12 @@
 
     <!-- Success and Error Messages -->
     @if (session('success'))
-    <div style="color: green; background-color: lightgreen; border: 1px solid green; padding: 10px; margin-top: 10px; font-size: 16px; text-align: center;">
+    <div class="alert alert-success" role="status">
         {{ session('success') }}
     </div>
     @endif
     @if (session('error'))
-    <div style="color: red; background-color: pink; border: 1px solid red; padding: 10px; margin-top: 10px; font-size: 16px; text-align: center;">
+    <div class="alert alert-danger" role="alert">
         {{ session('error') }}
     </div>
     @endif
@@ -87,23 +97,44 @@
 			<div class="col-md-12 firmware-section" style="background-color: var(--obsidian-surface-subtle, #f2f2f2); border: 1px solid var(--obsidian-border, #cccccc); box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.12);">
 					<form action="{{ route('uploadFirmware') }}" method="post" enctype="multipart/form-data">
 						@csrf
+                        <input type="hidden" name="_upload_kind" value="firmware">
+                        @if ($errors->any() && $legacyUploadKind === 'firmware')
+                            <div class="alert alert-danger" role="alert">
+                                <ul class="mb-0">
+                                    @foreach (['firmware' => 'firmware', 'version' => 'firmware-version', 'description' => 'firmware-description', 'prefix' => 'firmware-prefix'] as $field => $target)
+                                        @foreach ($errors->get($field) as $message)
+                                            <li><a href="#{{ $target }}">{{ $message }}</a></li>
+                                        @endforeach
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        <div class="form-group">
+                            <label for="firmware-version">Firmware version</label>
+                            <input id="firmware-version" type="number" name="version" min="1" step="1" required value="{{ $legacyUploadValue('firmware', 'version') }}" class="form-control{{ $legacyUploadKind === 'firmware' && $errors->has('version') ? ' is-invalid' : '' }}" aria-describedby="firmware-version-help{{ $legacyUploadKind === 'firmware' && $errors->has('version') ? ' firmware-version-error' : '' }}">
+                            <small id="firmware-version-help" class="form-text">Enter a whole number of 1 or greater.</small>
+                            @if ($legacyUploadKind === 'firmware')
+                                @error('version')<div id="firmware-version-error" class="invalid-feedback">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
 						<div class="form-group">
 							<label for="firmware">Firmware File (.bin):</label>
-							<input type="file" name="firmware" accept=".bin" required class="form-control" />
+							<input id="firmware" type="file" name="firmware" accept=".bin" required class="form-control" />
 						</div>
 						<div class="form-group">
-							<label for="description">Firmware Description:</label>
-							<textarea name="description" id="description" class="form-control" required placeholder="Enter a description for the firmware update"></textarea>
+							<label for="firmware-description">Firmware Description:</label>
+							<textarea name="description" id="firmware-description" class="form-control" required maxlength="255" placeholder="Enter a description for the firmware update">{{ $legacyUploadValue('firmware', 'description') }}</textarea>
 						</div>
 						<div class="form-group">
-						<label for="prefix">Prefix:</label>
-							<input type="text" name="prefix" class="form-control" placeholder="Enter prefix" required>
+						<label for="firmware-prefix">Prefix:</label>
+							<input id="firmware-prefix" type="text" name="prefix" class="form-control" placeholder="Enter prefix" maxlength="255" value="{{ $legacyUploadValue('firmware', 'prefix') }}" required>
 						</div>
 						<input type="submit" value="Upload Firmware" class="btn btn-success">
 					</form>		
 					<br>					
 					<!-- Existing Firmware Updates Section -->
 					<div class="firmware-updates">
+                        <div class="table-responsive position-relative">
 						<table class="table table-bordered">
 							<thead>
 								<tr>
@@ -111,19 +142,29 @@
 									<th>Prefix</th>
 									<th>Description</th>
 									<th>Date Uploaded</th>
+                                    <th scope="col"><span class="sr-only">Actions</span></th>
 								</tr>
 							</thead>
 							<tbody>
 								@foreach ($firmwareUpdates as $update)
 								<tr>
-									<td>{{ $update->version }}</td>
+									<td>v{{ $update->version }}</td>
 									<td>{{ $update->prefix }}</td>
 									<td>{{ $update->description }}</td>
-									<td>{{ $update->created_at->format('Y-m-d H:i:s') }}</td>
+									<td><time data-release-uploaded datetime="{{ optional($update->created_at)->toIso8601String() }}">{{ optional($update->created_at)->format('Y-m-d H:i:s T') ?? '—' }}</time></td>
+                                    <td>
+                                        <div data-release-actions data-kind="firmware" data-title="Firmware" data-csrf-token="{{ csrf_token() }}" data-props="{{ json_encode([
+                                            'id' => $update->id, 'version' => (string) $update->version,
+                                            'prefix' => $update->prefix, 'description' => $update->description,
+                                            'updateUrl' => route('developer.firmware.update', $update->id),
+                                            'deleteUrl' => route('developer.firmware.destroy', $update->id),
+                                        ]) }}"></div>
+                                    </td>
 								</tr>
 								@endforeach
 							</tbody>
 						</table>
+                        </div>
 						{{-- Firmware Pagination Size Selection --}}
 						<form action="{{ route('developer-workspace') }}" method="GET">
 							<input type="hidden" name="section" value="firmware">
@@ -146,29 +187,51 @@
 						{{ $firmwareUpdates->links() }}
 					</div>
 				</div>
+		</div>
 		<div class="row">
 			<h3>Config Updates</h3>
 			<!-- Configuration Upload and Table -->
 			<div class="col-md-12 config-section" style="background-color: var(--obsidian-surface-subtle, #f2f2f2); border: 1px solid var(--obsidian-border, #cccccc); box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.12);">
 				<form action="{{ route('uploadConfig') }}" method="post" enctype="multipart/form-data">
 					@csrf
+                    <input type="hidden" name="_upload_kind" value="config">
+                    @if ($errors->any() && $legacyUploadKind === 'config')
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0">
+                                @foreach (['config' => 'config', 'version' => 'config-version', 'description' => 'config-description', 'prefix' => 'config-prefix'] as $field => $target)
+                                    @foreach ($errors->get($field) as $message)
+                                        <li><a href="#{{ $target }}">{{ $message }}</a></li>
+                                    @endforeach
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                    <div class="form-group">
+                        <label for="config-version">Configuration version</label>
+                        <input id="config-version" type="number" name="version" min="1" step="1" required value="{{ $legacyUploadValue('config', 'version') }}" class="form-control{{ $legacyUploadKind === 'config' && $errors->has('version') ? ' is-invalid' : '' }}" aria-describedby="config-version-help{{ $legacyUploadKind === 'config' && $errors->has('version') ? ' config-version-error' : '' }}">
+                        <small id="config-version-help" class="form-text">Enter a whole number of 1 or greater.</small>
+                        @if ($legacyUploadKind === 'config')
+                            @error('version')<div id="config-version-error" class="invalid-feedback">{{ $message }}</div>@enderror
+                        @endif
+                    </div>
 					<div class="form-group">
 						<label for="config">Configuration File (.json):</label>
-						<input type="file" name="config" accept=".json" required class="form-control" />
+						<input id="config" type="file" name="config" accept=".json" required class="form-control" />
 					</div>
 					<div class="form-group">
-						<label for="description">Config Description:</label>
-						<textarea name="description" id="description" class="form-control" required placeholder="Enter a description for the configuration update"></textarea>
+						<label for="config-description">Config Description:</label>
+						<textarea name="description" id="config-description" class="form-control" required maxlength="255" placeholder="Enter a description for the configuration update">{{ $legacyUploadValue('config', 'description') }}</textarea>
 					</div>
 					<div class="form-group">
-						<label for="prefix">Prefix:</label>
-						<input type="text" name="prefix" class="form-control" placeholder="Enter prefix" required>
+						<label for="config-prefix">Prefix:</label>
+						<input id="config-prefix" type="text" name="prefix" class="form-control" maxlength="255" placeholder="Enter prefix" value="{{ $legacyUploadValue('config', 'prefix') }}" required>
 					</div>
 					<input type="submit" value="Upload JSON Config" class="btn btn-success">
 				</form>
 				<br>
 				<!-- Configuration Updates Section -->
 				<div class="config-updates">
+                    <div class="table-responsive position-relative">
 					<table class="table table-bordered">
 						<thead>
 							<tr>
@@ -176,23 +239,33 @@
 								<th>Prefix</th>
 								<th>Description</th>
 								<th>Date Uploaded</th>
+                                <th scope="col"><span class="sr-only">Actions</span></th>
 							</tr>
 						</thead>
 						<tbody>
 							@forelse ($configVersions as $config)
 							<tr>
-								<td>{{ $config->version }}</td>
+								<td>v{{ $config->version }}</td>
 								<td>{{ $config->prefix }}</td>
 								<td>{{ $config->description }}</td>
-								<td>{{ $config->created_at->format('Y-m-d H:i:s') }}</td>
+								<td><time data-release-uploaded datetime="{{ optional($config->created_at)->toIso8601String() }}">{{ optional($config->created_at)->format('Y-m-d H:i:s T') ?? '—' }}</time></td>
+                                <td>
+                                    <div data-release-actions data-kind="config" data-title="Configuration" data-csrf-token="{{ csrf_token() }}" data-props="{{ json_encode([
+                                        'id' => $config->id, 'version' => (string) $config->version,
+                                        'prefix' => $config->prefix, 'description' => $config->description,
+                                        'updateUrl' => route('developer.config.update', $config->id),
+                                        'deleteUrl' => route('developer.config.destroy', $config->id),
+                                    ]) }}"></div>
+                                </td>
 							</tr>
 							@empty
 							<tr>
-								<td colspan="4">No configuration updates found.</td>
+								<td colspan="5">No configuration updates found.</td>
 							</tr>
 							@endforelse
 						</tbody>
 					</table>
+                    </div>
 					{{-- Configuration Pagination Size Selection --}}
 						<form action="{{ route('developer-workspace') }}" method="GET">
 							<input type="hidden" name="section" value="config">
@@ -226,6 +299,18 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+<script>
+    const uploadDateFormat = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short',
+    });
+    document.querySelectorAll('[data-release-uploaded]').forEach((element) => {
+        const uploaded = new Date(element.dateTime);
+        element.textContent = Number.isFinite(uploaded.getTime())
+            ? uploadDateFormat.format(uploaded)
+            : '—';
+    });
+</script>
 
 @endif
 @endsection

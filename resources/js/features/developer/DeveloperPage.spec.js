@@ -34,7 +34,7 @@ function page(overrides = {}) {
                         version: '2',
                         prefix: 'SP1',
                         description: '<img src=x>',
-                        createdAt: '2026-09-21 10:30:00',
+                        createdAt: '2026-09-21T10:30:00+00:00',
                     },
                 ],
                 pagination,
@@ -60,6 +60,7 @@ async function cancelUpload(wrapper, kind) {
 }
 
 beforeEach(() => {
+    window.history.replaceState({}, '', '/developer-workspace');
     Object.defineProperties(HTMLDialogElement.prototype, {
         showModal: {
             configurable: true,
@@ -90,6 +91,35 @@ afterEach(() => {
 });
 
 describe('developer workspace upload workflow', () => {
+    it('persists the selected software section for reloads without losing either release history or API key filters', async () => {
+        window.history.replaceState(
+            { existing: 'history-state' },
+            '',
+            '/developer-workspace?firmware_search=roof&firmware_prefixes[]=A&firmware_prefixes[]=B&config_search=night&config_page=2&keys_statuses[]=Active#releases',
+        );
+        const wrapper = page();
+        await wrapper.get('#developer-config-tab').trigger('click');
+        const query = new URLSearchParams(window.location.search);
+        expect(query.get('section')).toBe('config');
+        expect(query.get('firmware_search')).toBe('roof');
+        expect(query.getAll('firmware_prefixes[]')).toEqual(['A', 'B']);
+        expect(query.get('config_search')).toBe('night');
+        expect(query.get('config_page')).toBe('2');
+        expect(query.getAll('keys_statuses[]')).toEqual(['Active']);
+        expect(window.location.hash).toBe('#releases');
+        expect(window.history.state).toEqual({ existing: 'history-state' });
+        await wrapper.get('#developer-config-tab').trigger('keydown', { key: 'Home' });
+        expect(new URLSearchParams(window.location.search).get('section')).toBe('firmware');
+        await wrapper.get('#developer-firmware-tab').trigger('keydown', { key: 'End' });
+        expect(new URLSearchParams(window.location.search).get('section')).toBe('config');
+        wrapper.unmount();
+        mounted.pop();
+        const restored = page({
+            activeSection: new URLSearchParams(window.location.search).get('section'),
+        });
+        expect(restored.get('#developer-config-panel').isVisible()).toBe(true);
+    });
+
     it('opens a modal on demand and keeps text drafts while resetting the file on close', async () => {
         const wrapper = page();
         expect(wrapper.get('h1').text()).toBe('Developer Workspace');
@@ -102,6 +132,10 @@ describe('developer workspace upload workflow', () => {
         expect(wrapper.get('dialog h2').text()).toBe('Upload firmware');
         expect(document.activeElement).toBe(wrapper.get('dialog h2').element);
         expect(document.body.style.overflow).toBe('hidden');
+        const version = wrapper.get('#firmware-version');
+        expect(version.attributes()).toMatchObject({ type: 'number', min: '1', step: '1' });
+        expect(version.element.value).toBe('');
+        await version.setValue('27');
         await wrapper.get('#firmware-description').setValue('A draft release');
         await wrapper.get('#firmware-prefix').setValue('SP1');
         const originalFile = wrapper.get('#firmware').element;
@@ -116,6 +150,7 @@ describe('developer workspace upload workflow', () => {
         await openUpload(wrapper, 'firmware');
         expect(wrapper.get('#firmware-description').element.value).toBe('A draft release');
         expect(wrapper.get('#firmware-prefix').element.value).toBe('SP1');
+        expect(wrapper.get('#firmware-version').element.value).toBe('27');
         expect(wrapper.get('#firmware').element).not.toBe(originalFile);
         expect(wrapper.get('#firmware').element.value).toBe('');
     });
@@ -162,6 +197,12 @@ describe('developer workspace upload workflow', () => {
             expect(form.get('[name="_token"]').element.value).toBe('test-csrf');
             expect(form.get('[name="_upload_kind"]').element.value).toBe(kind);
             expect(form.get('[name="' + kind + '"]').element.value).toBe('');
+            expect(form.get('[name="version"]').attributes()).toMatchObject({
+                type: 'number',
+                min: '1',
+                step: '1',
+            });
+            expect(form.get('[name="version"]').element.value).toBe('');
             expect(form.findAll('button[type="submit"]')).toHaveLength(1);
             expect(wrapper.html()).not.toContain('must-not-render');
             const ids = wrapper.findAll('[id]').map((element) => element.attributes('id'));
@@ -178,9 +219,10 @@ describe('developer workspace upload workflow', () => {
             activeUpload: 'config',
             activeSection: 'firmware',
             initiallyOpenUpload: 'config',
-            values: { description: 'Retained', prefix: 'CFG' },
+            values: { version: '37', description: 'Retained', prefix: 'CFG' },
             errors: {
                 config: ['Choose JSON.'],
+                version: ['This version is already used.'],
                 description: ['Description is invalid.'],
                 prefix: ['Prefix is invalid.'],
             },
@@ -190,6 +232,10 @@ describe('developer workspace upload workflow', () => {
         expect(wrapper.get('dialog').attributes('id')).toBe('config-upload-dialog');
         expect(wrapper.get('#developer-firmware-panel').isVisible()).toBe(false);
         expect(wrapper.get('#config-description').element.value).toBe('Retained');
+        expect(wrapper.get('#config-version').element.value).toBe('37');
+        expect(wrapper.get('[href="#config-version"]').text()).toBe(
+            'This version is already used.',
+        );
         expect(wrapper.find('#firmware-description').exists()).toBe(false);
         expect(wrapper.get('#config-prefix').element.value).toBe('CFG');
         expect(wrapper.get('#config').element.value).toBe('');
@@ -202,6 +248,28 @@ describe('developer workspace upload workflow', () => {
         expect(wrapper.findAll('[role="alert"]')).toHaveLength(1);
         expect(wrapper.get('[href="#config-description"]').text()).toBe('Description is invalid.');
         expect(document.activeElement).toBe(wrapper.get('[role="alert"]').element);
+    });
+
+    it('keeps user-chosen firmware and configuration version drafts independent', async () => {
+        const wrapper = page();
+        for (const [kind, version] of [
+            ['firmware', '27'],
+            ['config', '28'],
+        ]) {
+            await openUpload(wrapper, kind);
+            const input = wrapper.get(`#${kind}-version`);
+            expect(input.element.value).toBe('');
+            await input.setValue(version);
+            await cancelUpload(wrapper, kind);
+        }
+        for (const [kind, version] of [
+            ['firmware', '27'],
+            ['config', '28'],
+        ]) {
+            await openUpload(wrapper, kind);
+            expect(wrapper.get(`#${kind}-version`).element.value).toBe(version);
+            await cancelUpload(wrapper, kind);
+        }
     });
 
     it('shows a handled storage failure inside the correct modal and leaves success closed', async () => {

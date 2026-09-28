@@ -62,6 +62,43 @@ async function verifyLayoutAndAccessibility(page) {
     expect(violations).toEqual([]);
 }
 
+for (const { timezoneId, date, clock } of [
+    { timezoneId: 'America/Los_Angeles', date: 'Sep 12, 2026', clock: '5:00:00 AM PDT' },
+    { timezoneId: 'Pacific/Kiritimati', date: 'Sep 13, 2026', clock: '2:00:00 AM GMT+14' },
+]) {
+    test.describe(`upload timestamps in ${timezoneId}`, () => {
+        test.use({ timezoneId, locale: 'en-US' });
+
+        for (const renderer of ['modern', 'legacy']) {
+            test(`${renderer} firmware and configuration uploads use browser local time after reload`, async ({
+                page,
+            }) => {
+                if (renderer === 'legacy') await page.goto('/__browser-fixtures/developer/legacy');
+                for (let visit = 0; visit < 2; visit++) {
+                    for (const { key, title } of sections) {
+                        if (renderer === 'modern') {
+                            await page.getByRole('tab', { name: title, exact: true }).click();
+                        }
+                        const current =
+                            renderer === 'modern'
+                                ? panel(page, title)
+                                : page.locator(`.${key}-updates`);
+                        const row = current.locator('tbody tr').first();
+                        await expect(row.locator('th, td').first()).toHaveText('v12');
+                        const uploaded = row.locator('time');
+                        await expect(uploaded).toContainText(date);
+                        await expect(uploaded).toContainText(clock);
+                        expect(Date.parse(await uploaded.getAttribute('datetime'))).toBe(
+                            Date.parse('2026-09-12T12:00:00Z'),
+                        );
+                    }
+                    if (visit === 0) await page.reload();
+                }
+            });
+        }
+    });
+}
+
 test('release searches include later pages and preserve each software section', async ({
     page,
 }) => {
@@ -128,7 +165,7 @@ for (const { key, title } of sections) {
         await verifyLayoutAndAccessibility(page);
         await current.getByRole('button', { name: 'Apply filters', exact: true }).click();
         await expect(current.getByRole('table').locator('tbody tr')).toHaveCount(2);
-        await expect(current.getByRole('rowheader')).toHaveText(['4', '3']);
+        await expect(current.getByRole('rowheader')).toHaveText(['v4', 'v3']);
         await expect(current.getByText('Showing 1–2 of 2 releases', { exact: true })).toBeVisible();
         const query = new URL(page.url()).searchParams;
         expect(query.getAll(`${key}_prefixes[]`).sort()).toEqual(['BROWSER-SP1', 'BROWSER-SP2']);
@@ -136,7 +173,7 @@ for (const { key, title } of sections) {
         expect(query.get(`${key}_from`)).toBe('2026-09-03');
         expect(query.get(`${key}_to`)).toBe('2026-09-04');
         await page.reload();
-        await expect(current.getByRole('rowheader')).toHaveText(['4', '3']);
+        await expect(current.getByRole('rowheader')).toHaveText(['v4', 'v3']);
         await current.getByRole('button', { name: /^Filters/ }).click();
         await expect(current.getByLabel(`${title} uploaded from`, { exact: true })).toHaveValue(
             '2026-09-03',
@@ -146,39 +183,55 @@ for (const { key, title } of sections) {
         );
         await current.getByRole('button', { name: /^Filters/ }).click();
         await current.getByRole('button', { name: 'Clear filters', exact: true }).click();
-        await expect(current.getByRole('rowheader', { name: '12', exact: true })).toBeVisible();
+        await expect(current.getByRole('rowheader', { name: 'v12', exact: true })).toBeVisible();
         expect(new URL(page.url()).searchParams.get(`${key}_from`)).toBeNull();
         expect(new URL(page.url()).searchParams.getAll(`${key}_prefixes[]`)).toEqual([]);
         await verifyLayoutAndAccessibility(page);
     });
 }
 
-test('release sorting and pagination retain a stable non-expandable table', async ({ page }) => {
-    const firmware = panel(page, 'Firmware');
-    await firmware
-        .getByLabel('Sort firmware releases', { exact: true })
-        .selectOption({ label: 'Oldest first' });
-    await expect(firmware.getByRole('rowheader').first()).toHaveText('1');
-    await firmware.getByLabel('Firmware updates per page', { exact: true }).selectOption('2');
-    await expect(firmware.getByRole('rowheader')).toHaveText(['1', '2']);
-    await expect(firmware.getByText('Showing 1–2 of 12 releases', { exact: true })).toBeVisible();
-    const pages = firmware.getByRole('navigation', { name: 'Firmware pages', exact: true });
-    await pages.getByRole('link', { name: '2', exact: true }).click();
-    await expect(firmware.getByRole('rowheader')).toHaveText(['3', '4']);
-    await page.reload();
-    await expect(firmware.getByRole('rowheader')).toHaveText(['3', '4']);
-    await expect(firmware.getByLabel('Sort firmware releases', { exact: true })).toHaveValue(/.+/);
-    await expect(
-        firmware.getByRole('table').locator('[aria-expanded], details, button'),
-    ).toHaveCount(0);
-    await verifyLayoutAndAccessibility(page);
-});
+for (const { key, title } of sections) {
+    test(`${title} sorting and pagination retain a stable non-expandable table`, async ({
+        page,
+    }) => {
+        await page.getByRole('tab', { name: title, exact: true }).click();
+        const releaseName = key === 'firmware' ? 'firmware' : 'configuration';
+        const current = panel(page, title);
+        await current
+            .getByLabel(`Sort ${releaseName} releases`, { exact: true })
+            .selectOption({ label: 'Oldest first' });
+        await expect(current.getByRole('rowheader').first()).toHaveText('v1');
+        await current.getByLabel(`${title} updates per page`, { exact: true }).selectOption('2');
+        await expect(current.getByRole('rowheader')).toHaveText(['v1', 'v2']);
+        await expect(
+            current.getByText('Showing 1–2 of 12 releases', { exact: true }),
+        ).toBeVisible();
+        const pages = current.getByRole('navigation', { name: `${title} pages`, exact: true });
+        await pages.getByRole('link', { name: '2', exact: true }).click();
+        await expect(current.getByRole('rowheader')).toHaveText(['v3', 'v4']);
+        await page.reload();
+        await expect(current.getByRole('rowheader')).toHaveText(['v3', 'v4']);
+        await expect(
+            current.getByLabel(`Sort ${releaseName} releases`, { exact: true }),
+        ).toHaveValue(/.+/);
+        const table = current.getByRole('table');
+        await expect(table.locator('tbody tr')).toHaveCount(2);
+        await expect(table.locator('tr[aria-expanded], details')).toHaveCount(0);
+        await expect(
+            table.getByRole('button', { name: new RegExp(`^Actions for ${releaseName} `) }),
+        ).toHaveCount(2);
+        await expect(table.locator('button:not([aria-haspopup="menu"])')).toHaveCount(0);
+        await expect(table.locator('tbody tr > :last-child button')).toHaveCount(2);
+        await verifyLayoutAndAccessibility(page);
+    });
+}
 
 test('filter drafts cancel with Escape and apply with Enter from a date field', async ({
     page,
 }) => {
     const firmware = panel(page, 'Firmware');
     const filters = firmware.getByRole('button', { name: /^Filters/ });
+    await expect(filters).toBeVisible();
     const initialUrl = page.url();
     await filters.click();
     const prefix = page.getByRole('combobox', { name: 'Firmware prefixes', exact: true });
@@ -200,7 +253,7 @@ test('filter drafts cancel with Escape and apply with Enter from a date field', 
     const to = firmware.getByLabel('Firmware uploaded to', { exact: true });
     await to.fill('2026-09-07');
     await to.press('Enter');
-    await expect(firmware.getByRole('rowheader')).toHaveText(['7', '5', '3']);
+    await expect(firmware.getByRole('rowheader')).toHaveText(['v7', 'v5', 'v3']);
     await expect(firmware.getByText('Showing 1–3 of 3 releases', { exact: true })).toBeVisible();
     expect(new URL(page.url()).searchParams.getAll('firmware_prefixes[]')).toEqual(['BROWSER-SP1']);
 });

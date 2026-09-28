@@ -1,9 +1,11 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
 import ReleaseFilters from './ReleaseFilters.vue';
+import ReleaseActions from './ReleaseActions.vue';
 
 const props = defineProps({
     kind: { type: String, required: true },
+    csrfToken: { type: String, default: '' },
     title: { type: String, required: true },
     rows: { type: Array, default: () => [] },
     pagination: { type: Object, required: true },
@@ -15,6 +17,29 @@ const props = defineProps({
     pending: { type: Boolean, default: false },
 });
 const form = ref(null);
+const dateFormat = new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+});
+const timeFormat = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+});
+const displayRows = computed(() =>
+    props.rows.map((row) => {
+        const uploaded = row.createdAt ? new Date(row.createdAt) : null;
+        const valid = uploaded && Number.isFinite(uploaded.getTime());
+        return {
+            ...row,
+            uploadedDateTime: valid ? uploaded.toISOString() : undefined,
+            uploadedDate: valid ? dateFormat.format(uploaded) : '—',
+            uploadedTime: valid ? timeFormat.format(uploaded) : '',
+        };
+    }),
+);
 const search = ref('');
 const sort = ref('newest');
 const perPage = ref(props.pagination.perPage);
@@ -104,6 +129,9 @@ function remove(chip) {
         );
     } else applied.value[chip.field] = '';
     submit();
+}
+function refresh() {
+    window.location.reload();
 }
 </script>
 
@@ -245,28 +273,40 @@ function remove(chip) {
                         <th scope="col">Prefix</th>
                         <th scope="col">Description</th>
                         <th scope="col">Uploaded</th>
+                        <th scope="col" class="release-actions">
+                            <span class="visually-hidden">Actions</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(row, index) in rows" :key="index">
+                    <tr v-for="(row, index) in displayRows" :key="row.id ?? index">
                         <th scope="row">
-                            <span class="release-version">{{ row.version }}</span>
+                            <span class="release-version">v{{ row.version }}</span>
                         </th>
                         <td>
                             <span class="release-prefix">{{ row.prefix }}</span>
                         </td>
                         <td class="developer-description">{{ row.description || '—' }}</td>
                         <td class="release-date">
-                            <time :datetime="row.createdAt?.replace(' ', 'T')"
-                                ><span>{{ row.createdAt?.split(' ')[0] || '—' }}</span
-                                ><span class="release-time">{{
-                                    row.createdAt?.split(' ')[1]
-                                }}</span></time
+                            <time :datetime="row.uploadedDateTime"
+                                ><span>{{ row.uploadedDate }}</span
+                                ><span class="release-time">{{ row.uploadedTime }}</span></time
                             >
+                        </td>
+                        <td class="release-actions">
+                            <ReleaseActions
+                                v-if="row.updateUrl && row.deleteUrl"
+                                :kind="kind"
+                                :title="title"
+                                :row="row"
+                                :csrf-token="csrfToken"
+                                :disabled="pending"
+                                @changed="refresh"
+                            />
                         </td>
                     </tr>
                     <tr v-if="!rows.length">
-                        <td colspan="4" class="release-empty">
+                        <td colspan="5" class="release-empty">
                             <strong>{{
                                 kind === 'firmware'
                                     ? 'No firmware updates found.'

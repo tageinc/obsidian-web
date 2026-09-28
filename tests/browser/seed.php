@@ -27,6 +27,19 @@ foreach (['owner', 'developer', 'empty'] as $role) {
     ]);
     if ($role === 'owner') $owner = $user;
 }
+foreach (['reset', 'verify'] as $purpose) {
+    foreach (['modern', 'legacy'] as $renderer) {
+        foreach (['desktop', 'mobile'] as $project) {
+            $recipient = User::create([
+                'name' => 'Authentication '.$purpose.' '.$renderer.' '.$project.' fixture',
+                'email' => 'auth-'.$purpose.'-'.$renderer.'-'.$project.'@browser.example.test',
+                'password' => Hash::make('browser-test-password'),
+                'email_verified_at' => $purpose === 'reset' ? now() : null,
+            ]);
+            $recipient->settings()->create(['receive_app_activity_emails' => false]);
+        }
+    }
+}
 $device = Device::create([
     'user_id' => $owner->id, 'serial_no' => 'BROWSER-SIMULATOR-1',
     'name' => 'Browser simulator', 'sku' => 'FIXTURE', 'order_no' => 'TEST-ORDER',

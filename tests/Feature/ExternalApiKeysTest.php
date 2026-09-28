@@ -114,8 +114,8 @@ class ExternalApiKeysTest extends TestCase
         $this->bearer($secret)->getJson('/api/external/v1/devices/999999')->assertNotFound();
         $upload = $this->bearer($secret)->postJson('/api/external/v1/configuration', [
             'config' => UploadedFile::fake()->createWithContent('fixture.json', '{"fixture":true}'),
-            'prefix' => 'TEST', 'description' => 'Synthetic integration test',
-        ])->assertCreated();
+            'version' => '37', 'prefix' => 'TEST', 'description' => 'Synthetic integration test',
+        ])->assertCreated()->assertJsonPath('version', '37')->assertJsonStructure(['id', 'version', 'message']);
         $this->bearer($secret)->getJson('/api/external/v1/configuration')->assertOk()->assertDontSee('file_path');
         $this->bearer($secret)->get('/api/external/v1/configuration/'.$upload->json('version').'/download')->assertOk();
         $this->assertNotNull($key->fresh()->last_used_at);

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import WorkspaceFilters from './WorkspaceFilters.vue';
+import ExternalApiKeyActions from './ExternalApiKeyActions.vue';
 import FormModal from '../../shared/components/FormModal.vue';
 import FormFeedback from '../../shared/components/FormFeedback.vue';
 import { requestJson } from '../../shared/api/client.js';
@@ -226,8 +227,9 @@ async function copy() {
         modalError.value = 'Copy is unavailable. Select and copy the key from the field.';
     }
 }
-function openRevoke(key, event) {
-    returnFocus = event.currentTarget;
+function openRevoke(key, trigger) {
+    if (key.status === 'Revoked' || pending.value || loading.value) return;
+    returnFocus = trigger;
     modalError.value = null;
     revokeKey.value = key;
 }
@@ -411,7 +413,7 @@ function date(value) {
                         <th scope="col">Created</th>
                         <th scope="col">Last used</th>
                         <th scope="col">Expires</th>
-                        <th scope="col">Actions</th>
+                        <th scope="col" class="release-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -430,16 +432,12 @@ function date(value) {
                         <td>{{ date(key.created_at) }}</td>
                         <td>{{ date(key.last_used_at) }}</td>
                         <td>{{ date(key.expires_at) }}</td>
-                        <td>
-                            <button
-                                type="button"
-                                class="btn btn-outline-danger btn-sm"
-                                :aria-label="`Revoke ${key.name}`"
-                                :disabled="key.status === 'Revoked' || pending || loading"
-                                @click="openRevoke(key, $event)"
-                            >
-                                Revoke
-                            </button>
+                        <td class="release-actions">
+                            <ExternalApiKeyActions
+                                :api-key="key"
+                                :disabled="pending || loading"
+                                @revoke="openRevoke(key, $event)"
+                            />
                         </td>
                     </tr>
                     <tr v-if="!loading && !error && !rows.length">

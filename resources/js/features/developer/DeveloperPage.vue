@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import softwareIcon from './download.svg';
 import toolsIcon from './wrench.svg';
 import ExternalApiKeys from './ExternalApiKeys.vue';
@@ -36,6 +36,16 @@ const selected = ref(
     ['config', 'api-keys'].includes(modalFailureKind.value || props.activeSection)
         ? modalFailureKind.value || props.activeSection
         : 'firmware',
+);
+watch(
+    selected,
+    (section) => {
+        if (!sections.some((item) => item.key === section)) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('section', section);
+        window.history.replaceState(window.history.state, '', url);
+    },
+    { immediate: true },
 );
 const tabElements = ref({});
 async function navigateSections(event, index) {
