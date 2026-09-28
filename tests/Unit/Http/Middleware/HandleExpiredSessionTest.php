@@ -4,7 +4,7 @@ namespace Tests\Unit\Http\Middleware;
 
 use App\Http\Middleware\HandleExpiredSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
@@ -76,24 +76,26 @@ class HandleExpiredSessionTest extends TestCase
     }
 
     /**
-     * Session-expired and refresh endpoints themselves are never intercepted.
+     * Session-expired and refresh endpoints are never intercepted.
      */
     public function test_expired_routes_are_skipped(): void
     {
-        // session-expired route
-        $expired = Request::create('/session-expired', 'GET');
-        $capturedExpired = null;
-        $responseExpired = $this->middleware->handle($expired, function (Request $r) use (&$capturedExpired) {
-            $capturedExpired = $r;
-            return response('ok');
-        });
-        // The middleware skips these routes entirely when unauthenticated,
-        // but it still passes through because of the routeIs() check.
-        // However, since we're NOT authenticated and NOT on those exact routes
-        // (the request is just a raw URL, not a Laravel Route), let's test it differently.
+        foreach (['session.expired', 'session.expire.refresh'] as $name) {
+            $route = Route::getRoutes()->getByName($name);
 
-        // For this test we verify the logic: when routeIs('session.expired') returns true,
-        // the user check is skipped.
-        $this->assertTrue(true); // exercised; real routing tested in feature tests below.
+            $this->assertNotNull($route, "Named route {$name} must exist");
+
+            $request = Request::create($route->uri(), $route->methods()[0]);
+            $request->setRouteResolver(fn () => $route);
+
+            $captured = null;
+            $response = $this->middleware->handle($request, function (Request $nextRequest) use (&$captured) {
+                $captured = $nextRequest;
+                return response('ok');
+            });
+
+            $this->assertSame($request, $captured, "{$name} must pass the request to the next middleware");
+            $this->assertSame(200, $response->getStatusCode(), "{$name} must not redirect");
+        }
     }
 }
