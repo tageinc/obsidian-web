@@ -308,6 +308,7 @@ it('navigates periods, offers available history and disables period arrows for c
     expect(wrapper.get('#history-period-date').element.value).toBe('1969-12-29');
     await wrapper.get('#history-view').setValue('all');
     expect(wrapper.text()).toContain('2 raw readings');
+    expect(wrapper.get('[aria-label="Next time range"]').element.disabled).toBe(true);
     await wrapper.get('#history-view').setValue('custom');
     await wrapper.get('#history-to').setValue('1969-12-31T17:00:00');
     expect(wrapper.get('#history-view').element.value).toBe('custom');
@@ -805,59 +806,28 @@ it('resumes live-follow refresh after empty-ending recovery', async () => {
 it.each([
     ['hour', 3600000],
     ['twelveHours', 12 * 3600000],
-])(
-    'shifts %s ranges by exact elapsed across Pacific DST gaps and midnight boundaries',
-    async (view, duration) => {
+])('shifts %s by exact elapsed time across Pacific DST and midnight', async (view, duration) => {
+    for (const instant of [
+        '2026-03-08T10:30:00Z',
+        '2026-11-01T09:30:00Z',
+        '2026-03-15T06:30:00Z',
+    ]) {
+        const now = Date.parse(instant);
+        vi.setSystemTime(now);
         const wrapper = mount(HistoryCharts, {
-            props: { points: [{ epoch_ms: Date.parse('2026-03-08T10:30:00Z'), temp: 1 }] },
+            props: { points: [{ epoch_ms: now, temp: 1 }] },
         });
         await flushPromises();
-
-        // Pre-spring DST (Mar 8 2026 is the gap in Pacific).
         await wrapper.get('#history-view').setValue(view);
-        const before = wrapper.get('#history-ending').element.value;
-        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
-
-        // Shift backward across DST gap.
+        const originalEnding = wrapper.get('#history-ending').element.value;
+        expect(wrapper.vm.range).toEqual({ start: now - duration, end: now });
         await wrapper.get('[aria-label="Previous time range"]').trigger('click');
-        const afterPrev = wrapper.get('#history-ending').element.value;
-        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
-        expect(afterPrev < before).toBe(true);
-
-        // Shift forward — should restore original ending.
+        expect(wrapper.vm.range).toEqual({ start: now - 2 * duration, end: now - duration });
         await wrapper.get('[aria-label="Next time range"]').trigger('click');
-        const afterNext = wrapper.get('#history-ending').element.value;
-        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
-        expect(afterNext).toBe(before);
-
-        // Shift backward across the spring-fall DST transition (Nov 1 2026 fallback).
-        vi.setSystemTime(Date.parse('2026-11-01T10:30:00Z'));
-        await wrapper.get('#history-view').setValue(view);
-        const beforeFall = wrapper.get('#history-ending').element.value;
-
-        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
-        const afterPrevFall = wrapper.get('#history-ending').element.value;
-        expect(afterPrevFall < beforeFall).toBe(true);
-
+        expect(wrapper.vm.range).toEqual({ start: now - duration, end: now });
+        expect(wrapper.get('#history-ending').element.value).toBe(originalEnding);
         await wrapper.get('[aria-label="Next time range"]').trigger('click');
-        const afterNextFall = wrapper.get('#history-ending').element.value;
-        expect(afterNextFall).toBe(beforeFall);
-
-        // Test midnight boundary: shift right through midnight.
-        vi.setSystemTime(Date.parse('2026-03-15T06:30:00Z'));
-        await wrapper.get('#history-view').setValue(view);
-        const beforeMidnight = wrapper.get('#history-ending').element.value;
-
-        await wrapper.get('[aria-label="Next time range"]').trigger('click');
-        const afterMidnight = wrapper.get('#history-ending').element.value;
-        expect(afterMidnight > beforeMidnight).toBe(true);
-        expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
-
-        // Shift left back — restore.
-        await wrapper.get('[aria-label="Previous time range"]').trigger('click');
-        const afterPrevBack = wrapper.get('#history-ending').element.value;
-        expect(afterPrevBack).toBe(beforeMidnight);
-
+        expect(wrapper.vm.range).toEqual({ start: now, end: now + duration });
         wrapper.unmount();
-    },
-);
+    }
+});

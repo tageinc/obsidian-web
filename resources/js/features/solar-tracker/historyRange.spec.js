@@ -94,9 +94,9 @@ describe('shorter time-window options (OB-19)', () => {
     });
 
     it('shifts hour/twelveHours by exact ±3600000/±43200000 across Pacific spring DST gap (Mar 8 2026)', () => {
-        // Pre-spring DST in Pacific: clocks jump from 2026-03-08T10:00:00Z to 11:00:00Z.
-        const hourRange = lastNHours(1, Date.parse('2026-03-08T15:00:00Z'));
-        const twelveHourRange = lastNHours(12, Date.parse('2026-03-08T15:00:00Z'));
+        // At 10:00Z, Pacific wall time jumps from 01:59 PST to 03:00 PDT.
+        const hourRange = lastNHours(1, Date.parse('2026-03-08T10:30:00Z'));
+        const twelveHourRange = lastNHours(12, Date.parse('2026-03-08T10:30:00Z'));
 
         // Backward shift.
         const prevHour = shiftRange(hourRange, 'hour', -1);
@@ -135,7 +135,7 @@ describe('shorter time-window options (OB-19)', () => {
     });
 
     it('shifts hour/twelveHours through midnight boundary without calendar-day drift', () => {
-        const now = Date.parse('2026-03-15T06:30:00Z'); // Pacific: ~22:30 previous day.
+        const now = Date.parse('2026-03-15T06:30:00Z'); // Pacific: 23:30 previous day.
         const hourRange = lastNHours(1, now);
         const twelveHourRange = lastNHours(12, now);
 
