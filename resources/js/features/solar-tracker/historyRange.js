@@ -42,6 +42,11 @@ export function lastDay(now = Date.now()) {
     return { start: end - 24 * hour, end };
 }
 
+export function lastNHours(hourCount, now = Date.now()) {
+    const end = Math.floor(now / 1000) * 1000;
+    return { start: end - hourCount * hour, end };
+}
+
 export function calendarRange(mode, anchor) {
     const day = new Date(`${datetimeInput(anchor).slice(0, 10)}T00:00:00Z`);
     if (mode === 'week') day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
@@ -57,6 +62,16 @@ export function shiftRange(range, mode, direction) {
         return {
             start: range.start + direction * 24 * hour,
             end: range.end + direction * 24 * hour,
+        };
+    if (mode === 'hour')
+        return {
+            start: range.start + direction * hour,
+            end: range.end + direction * hour,
+        };
+    if (mode === 'twelveHours')
+        return {
+            start: range.start + direction * 12 * hour,
+            end: range.end + direction * 12 * hour,
         };
     if (mode === 'week')
         return calendarRange(mode, range.start + direction * 7 * 24 * hour + 12 * hour);

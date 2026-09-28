@@ -3,6 +3,7 @@ import {
     calendarRange,
     datetimeInput,
     lastDay,
+    lastNHours,
     parseDatetime,
     pointsInRange,
     shiftRange,
@@ -54,5 +55,41 @@ describe('Pacific datetime ranges', () => {
         );
         expect(chart.options.scales.x.min).toBe(range.start);
         expect(chart.options.scales.x.max).toBe(range.end);
+    });
+});
+
+describe('shorter time-window options (OB-19)', () => {
+    it.each([1, 2, 12, 6, 48])('lastNHours returns the correct elapsed hours (%s)', (hourCount) => {
+        const now = Date.parse('2026-03-08T15:00:00Z');
+        const range = lastNHours(hourCount, now);
+        expect(range).toEqual({ start: now - hourCount * 3600000, end: now });
+    });
+
+    it('shifts hour-mode ranges by one hour', () => {
+        const range = lastNHours(1, Date.parse('2026-03-08T15:00:00Z'));
+        expect(shiftRange(range, 'hour', 1)).toEqual({
+            start: range.start + 3600000,
+            end: range.end + 3600000,
+        });
+    });
+
+    it('shifts twelve-hours mode ranges by one full window', () => {
+        const range = lastNHours(12, Date.parse('2026-03-08T15:00:00Z'));
+        expect(shiftRange(range, 'twelveHours', 1)).toEqual({
+            start: range.start + 12 * 3600000,
+            end: range.end + 12 * 3600000,
+        });
+    });
+
+    it('keeps fixed durations across DST boundaries', () => {
+        const hourRange = lastNHours(1, Date.parse('2026-03-08T15:00:00Z'));
+        const twelveHourRange = lastNHours(12, Date.parse('2026-03-08T15:00:00Z'));
+        expect(
+            shiftRange(hourRange, 'hour', -1).end - shiftRange(hourRange, 'hour', -1).start,
+        ).toBe(3600000);
+        expect(
+            shiftRange(twelveHourRange, 'twelveHours', -1).end -
+                shiftRange(twelveHourRange, 'twelveHours', -1).start,
+        ).toBe(12 * 3600000);
     });
 });
