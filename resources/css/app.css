@@ -1,12 +1,1 @@
-.nav-link {
-	color: black !important;
-}
-
-@media screen and (max-width: 900px) {
-	body {
-		background-color: red;
-	}
-	.section {
-		flex-direction: column;
-	}
-}
+/* App global styles - WF0004/OB-17: removed debug leftover rules (black !important nav-link, red mobile bg) */
