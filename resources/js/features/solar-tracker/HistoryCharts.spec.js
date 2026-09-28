@@ -500,6 +500,7 @@ it('supports all OB-19 View dropdown options and preserves the selected view', a
     });
     await flushPromises();
     const options = wrapper.get('#history-view').findAll('option');
+    expect(wrapper.get('#history-view optgroup').attributes('label')).toBe('Windows');
     expect(options.map((o) => o.attributes('value'))).toEqual(
         expect.arrayContaining(['hour', 'twelveHours', 'day', 'week', 'month', 'all', 'custom']),
     );
@@ -507,6 +508,29 @@ it('supports all OB-19 View dropdown options and preserves the selected view', a
         await wrapper.get('#history-view').setValue(view);
         expect(wrapper.get('#history-view').element.value).toBe(view);
     }
+    wrapper.unmount();
+});
+
+it.each([
+    ['hour', 3600000],
+    ['twelveHours', 12 * 3600000],
+])('keeps the selected %s window when its ending time changes', async (view, duration) => {
+    const wrapper = mount(HistoryCharts, {
+        props: {
+            points: [
+                { epoch_ms: Date.parse('2026-01-15T18:00:00Z'), temp: 1 },
+                { epoch_ms: Date.parse('2026-01-15T19:00:00Z'), temp: 2 },
+            ],
+        },
+    });
+    await flushPromises();
+
+    await wrapper.get('#history-view').setValue(view);
+    await wrapper.get('#history-ending').setValue('2026-01-15T12:00:00');
+
+    const summary = wrapper.get('.history-range-display').text();
+    expect(summary).toContain('Jan 15, 2026');
+    expect(wrapper.vm.range.end - wrapper.vm.range.start).toBe(duration);
     wrapper.unmount();
 });
 

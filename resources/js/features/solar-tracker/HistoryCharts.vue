@@ -49,6 +49,7 @@ const to = ref(datetimeInput(initialRange.end));
 const selectedDate = ref(datetimeInput(initialRange.end).slice(0, 10));
 const rangeError = ref('');
 const customView = computed(() => view.value === 'custom');
+const shortWindowHours = { hour: 1, twelveHours: 12 };
 const periodNavigation = computed(
     () =>
         !customView.value && view.value !== 'all' && ['day', 'week', 'month'].includes(view.value),
@@ -95,12 +96,16 @@ function chooseView() {
 function editPeriod() {
     followingNow.value = false;
     const anchor = parseDatetime(
-        view.value === 'day' ? to.value : `${selectedDate.value}T12:00:00`,
+        view.value === 'day' || shortWindowHours[view.value]
+            ? to.value
+            : `${selectedDate.value}T12:00:00`,
         'end',
     );
     rangeError.value = anchor === null ? 'Enter a valid date and time in Pacific Time.' : '';
     if (rangeError.value) return;
-    setRange(view.value === 'day' ? lastDay(anchor) : calendarRange(view.value, anchor));
+    if (view.value === 'day') setRange(lastDay(anchor));
+    else if (shortWindowHours[view.value]) setRange(lastNHours(shortWindowHours[view.value], anchor));
+    else setRange(calendarRange(view.value, anchor));
 }
 function editRange() {
     followingNow.value = false;
@@ -359,11 +364,13 @@ onBeforeUnmount(() => {
                                 class="form-select form-select-sm"
                                 @change="chooseView"
                             >
-                                <option value="day">24 hours</option>
-                                <option value="hour">1 hour</option>
-                                <option value="twelveHours">12 hours</option>
-                                <option value="week">Week</option>
-                                <option value="month">Month</option>
+                                <optgroup label="Windows">
+                                    <option value="hour">1 hour</option>
+                                    <option value="twelveHours">12 hours</option>
+                                    <option value="day">24 hours</option>
+                                    <option value="week">Week</option>
+                                    <option value="month">Month</option>
+                                </optgroup>
                                 <option value="all" :disabled="!normalized.length">
                                     Available history
                                 </option>
