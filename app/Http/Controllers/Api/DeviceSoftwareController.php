@@ -24,7 +24,8 @@ class DeviceSoftwareController extends Controller
     private function version($model, $kind, $prefix)
     {
         $version = app(RedisWorkloads::class)->version($kind, $prefix, function () use ($model, $prefix) {
-            $record = $model::where('prefix', $prefix)->orderBy('version', 'desc')->first();
+            $query = $model::where('prefix', $prefix);
+            $record = $query->orderByReleaseVersion()->first();
 
             return $record ? (string) $record->version : null;
         });
@@ -63,7 +64,8 @@ class DeviceSoftwareController extends Controller
         if ($selector === 'version') {
             $record = $value === null ? $model::latest()->first() : $model::where('version', $value)->first();
         } elseif ($value !== null) {
-            $record = $model::where('prefix', $value)->orderBy('version', 'desc')->first();
+            $query = $model::where('prefix', $value);
+            $record = $query->orderByReleaseVersion()->first();
         }
 
         if (!$record || !$record->file_path || !Storage::exists($record->file_path)) {

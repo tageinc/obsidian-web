@@ -28,10 +28,105 @@ config([
     'mail.default' => 'array',
     'logging.default' => 'null',
     'redis-workloads.enabled' => false,
+    'filesystems.default' => 'local',
+    'filesystems.disks.local.root' => $fixtureRoot.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app',
+    'filesystems.disks.public.root' => $fixtureRoot.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'public',
 ]);
+// The cookie exists only in this guarded harness, so real signed links and native
+// form redirects can exercise the fallback auth renderer without changing URLs.
+if (($_COOKIE['obsidian_browser_auth_renderer'] ?? null) === 'legacy') {
+    config(['frontend.vue3.auth' => false]);
+}
 $app->make(Illuminate\Contracts\Debug\ExceptionHandler::class)->reportable(function (Throwable $error) {
     file_put_contents('php://stderr', get_class($error).': '.$error->getMessage().PHP_EOL);
 });
+
+// Capture only dedicated synthetic authentication recipients after the real array
+// transport accepts their rendered mail. Links stay in private temporary storage.
+$authMailRecipients = [];
+foreach (['reset', 'verify', 'register'] as $purpose) {
+    foreach (['modern', 'legacy'] as $renderer) {
+        foreach (['desktop', 'mobile'] as $project) {
+            $authMailRecipients[] = 'auth-'.$purpose.'-'.$renderer.'-'.$project.'@browser.example.test';
+        }
+    }
+}
+$authMailPath = static function (string $email, string $kind) use ($fixtureRoot): string {
+    return $fixtureRoot.DIRECTORY_SEPARATOR.'auth-mail-'.$kind.'-'.hash('sha256', $email).'.json';
+};
+$authMailTransport = new class($authMailRecipients, $authMailPath) extends Illuminate\Mail\Transport\ArrayTransport {
+    private array $recipients;
+    private $path;
+
+    public function __construct(array $recipients, callable $path)
+    {
+        parent::__construct();
+        $this->recipients = $recipients;
+        $this->path = $path;
+    }
+
+    public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
+    {
+        foreach (array_keys($message->getTo() ?? []) as $email) {
+            if (in_array($email, $this->recipients, true) && is_file(($this->path)($email, 'failure'))) {
+                throw new Swift_TransportException('Synthetic browser mail delivery failure.');
+            }
+        }
+
+        return parent::send($message, $failedRecipients);
+    }
+};
+$app->make('mailer')->setSwiftMailer(new Swift_Mailer($authMailTransport));
+Illuminate\Support\Facades\Event::listen(Illuminate\Mail\Events\MessageSent::class,
+    static function ($event) use ($authMailRecipients, $authMailPath) {
+        $recipients = array_keys($event->message->getTo() ?? []);
+        if (count($recipients) !== 1 || !in_array($recipients[0], $authMailRecipients, true)) {
+            return;
+        }
+        preg_match_all('/href="([^"]+)"/', $event->message->getBody(), $matches);
+        foreach ($matches[1] as $href) {
+            $url = html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (parse_url($url, PHP_URL_HOST) !== '127.0.0.1'
+                || parse_url($url, PHP_URL_PORT) !== 8127
+                || !preg_match('#^/(password/reset|email/verify)/#', parse_url($url, PHP_URL_PATH) ?? '')) {
+                continue;
+            }
+            file_put_contents($authMailPath($recipients[0], 'delivery'), json_encode([
+                'email' => $recipients[0], 'url' => $url,
+            ], JSON_THROW_ON_ERROR), LOCK_EX);
+            break;
+        }
+    });
+Illuminate\Support\Facades\Route::put('/__browser-fixtures/auth-mail',
+    static function (Illuminate\Http\Request $request) use ($authMailRecipients, $authMailPath) {
+        $values = $request->validate([
+            'email' => ['required', Illuminate\Validation\Rule::in($authMailRecipients)],
+            'fail' => ['required', 'boolean'],
+        ]);
+        $path = $authMailPath($values['email'], 'failure');
+        if ($values['fail']) {
+            file_put_contents($path, 'true', LOCK_EX);
+        } elseif (is_file($path)) {
+            unlink($path);
+        }
+
+        return response()->noContent();
+    });
+Illuminate\Support\Facades\Route::get('/__browser-fixtures/auth-mail',
+    static function (Illuminate\Http\Request $request) use ($authMailRecipients, $authMailPath) {
+        $values = $request->validate([
+            'email' => ['required', Illuminate\Validation\Rule::in($authMailRecipients)],
+        ]);
+        $user = App\Models\User::where('email', $values['email'])->firstOrFail();
+        $path = $authMailPath($values['email'], 'delivery');
+
+        return response()->json([
+            'delivery' => is_file($path) ? json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR) : null,
+            'verified' => $user->hasVerifiedEmail(),
+            'activity_email_enabled' => $user->settings->receive_app_activity_emails,
+            'notification_count' => $user->notifications()->count(),
+        ]);
+    });
 
 // These routes exist only behind the disposable-database checks above. The live
 // browser test removes only the tagged readings that it created.
@@ -46,6 +141,36 @@ Illuminate\Support\Facades\Route::get('/__browser-fixtures/devices/{id}/legacy',
 
     return app(App\Http\Controllers\ViewDeviceController::class)->show($id);
 })->middleware(['web', 'auth', 'verified', 'browser.device']);
+
+Illuminate\Support\Facades\Route::get('/__browser-fixtures/developer/legacy', function (Illuminate\Http\Request $request) {
+    config(['frontend.vue3.developer' => false, 'frontend.vue3.workspace' => false]);
+
+    return app(App\Http\Controllers\DeveloperWorkspaceController::class)->index($request);
+})->middleware(['web', 'auth', 'verified', 'browser.developer']);
+
+Illuminate\Support\Facades\Route::delete('/__browser-fixtures/firmware', function (Illuminate\Http\Request $request) {
+    $values = $request->validate([
+        'prefix' => ['required', 'string', 'regex:/\ABROWSER-MUTATION-(modern|legacy)-(desktop|mobile)\z/'],
+    ]);
+    foreach (App\Models\FirmwareVersions::where('prefix', $values['prefix'])->get() as $firmware) {
+        Illuminate\Support\Facades\Storage::disk('local')->delete($firmware->file_path);
+        $firmware->delete();
+    }
+
+    return response()->noContent();
+})->middleware(['web', 'auth', 'verified', 'browser.developer']);
+
+Illuminate\Support\Facades\Route::delete('/__browser-fixtures/config', function (Illuminate\Http\Request $request) {
+    $values = $request->validate([
+        'prefix' => ['required', 'string', 'regex:/\ABROWSER-MUTATION-(modern|legacy)-(desktop|mobile)\z/'],
+    ]);
+    foreach (App\Models\ConfigVersions::where('prefix', $values['prefix'])->get() as $configuration) {
+        Illuminate\Support\Facades\Storage::disk('local')->delete($configuration->file_path);
+        $configuration->delete();
+    }
+
+    return response()->noContent();
+})->middleware(['web', 'auth', 'verified', 'browser.developer']);
 
 Illuminate\Support\Facades\Route::post('/__browser-fixtures/telemetry', function (Illuminate\Http\Request $request) {
     $values = $request->validate([

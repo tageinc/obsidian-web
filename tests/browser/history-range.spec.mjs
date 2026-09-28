@@ -127,7 +127,7 @@ test('history ranges and PDF reports navigate, validate and retain state without
     await panel.getByLabel('View', { exact: true }).selectOption('custom');
     await expect(from).toHaveValue(value(now - 86400000));
     await expect(to).toHaveValue(value(now));
-    await from.fill(datetimeInput(now - 2 * 3600000));
+    await from.fill(value(now - 2 * 3600000));
     await expect(panel.getByLabel('View', { exact: true })).toHaveValue('custom');
     await expect(panel.getByText('2 raw readings', { exact: true })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Previous time range' })).toBeDisabled();
@@ -163,7 +163,7 @@ test('history ranges and PDF reports navigate, validate and retain state without
         0,
     );
     await expect(panel.getByLabel('Measurement', { exact: true })).toHaveValue('ps_avg');
-    await from.fill(datetimeInput(now + 3600000));
+    await from.fill(value(now + 3600000));
     await expect(rangeError).toContainText('before or equal');
     await expect(report).toBeDisabled();
     await expect(panel.getByRole('img')).not.toBeVisible();
@@ -211,3 +211,69 @@ test('history ranges and PDF reports navigate, validate and retain state without
     await expect(from).toHaveCount(0);
     expect(commands).toEqual([]);
 });
+
+for (const [viewName, hours] of [
+    ['hour', 1],
+    ['twelveHours', 12],
+    ['day', 24],
+]) {
+    test(`Reset and exact ${hours}-hour arrows preserve measurement and report bounds`, async ({
+        page,
+        context,
+    }) => {
+        const commands = [];
+        await context.route('**/*', (route) => {
+            const request = route.request();
+            const url = new URL(request.url());
+            if (url.origin !== 'http://127.0.0.1:8127') return route.abort();
+            if (/remote-control/.test(url.pathname) && request.method() !== 'GET') {
+                commands.push(url.pathname);
+                return route.abort();
+            }
+            return route.continue();
+        });
+        const now = Math.floor(Date.now() / 1000) * 1000 + 5000;
+        const duration = hours * 3600000;
+        const value = (epoch) => datetimeInput(epoch).replace(/:00$/, '');
+        await page.clock.setFixedTime(now);
+        await page.goto('/login');
+        await page.getByLabel('Email address', { exact: true }).fill('owner@browser.example.test');
+        await page.getByLabel('Password', { exact: true }).fill('browser-test-password');
+        await page.getByRole('button', { name: 'Login', exact: true }).click();
+        await page.getByRole('link', { name: 'Browser simulator', exact: true }).click();
+        await page.getByRole('tab', { name: 'History', exact: true }).click();
+        const panel = page.getByRole('region', { name: 'Reading history', exact: true });
+        const view = panel.getByLabel('View', { exact: true });
+        const metric = panel.getByLabel('Measurement', { exact: true });
+        const ending = panel.getByLabel('Ending at', { exact: true });
+        const previous = panel.getByRole('button', { name: 'Previous time range' });
+        const next = panel.getByRole('button', { name: 'Next time range' });
+        const report = panel.getByRole('button', { name: 'Download history report' });
+        await view.selectOption(viewName);
+        await metric.selectOption('pds');
+        await expect(ending).toHaveValue(value(now));
+        await expect(previous).toBeVisible();
+        await expect(next).toBeVisible();
+        await previous.focus();
+        await page.keyboard.press('Enter');
+        await expect(ending).toHaveValue(value(now - duration));
+        await expectReportDownload(page, report, now - 2 * duration, now - duration);
+        await next.click();
+        await expect(ending).toHaveValue(value(now));
+        await previous.click();
+        // Simulate the native Reset empty-input event; actual iOS picker needs manual testing.
+        await ending.fill('');
+        await expect(ending).toHaveValue(value(now));
+        await expect(panel.locator('#history-range-error')).toHaveText('');
+        await expect(view).toHaveValue(viewName);
+        await expect(metric).toHaveValue('pds');
+        await expect(panel.getByRole('img')).toBeVisible();
+        await expectReportDownload(page, report, now - duration, now);
+        await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+        await page.getByRole('tab', { name: 'History', exact: true }).click();
+        await expect(view).toHaveValue(viewName);
+        await expect(metric).toHaveValue('pds');
+        await expect(ending).toHaveValue(value(now));
+        expect(commands).toEqual([]);
+    });
+}

@@ -454,15 +454,105 @@ test('legacy device surfaces and existing canvas charts follow saved theme chang
     }
 });
 
+async function expectReleaseActionSurfaces(page, legacy, dark, title) {
+    await page.goto(legacy ? '/__browser-fixtures/developer/legacy' : '/developer-workspace');
+    if (!legacy) await page.getByRole('tab', { name: title, exact: true }).click();
+    const releaseName = title.toLowerCase();
+    const actions = page.getByRole('button', {
+        name: `Actions for ${releaseName} 12`,
+        exact: true,
+    });
+    await expectButtonStateContrast(page, actions);
+    await actions.focus();
+    await page.keyboard.press('ArrowDown');
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+    const contrast = dark ? expectDarkContrast : expectContrast;
+    await contrast(menu.getByRole('menuitem', { name: 'Edit', exact: true }));
+    await contrast(menu.getByRole('menuitem', { name: 'Delete', exact: true }));
+    await page.keyboard.press('Enter');
+    const edit = page.getByRole('dialog', { name: `Edit ${releaseName}`, exact: true });
+    await expect(edit).toBeVisible();
+    await contrast(edit);
+    await contrast(edit.getByRole('spinbutton', { name: `${title} version`, exact: true }));
+    await contrast(edit.getByLabel(`${title} description`, { exact: true }));
+    await expectButtonStateContrast(
+        page,
+        edit.getByRole('button', { name: 'Save changes', exact: true }),
+    );
+    await page.keyboard.press('Escape');
+    await expect(actions).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    const confirmation = page.getByRole('dialog', { name: `Delete ${releaseName}`, exact: true });
+    await expect(confirmation).toBeVisible();
+    await contrast(confirmation);
+    await expectButtonStateContrast(
+        page,
+        confirmation.getByRole('button', { name: `Delete ${releaseName}`, exact: true }),
+    );
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(actions).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+    );
+}
+
+async function expectKeyActionMenuContrast(page, content) {
+    const actions = content.locator('button[aria-label^="Actions for API key "]:enabled').first();
+    await expectButtonStateContrast(page, actions);
+    const name = await actions.getAttribute('aria-label');
+    await actions.focus();
+    await page.keyboard.press('ArrowDown');
+    const menu = page.getByRole('menu', { name, exact: true });
+    const revoke = menu.getByRole('menuitem');
+    await expect(revoke).toHaveCount(1);
+    await expect(revoke).toHaveText('Revoke');
+    await expect(revoke).toBeFocused();
+    await actions.focus();
+    await expect(menu).toBeVisible();
+    await expectContrast(revoke);
+    await revoke.hover();
+    await expect.poll(() => revoke.evaluate((element) => element.matches(':hover'))).toBe(true);
+    await expectContrast(revoke);
+    await page.mouse.move(0, 0);
+    await revoke.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect
+        .poll(() => revoke.evaluate((element) => element.matches(':focus-visible')))
+        .toBe(true);
+    await expectContrast(revoke);
+    await page.keyboard.down('Space');
+    try {
+        await expect
+            .poll(() => revoke.evaluate((element) => element.matches(':active')))
+            .toBe(true);
+        await expectContrast(revoke);
+    } finally {
+        await revoke.evaluate((element) => element.blur());
+        await page.keyboard.up('Space');
+    }
+    await expect(menu).toBeHidden();
+}
+
 for (const mode of ['light', 'dark', 'adaptive']) {
     for (const legacy of [false, true]) {
-        test(`${legacy ? 'legacy' : 'modern'} API-key actions retain readable interaction states in ${mode} mode at night`, async ({
+        test(`${legacy ? 'legacy' : 'modern'} developer actions retain readable interaction states in ${mode} mode at night`, async ({
             page,
         }) => {
             await page.clock.setFixedTime(new Date('2026-09-27T23:00:00-04:00'));
             await login(page, 'developer@browser.example.test');
             const original = await settingsApi(page);
             const keyMutations = [];
+            const releaseMutations = [];
+            await page.route(/\/developer-workspace\/(firmware|config)\//, async (route) => {
+                if (!['GET', 'HEAD'].includes(route.request().method())) {
+                    releaseMutations.push(route.request().method());
+                    return route.abort();
+                }
+                return route.continue();
+            });
             await page.route('**/developer-workspace/api-keys**', async (route) => {
                 if (!['GET', 'HEAD'].includes(route.request().method())) {
                     keyMutations.push(
@@ -487,10 +577,7 @@ for (const mode of ['light', 'dark', 'adaptive']) {
                 await expect(content.getByRole('rowheader').first()).toBeVisible();
                 if (!legacy) await expectSoftwareIcons(page, dark);
 
-                await expectButtonStateContrast(
-                    page,
-                    content.locator('button.btn-outline-danger:enabled').first(),
-                );
+                await expectKeyActionMenuContrast(page, content);
                 await expectButtonStateContrast(
                     page,
                     content.getByRole('button', {
@@ -517,6 +604,10 @@ for (const mode of ['light', 'dark', 'adaptive']) {
                     legacy ? 'main' : '.developer-workspace',
                 );
                 expect(violations).toEqual([]);
+                for (const title of ['Firmware', 'Configuration']) {
+                    await expectReleaseActionSurfaces(page, legacy, dark, title);
+                }
+                expect(releaseMutations).toEqual([]);
                 expect((await settingsApi(page)).receive_app_activity_emails).toBe(
                     original.receive_app_activity_emails,
                 );

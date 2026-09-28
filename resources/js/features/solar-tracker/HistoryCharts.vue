@@ -52,7 +52,9 @@ const customView = computed(() => view.value === 'custom');
 const shortWindowHours = { hour: 1, twelveHours: 12 };
 const periodNavigation = computed(
     () =>
-        !customView.value && view.value !== 'all' && ['day', 'week', 'month'].includes(view.value),
+        !customView.value &&
+        view.value !== 'all' &&
+        (['day', 'week', 'month'].includes(view.value) || shortWindowHours[view.value]),
 );
 const hasRangeFilters = computed(
     () =>
@@ -94,6 +96,14 @@ function chooseView() {
     } else setRange(calendarRange(view.value, range.value.end));
 }
 function editPeriod() {
+    if ((view.value === 'day' || shortWindowHours[view.value]) && !to.value.trim()) {
+        // Empty Ending at in short windows: restore a current valid range.
+        followingNow.value = true;
+        rangeError.value = '';
+        if (view.value === 'day') setRange(lastDay());
+        else setRange(lastNHours(shortWindowHours[view.value]));
+        return;
+    }
     followingNow.value = false;
     const anchor = parseDatetime(
         view.value === 'day' || shortWindowHours[view.value]
@@ -199,9 +209,13 @@ watch([normalized, () => props.refreshedAt], () => {
     } else if (followingNow.value && props.refreshedAt !== null && !rangeError.value) {
         defaultRange.value = lastDay(props.refreshedAt);
         setRange(
-            view.value === 'day'
-                ? defaultRange.value
-                : calendarRange(view.value, props.refreshedAt),
+            view.value === 'hour'
+                ? lastNHours(1, props.refreshedAt)
+                : view.value === 'twelveHours'
+                  ? lastNHours(12, props.refreshedAt)
+                  : view.value === 'day'
+                    ? defaultRange.value
+                    : calendarRange(view.value, props.refreshedAt),
         );
     }
 });
@@ -319,7 +333,6 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
-                            v-if="view !== 'hour' && view !== 'twelveHours'"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Previous time range"
@@ -332,7 +345,6 @@ onBeforeUnmount(() => {
                             </svg>
                         </button>
                         <button
-                            v-if="view !== 'hour' && view !== 'twelveHours'"
                             type="button"
                             class="history-nav-icon"
                             aria-label="Next time range"

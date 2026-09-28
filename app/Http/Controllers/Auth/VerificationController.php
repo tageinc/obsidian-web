@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\VerifiesEmails;
 use Illuminate\Auth\Events\Verified;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class VerificationController extends Controller
 {
@@ -43,7 +44,8 @@ class VerificationController extends Controller
         try {
             $user->sendEmailVerificationNotification();
             return back()->with('status', 'Verification email sent to: ' . $email);
-        } catch (\Exception $e) {
+        } catch (\Throwable $exception) {
+            Log::warning('auth.verification_delivery_failed', ['exception' => get_class($exception)]);
             return back()->with('error', 'Failed to send verification email.');
         }
     }

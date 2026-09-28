@@ -197,13 +197,13 @@ class VueWorkflowPagesTest extends TestCase
         }
         $this->actingAs($this->owner)->get('/developer-workspace')->assertForbidden();
         $response = $this->actingAs($this->admin)->withSession([
-            '_old_input' => ['_upload_kind' => 'config', 'description' => 'Retained description', 'prefix' => 'CFG', 'file_path' => 'old-path-must-not-be-serialized'],
+            '_old_input' => ['_upload_kind' => 'config', 'version' => '37', 'description' => 'Retained description', 'prefix' => 'CFG', 'file_path' => 'old-path-must-not-be-serialized'],
             'errors' => (new ViewErrorBag)->put('default', new MessageBag(['config' => ['JSON required.']])),
         ])->get('/developer-workspace?firmware_show=2&config_show=1');
         $props = $this->props($response, 'developer');
         $this->assertSame('config', $props['activeUpload']);
         $this->assertSame('config', $props['activeSection']);
-        $this->assertSame(['description' => 'Retained description', 'prefix' => 'CFG'], $props['values']);
+        $this->assertSame(['version' => '37', 'description' => 'Retained description', 'prefix' => 'CFG'], $props['values']);
         $this->assertSame(['JSON required.'], $props['errors']['config']);
         $this->assertCount(2, $props['firmware']['rows']);
         $this->assertCount(1, $props['config']['rows']);
@@ -211,7 +211,9 @@ class VueWorkflowPagesTest extends TestCase
         $this->assertSame(route('uploadConfig'), $props['links']['uploadConfig']);
         $this->assertSame(route('developer-workspace'), $props['links']['developer']);
         foreach (['firmware', 'config'] as $kind) {
-            $this->assertSame(['version', 'prefix', 'description', 'createdAt'], array_keys($props[$kind]['rows'][0]));
+            $this->assertSame(['version', 'prefix', 'description', 'createdAt', 'id', 'updateUrl', 'deleteUrl'], array_keys($props[$kind]['rows'][0]));
+            $this->assertSame(route('developer.'.$kind.'.update', $props[$kind]['rows'][0]['id']), $props[$kind]['rows'][0]['updateUrl']);
+            $this->assertSame(route('developer.'.$kind.'.destroy', $props[$kind]['rows'][0]['id']), $props[$kind]['rows'][0]['deleteUrl']);
             foreach ($props[$kind]['pagination']['links'] as $link) {
                 if ($link['url']) {
                     $this->assertStringContainsString('firmware_show=2', $link['url']);

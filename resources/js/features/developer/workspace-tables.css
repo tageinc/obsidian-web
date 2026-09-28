@@ -98,6 +98,7 @@
     font-size: 0.75rem;
 }
 .release-table-container {
+    position: relative;
     border: 1px solid var(--obsidian-border, #e1e6ed);
     border-radius: 0.625rem;
 }
@@ -127,15 +128,6 @@
     width: 7rem;
 }
 .release-version {
-    display: inline-block;
-    padding: 0.25rem 0.6rem;
-    min-width: 2.25rem;
-    text-align: center;
-    border: 1px solid var(--obsidian-accent-border);
-    border-radius: 0.375rem;
-    background: var(--obsidian-accent-soft);
-    color: var(--obsidian-accent-strong);
-    font-size: 0.8125rem;
     font-weight: 600;
 }
 .release-prefix {
@@ -168,6 +160,12 @@
     margin-top: 0.15rem;
     font-size: 0.75rem;
     color: var(--obsidian-text-muted, #657184);
+}
+.developer-history .release-actions {
+    width: 3.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    text-align: right;
 }
 .developer-history .release-empty {
     padding: 3rem 1rem;

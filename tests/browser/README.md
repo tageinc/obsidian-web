@@ -35,6 +35,23 @@ horizontal overflow and keyboard menu access are also checked. Backend and Vue
 unit tests cover the remaining authorization, mutation, timezone/DST, lifecycle,
 and error-handling cases.
 
+Authentication recovery coverage renders and delivers password-reset and email
+verification messages through Laravel's real array mail transport, then consumes
+the captured action links through the application. It verifies failed delivery
+feedback, successful retry, persisted replacement passwords, reset-token reuse
+rejection, tampered verification rejection, and registration recovery after a
+verification-mail failure. Dedicated reset/resend recipients opt out of activity
+email to confirm that account-access mail still works without creating activity.
+The guarded fixture application allowlists twelve exact `browser.example.test`
+addresses, keeps captured links in its private temporary directory, and injects
+Swift transport exceptions only for those recipients. These capture/control
+routes are absent from the deployed application; no SMTP server or real mailbox
+is contacted. Backend tests additionally verify token/link expiration and safe
+exception logging. Both desktop and mobile exercise all three recovery workflows
+on modern and legacy auth forms, with separate synthetic accounts. A cookie read
+only by the guarded fixture application selects the legacy auth renderer across
+native redirects and captured signed links; tests assert the expected renderer.
+
 History coverage exercises the separate filter/navigation and chart cards,
 Pacific-time ranges from a browser in another timezone, keyboard report
 activation, and real PDF downloads for the default and custom ranges. It checks
@@ -62,6 +79,10 @@ from installed local dependencies while blocking other external requests.
 Developer coverage includes Tools navigation, key creation and validation,
 one-time secret display, reload persistence, revocation, CSRF rejection, and a
 real authenticated external device-list request against synthetic fixtures.
+Modern and legacy key rows reveal a three-dot menu containing only Revoke;
+keyboard opening, dismissal, focus restoration, and disabled revoked actions
+are checked. The modern confirmation's cancellation preserves the key's access,
+while confirmed revocation and the legacy native action both invalidate it.
 The browser fixture developer is `developer@browser.example.test`. External
 remote-control endpoints are never invoked by these tests.
 
@@ -84,11 +105,29 @@ legacy layouts, including normal, hover, keyboard-focus, and held-active button
 contrast. Software and Tools icons retain their white artwork in dark mode.
 These checks preserve the developer's saved theme, retain axe WCAG checks, and
 block and assert absent key mutations while inspecting button states.
+Firmware and configuration menus, editable fields, and confirmation dialogs receive the same
+theme and interaction-state checks on modern and legacy layouts; mutation
+requests are blocked during those appearance checks.
 
 Release-table coverage uses synthetic firmware/configuration records to verify
 full-history search, independent query state, searchable Tom Select prefix and
 version filters, inclusive upload dates, clearing, sorting, pagination, reloads,
 flat rows, accessibility, and desktop/mobile overflow.
+Both modern and legacy release tables also verify browser-local upload dates and
+times in Los Angeles and Kiritimati, including next-day rollover and reloads while
+preserving the original timestamp. The legacy page uses a guarded fixture route
+with the application's Developer authorization.
+
+Release management coverage uploads synthetic firmware binary and configuration
+JSON files with user-selected integers using the number spinners, edits each
+version and description, and deletes releases through confirmation.
+Modern and legacy pages verify reload persistence,
+unchanged upload time and file content, invalid numbers, duplicate-version
+validation, cancelled edits/deletions, keyboard menus and dialog focus, and mobile
+overflow. A mocked deletion failure checks retry without removing the release;
+ordinary uploads, edits, downloads, and deletions use the isolated backend.
+Fixture storage disks are confined to the temporary browser directory. A guarded
+cleanup route removes only releases with the test's exact synthetic prefix.
 
 The checks workflow also runs the real Redis integration script against a
 disposable service with a unique namespace. The existing deployment workflow

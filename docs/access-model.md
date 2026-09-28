@@ -87,9 +87,11 @@ rate-limit responses return 429 and `Retry-After`. No secrets are logged.
 | GET | `/devices/{id}/report` | History PDF with all graphs, device details, latest readings, and creation timestamp; optional inclusive `from`/`to` ISO 8601 range |
 | GET | `/remote-control?serial_no=...` | Remote-control state |
 | POST | `/remote-control` | Set `serial_no`, `mode`, and `motor_speed` using existing validation |
-| GET / POST | `/firmware` | List releases / upload `firmware`, `description`, and `prefix` |
+| GET / POST | `/firmware` | List releases / upload `firmware`, selected positive-integer `version`, `description`, and `prefix` |
+| PATCH / DELETE | `/firmware/{firmware}` | Edit version/description or delete by immutable database ID |
 | GET | `/firmware/{version}/download` | Download firmware |
-| GET / POST | `/configuration` | List releases / upload `config`, `description`, and `prefix` |
+| GET / POST | `/configuration` | List releases / upload `config`, selected positive-integer `version`, `description`, and `prefix` |
+| PATCH / DELETE | `/configuration/{configuration}` | Edit version/description or delete by immutable database ID |
 | GET | `/configuration/{version}/download` | Download configuration |
 | GET / PATCH | `/user-settings` | Read / partially update the acting user's email and theme preferences |
 | GET | `/app-activity` | Read the acting user's activity feed and unread count |
@@ -97,7 +99,11 @@ rate-limit responses return 429 and `Retry-After`. No secrets are logged.
 | DELETE | `/app-activity/{id}` | Dismiss one owned activity |
 | DELETE | `/app-activity` | Clear the acting user's activity feed |
 
-Uploads use multipart form data and return JSON 201 with a version and message.
+Uploads use multipart form data and return JSON 201 with `id`, `version`, and
+`message`. Versions are selected by the caller and unique across prefixes within
+each release type; firmware and configuration have independent version spaces.
+Edits preserve prefixes, file bytes, IDs, and upload timestamps. Download URLs
+continue to use the current version; management URLs use the immutable ID.
 Lists omit storage paths. Device edits and commands reuse existing controllers
 and validation; there is no blanket bypass of application rules. Device
 registration, account identity/security changes, key management, and owner-only lifecycle actions
