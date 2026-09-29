@@ -179,6 +179,7 @@ Illuminate\Support\Facades\Route::post('/__browser-fixtures/telemetry', function
         'pds' => 'required|numeric',
         'firmware_version' => 'nullable|string|max:255',
         'config_version' => 'nullable|string|max:255',
+        'prefix' => 'nullable|string|max:255',
         'cts' => 'sometimes|nullable|integer',
     ]);
     $serial = 'BROWSER-SIMULATOR-1';

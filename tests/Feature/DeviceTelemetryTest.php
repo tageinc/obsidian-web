@@ -43,7 +43,7 @@ class DeviceTelemetryTest extends TestCase
             'data' => [
                 'temp' => 31.5, 'ps1' => 18, 'ps2' => 19, 'ps_avg' => null, 'pds' => -1,
                 'cts' => 4, 'state' => 'tracking', 'motor_speed' => -20,
-                'firmware_version' => '001.020', 'config_version' => '0',
+                'firmware_version' => '001.020', 'config_version' => '0', 'prefix' => '001',
                 'extension' => ['private_value' => 'not-for-the-overview'],
             ],
         ]);
@@ -53,6 +53,7 @@ class DeviceTelemetryTest extends TestCase
         ]);
         $beforeDevice = $this->device->fresh()->getAttributes();
         $beforeControl = $control->fresh()->getAttributes();
+        $beforeReading = $latest->fresh()->getAttributes();
         $beforeCount = DeviceLog::count();
 
         $browser = $this->actingAs($this->owner)->getJson($this->browserUrl())->assertOk();
@@ -67,6 +68,7 @@ class DeviceTelemetryTest extends TestCase
             ->assertJsonPath('status.Motor Speed', -20)
             ->assertJsonPath('status.Firmware version', '001.020')
             ->assertJsonPath('status.Config version', '0')
+            ->assertJsonPath('status.Prefix', '001')
             ->assertJsonPath('status.Updated', 'September 25, 2026, 11:00 AM PDT')
             ->assertJsonPath('latest_reading.id', $latest->id)
             ->assertJsonPath('latest_reading.timestamp', '2026-09-25T11:00:00-07:00')
@@ -82,6 +84,7 @@ class DeviceTelemetryTest extends TestCase
         $external->assertDontSee('user_id')->assertDontSee('private_value')->assertDontSee('not-for-the-overview');
         $this->assertSame($beforeDevice, $this->device->fresh()->getAttributes());
         $this->assertSame($beforeControl, $control->fresh()->getAttributes());
+        $this->assertSame($beforeReading, $latest->fresh()->getAttributes());
         $this->assertSame($beforeCount, DeviceLog::count());
         $this->bearer($secret)->getJson('/api/external/v1')->assertJsonFragment([
             'GET /api/external/v1/devices/{id}/telemetry',
@@ -131,31 +134,48 @@ class DeviceTelemetryTest extends TestCase
         $this->assertDatabaseCount('solar_tracker_remote_controls', 0);
     }
 
-    public function test_software_versions_follow_the_same_reading_and_preserve_missing_and_zero_values(): void
+    public function test_software_identifiers_follow_the_same_reading_and_preserve_missing_and_zero_values(): void
     {
         $this->reading('2026-09-25 18:00:00', [
-            'data' => ['temp' => 20, 'firmware_version' => 'older-firmware', 'config_version' => 'older-config'],
+            'data' => ['temp' => 20, 'firmware_version' => 'older-firmware', 'config_version' => 'older-config',
+                'prefix' => 'older-prefix'],
         ]);
         [, $secret] = ExternalApiKey::issue($this->developer, 'Software versions test', null);
         $cases = [
-            [['firmware_version' => '001.020', 'config_version' => '0'], '001.020', '0'],
-            [['firmware_version' => 43, 'config_version' => 0], 43, 0],
-            [['firmware_version' => 1.25, 'config_version' => 2.5], 1.25, 2.5],
-            [['firmware_version' => null, 'config_version' => null], null, null],
-            [[], null, null],
-            [['firmware_version' => '', 'config_version' => '  '], null, null],
-            [['firmware_version' => ['version' => 'nested'], 'config_version' => false], null, null],
+            [['firmware_version' => '001.020', 'config_version' => '0', 'prefix' => '001'], '001.020', '0', '001'],
+            [['firmware_version' => 43, 'config_version' => 0, 'prefix' => 0], 43, 0, 0],
+            [['firmware_version' => 1.25, 'config_version' => 2.5, 'prefix' => 1.5], 1.25, 2.5, 1.5],
+            [['firmware_version' => 'v1', 'config_version' => 'v0', 'prefix' => '0'], 'v1', 'v0', '0'],
+            [['prefix' => ' Tracker A '], null, null, ' Tracker A '],
+            [['firmware_version' => null, 'config_version' => null, 'prefix' => null], null, null, null],
+            [[], null, null, null],
+            [['firmware_version' => '', 'config_version' => '  ', 'prefix' => ''], null, null, null],
+            [['prefix' => '  '], null, null, null],
+            [['firmware_version' => ['version' => 'nested'], 'config_version' => false,
+                'prefix' => ['value' => 'nested']], null, null, null],
+            [['prefix' => false], null, null, null],
+            [['prefix' => true], null, null, null],
         ];
 
-        foreach ($cases as [$versions, $firmware, $configuration]) {
-            $latest = $this->reading('2026-09-25 18:00:00', ['data' => array_merge(['temp' => 21], $versions)]);
+        foreach ($cases as [$identifiers, $firmware, $configuration, $prefix]) {
+            $data = array_merge(['temp' => 21], $identifiers);
+            $latest = $this->reading('2026-09-25 18:00:00', ['data' => $data]);
+            $beforeReading = $latest->fresh()->getAttributes();
+            $beforeCount = DeviceLog::count();
             $browser = $this->actingAs($this->owner)->getJson($this->browserUrl())->assertOk()
                 ->assertJsonPath('latest_reading.id', $latest->id)
                 ->assertJsonPath('status.Firmware version', $firmware)
-                ->assertJsonPath('status.Config version', $configuration);
+                ->assertJsonPath('status.Config version', $configuration)
+                ->assertJsonPath('status.Prefix', $prefix)
+                ->assertJsonPath('status.Temperature (°C)', 21);
+            $this->get('/devices/'.$this->device->id)->assertOk()->assertViewHas('telemetry', $browser->json());
             $external = $this->bearer($secret)->getJson($this->externalUrl())->assertOk();
             $this->assertSame($browser->json(), $external->json());
+            $this->assertSame($data, $latest->fresh()->data);
+            $this->assertSame($beforeReading, $latest->fresh()->getAttributes());
+            $this->assertSame($beforeCount, DeviceLog::count());
         }
+        $this->assertDatabaseCount('solar_tracker_remote_controls', 0);
     }
 
     public function test_browser_external_and_graph_values_share_fahrenheit_and_cts_states(): void

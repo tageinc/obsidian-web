@@ -30,8 +30,9 @@ class DeviceTelemetryData
                 'PDS' => $lastPoint['pds'] ?? null,
                 'Temperature (°C)' => $lastPoint['temp'] ?? null,
                 'Temperature (°F)' => $lastPoint['temp_f'] ?? null,
-                'Firmware version' => $this->softwareVersion($latestData['firmware_version'] ?? null),
-                'Config version' => $this->softwareVersion($latestData['config_version'] ?? null),
+                'Firmware version' => $this->softwareIdentifier($latestData['firmware_version'] ?? null),
+                'Config version' => $this->softwareIdentifier($latestData['config_version'] ?? null),
+                'Prefix' => $this->softwareIdentifier($latestData['prefix'] ?? null),
             ],
             'graph' => $graph,
             'latest_reading' => $lastPoint ? [
@@ -42,7 +43,7 @@ class DeviceTelemetryData
         ];
     }
 
-    private function softwareVersion($value)
+    private function softwareIdentifier($value)
     {
         return is_int($value) || is_float($value) || (is_string($value) && trim($value) !== '')
             ? $value : null;
