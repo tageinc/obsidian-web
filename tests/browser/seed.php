@@ -51,7 +51,7 @@ SolarTrackerRemoteControl::create(['serial_no' => $device->serial_no, 'mode' => 
 foreach ([0, 1, 4, 12, 24, 30] as $index => $hours) {
     $log = new DeviceLog([
         'serial_no' => $device->serial_no,
-        'data' => ['firmware_version' => '001.020', 'config_version' => '0'],
+        'data' => ['firmware_version' => '001.020', 'config_version' => '0', 'prefix' => '00202501220008'],
         'ps1' => 12 + $index, 'ps2' => 22 + $index,
         'ps_avg' => 99, 'pds' => $index - 2, 'temp' => 20 + $index, 'motor_speed' => 0, 'state' => 'solar-track', 'cts' => 1,
     ]);

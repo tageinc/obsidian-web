@@ -378,7 +378,7 @@ The response contains three fields:
 
 - `status`: the latest overview values under `State`, `PS1`, `PS2`, `PS Average`,
   `PDS`, `CTS`, `CTS state`, `Motor Speed`, `Temperature (°C)`, `Temperature (°F)`, `Firmware version`,
-  `Config version`, and `Updated`. Missing
+  `Config version`, `Prefix`, and `Updated`. Missing
   measurements are `null`, including missing values in a recorded reading;
   zero remains a real zero. `Updated` is the recorded time displayed in Pacific
   Time, or `N/A` when no timestamped reading exists.
@@ -389,15 +389,21 @@ The response contains three fields:
   "epoch_ms": 1790359200000 }`, or `null` for a device without readings. When
   several readings share a timestamp, the highest ID is the latest reading.
 
-The Overview card's **Software versions** values come from `firmware_version`
-and `config_version` in that same latest device reading. They describe the
-device-reported versions, not the newest releases available for download.
+The Overview card's **Software versions** values come from `firmware_version`,
+`config_version`, and `prefix` in that same latest device reading. They describe
+the device-reported firmware version, configuration version, and software prefix,
+not the newest releases available for download. The `Prefix` status field exposes
+the reported `prefix` value independently of either version.
 Nonempty string identifiers retain their exact text (including leading zeros),
-and numeric versions retain their numeric value; `"0"` and `0` are valid
-versions. Missing, `null`, blank, or nonscalar values return `null`, as do
-booleans. Versions are not carried forward from an older reading when the
-latest reading omits them. The card layout is presentation behavior; the data
-is available through the existing telemetry operation above.
+and numeric identifiers retain their numeric value; `"0"` and `0` are valid for
+all three fields. Missing, `null`, blank, or nonscalar values return `null`, as do
+booleans. None of these values are carried forward from an older reading when
+the latest reading omits them. The card displays a single lowercase `v` before
+available Firmware and Configuration versions and an em dash for missing values.
+That `v` is presentation formatting only: the API and stored values retain their
+reported text or number. The Prefix row displays the reported prefix without
+adding `v`. Card layout and version formatting need no separate API operation;
+the three reported values are available through the telemetry operation above.
 
 `Temperature (°F)` uses the same conversion, precision, and null handling as
 `graph.points[].temp_f`. `Temperature (°C)` and `CTS` retain their existing raw

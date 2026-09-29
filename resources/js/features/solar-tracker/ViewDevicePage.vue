@@ -89,6 +89,10 @@ const hasReading = computed(() =>
     Boolean(currentStatus.value.Updated && currentStatus.value.Updated !== 'N/A'),
 );
 const reading = (key) => (hasReading.value ? (currentStatus.value[key] ?? '—') : '—');
+function softwareVersion(key) {
+    const version = String(reading(key)).trim().replace(/^v+/i, '').trim();
+    return version && version !== '—' ? `v${version}` : '—';
+}
 const temperature = computed(() => {
     if (!hasReading.value) return null;
     if ('Temperature (°F)' in currentStatus.value) {
@@ -271,11 +275,15 @@ function navigateSection(event, index) {
                         <dl class="device-software-versions">
                             <div>
                                 <dt>Firmware</dt>
-                                <dd>{{ reading('Firmware version') }}</dd>
+                                <dd>{{ softwareVersion('Firmware version') }}</dd>
                             </div>
                             <div>
                                 <dt>Configuration</dt>
-                                <dd>{{ reading('Config version') }}</dd>
+                                <dd>{{ softwareVersion('Config version') }}</dd>
+                            </div>
+                            <div class="device-software-prefix">
+                                <dt>Prefix</dt>
+                                <dd>{{ reading('Prefix') }}</dd>
                             </div>
                         </dl>
                     </dd>
@@ -654,6 +662,9 @@ function navigateSection(event, index) {
     }
     .device-software-versions dd {
         text-align: left;
+    }
+    .device-software-prefix {
+        grid-column: 1 / -1;
     }
 }
 @media (max-width: 575px) {

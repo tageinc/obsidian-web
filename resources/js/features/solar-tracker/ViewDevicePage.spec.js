@@ -22,6 +22,7 @@ const props = {
         'Motor Speed': 0,
         'Firmware version': '001.020',
         'Config version': '0',
+        Prefix: '00202501220008',
         CTS: 0,
         PS1: 10,
     },
@@ -88,28 +89,83 @@ it('shows missing telemetry explicitly instead of presenting placeholder zero re
     expect(wrapper.findAll('.device-software-versions dd').map((value) => value.text())).toEqual([
         '—',
         '—',
+        '—',
     ]);
     wrapper.unmount();
 });
 it.each([false, true])(
-    'shows reported software versions without losing leading zeros (embedded=%s)',
+    'prefixes reported software versions without losing leading zeros (embedded=%s)',
     (embedded) => {
         const wrapper = mount(ViewDevicePage, { props: { ...props, embedded } });
         expect(wrapper.get('.device-metrics').text()).toContain('Software versions');
         expect(
             wrapper.findAll('.device-software-versions dd').map((value) => value.text()),
-        ).toEqual(['001.020', '0']);
+        ).toEqual(['v001.020', 'v0', '00202501220008']);
         wrapper.unmount();
     },
 );
-it('shows missing versions even when other telemetry is present', () => {
+it.each([
+    [1, 0, ['v1', 'v0']],
+    ['1', '0', ['v1', 'v0']],
+    ['v1', 'v0', ['v1', 'v0']],
+    ['V1', 'vv0', ['v1', 'v0']],
+    [' v1 ', ' V0 ', ['v1', 'v0']],
+    ['', ' ', ['—', '—']],
+    ['v', 'V', ['—', '—']],
+    ['—', '—', ['—', '—']],
+])('formats firmware %j and configuration %j only for display', (firmware, config, expected) => {
+    const status = {
+        ...props.status,
+        'Firmware version': firmware,
+        'Config version': config,
+    };
+    const originalStatus = { ...status };
+    const wrapper = mount(ViewDevicePage, { props: { ...props, status } });
+    expect(wrapper.findAll('.device-software-versions dt').map((label) => label.text())).toEqual([
+        'Firmware',
+        'Configuration',
+        'Prefix',
+    ]);
+    expect(wrapper.findAll('.device-software-versions dd').map((value) => value.text())).toEqual([
+        ...expected,
+        '00202501220008',
+    ]);
+    expect(status).toEqual(originalStatus);
+    expect(wrapper.get('.device-metrics > div:nth-child(3) dd').text()).toBe('0');
+    expect(wrapper.get('.device-metrics').text()).toContain('75.2 °F');
+    expect(wrapper.findAll('.device-sensors dd')[0].text()).toBe('10');
+    expect(requestJson).not.toHaveBeenCalled();
+    wrapper.unmount();
+});
+it.each([
+    ['00202501220008', '00202501220008'],
+    ['v-family', 'v-family'],
+    [0, '0'],
+    [null, '—'],
+    [undefined, '—'],
+])('displays the reported prefix %j without version formatting', (prefix, expected) => {
+    const status = { ...props.status, Prefix: prefix };
+    const wrapper = mount(ViewDevicePage, { props: { ...props, status } });
+    expect(wrapper.get('.device-software-prefix dt').text()).toBe('Prefix');
+    expect(wrapper.get('.device-software-prefix dd').text()).toBe(expected);
+    expect(status.Prefix).toBe(prefix);
+    expect(requestJson).not.toHaveBeenCalled();
+    wrapper.unmount();
+});
+it('shows missing software identifiers even when other telemetry is present', () => {
     const wrapper = mount(ViewDevicePage, {
         props: {
             ...props,
-            status: { ...props.status, 'Firmware version': null, 'Config version': undefined },
+            status: {
+                ...props.status,
+                'Firmware version': null,
+                'Config version': undefined,
+                Prefix: null,
+            },
         },
     });
     expect(wrapper.findAll('.device-software-versions dd').map((value) => value.text())).toEqual([
+        '—',
         '—',
         '—',
     ]);
@@ -241,6 +297,7 @@ it.each([false, true])(
                 'Temperature (°C)': 31,
                 'Firmware version': '001.021',
                 'Config version': '003.004',
+                Prefix: 'v-family',
                 CTS: 1,
                 PS1: 99,
             },
@@ -255,7 +312,7 @@ it.each([false, true])(
         expect(wrapper.get('.cts-badge-closed').text()).toBe('Closed');
         expect(
             wrapper.findAll('.device-software-versions dd').map((value) => value.text()),
-        ).toEqual(['001.021', '003.004']);
+        ).toEqual(['v001.021', 'v003.004', 'v-family']);
         expect(wrapper.get('.device-sensors').text()).toContain('99');
         expect(wrapper.get('.reading-time').text()).toContain('11:01 AM PDT');
         expect(wrapper.get('.plot-heading').text()).toContain('2 raw readings');

@@ -72,7 +72,7 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
                 ? 'rgb(48, 48, 48)'
                 : 'rgb(233, 236, 239)',
         );
-        await expect(versions.locator('dd')).toHaveText(['001.020', '0']);
+        await expect(versions.locator('dd')).toHaveText(['v001.020', 'v0', '00202501220008']);
         await expect(versions).toBeVisible();
         expect(
             await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
@@ -89,6 +89,7 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         const first = await addReading(37.75, 123, 9.5, {
             firmware_version: '001.021',
             config_version: '003.004',
+            prefix: 'SP1',
             cts: 0,
         });
         await page.clock.fastForward(59999);
@@ -99,6 +100,9 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         expect(snapshot.status['Temperature (°C)']).toBe(37.75);
         expect(snapshot.status['Temperature (°F)']).toBe(99.95);
         expect(snapshot.status['CTS state']).toBe('Open');
+        expect(snapshot.status['Firmware version']).toBe('001.021');
+        expect(snapshot.status['Config version']).toBe('003.004');
+        expect(snapshot.status.Prefix).toBe('SP1');
         await expect(ending).toHaveValue(dateValue(now + 60000));
         await expect(history.getByText('5 raw readings', { exact: true })).toBeVisible();
         await page.getByRole('tab', { name: 'Overview', exact: true }).click();
@@ -110,7 +114,7 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         );
         await expect(metric(/^PS Average$/)).toHaveText('123');
         await expect(metric(/^PDS$/)).toHaveText('9.5');
-        await expect(versions.locator('dd')).toHaveText(['001.021', '003.004']);
+        await expect(versions.locator('dd')).toHaveText(['v001.021', 'v003.004', 'SP1']);
         await page.getByRole('tab', { name: 'History', exact: true }).click();
 
         await history.getByLabel('View', { exact: true }).selectOption('custom');
@@ -138,10 +142,20 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         await page.getByRole('tab', { name: 'Overview', exact: true }).click();
         await expect(metric(/^Temperature$/)).toHaveText('100.85 °F');
         await expect(metric(/^CTS$/)).toHaveText('Closed');
-        await expect(versions.locator('dd')).toHaveText(['—', '—']);
+        await expect(versions.locator('dd')).toHaveText(['—', '—', '—']);
         await page.unroute(telemetryRoute);
-        await addReading(39.5, 125, 11, { cts: null });
-        await refreshAfter(60000);
+        await addReading(39.5, 125, 11, {
+            cts: null,
+            firmware_version: 'v1',
+            config_version: 'v0',
+            prefix: 'v-family',
+        });
+        const prefixedResponse = await refreshAfter(60000);
+        const prefixedSnapshot = await prefixedResponse.json();
+        expect(prefixedSnapshot.status['Firmware version']).toBe('v1');
+        expect(prefixedSnapshot.status['Config version']).toBe('v0');
+        expect(prefixedSnapshot.status.Prefix).toBe('v-family');
+        await expect(versions.locator('dd')).toHaveText(['v1', 'v0', 'v-family']);
         await expect(metric(/^Temperature$/)).toHaveText('103.1 °F');
         await expect(metric(/^CTS$/)).toHaveText('—');
         await expect(metric(/^CTS$/).locator('.cts-badge')).toHaveCount(0);

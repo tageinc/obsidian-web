@@ -117,7 +117,9 @@ function submitForm(event, target) {
                             ].includes(mode),
                         }"
                     >
-                        <h1 class="h5 mb-0">{{ page.title }}</h1>
+                        <h1 class="h5 mb-0" :class="{ 'text-reset': mode === 'login' }">
+                            {{ page.title }}
+                        </h1>
                     </div>
                     <div class="card-body">
                         <FormFeedback
