@@ -33,6 +33,7 @@ class DeviceTelemetryData
                 'Firmware version' => $this->softwareIdentifier($latestData['firmware_version'] ?? null),
                 'Config version' => $this->softwareIdentifier($latestData['config_version'] ?? null),
                 'Prefix' => $this->softwareIdentifier($latestData['prefix'] ?? null),
+                'Configuration OTA' => app(ConfigurationTelemetry::class)->fromReading($latestData),
             ],
             'graph' => $graph,
             'latest_reading' => $lastPoint ? [

@@ -157,12 +157,12 @@ class BrowserAuthorizationTest extends TestCase
         $this->actingAs($this->admin);
         $this->from('/developer-workspace?section=firmware')->post('/upload-firmware', [
             'firmware' => UploadedFile::fake()->createWithContent('firmware.bin', 'synthetic firmware'),
-            'version' => '1', 'description' => 'Firmware fixture', 'prefix' => 'TEST', '_upload_kind' => 'firmware',
+            'version' => '1', 'description' => 'Firmware fixture', 'prefix' => 'TEST', 'device_family' => 'smart-panels-esp32', '_upload_kind' => 'firmware',
         ])->assertRedirect('/developer-workspace?section=firmware')
             ->assertSessionHas('active_upload', 'firmware')->assertSessionHas('success');
         $this->from('/developer-workspace?section=config')->post('/upload-config', [
-            'config' => UploadedFile::fake()->createWithContent('config.json', '{"synthetic":true}'),
-            'version' => '1', 'description' => 'Config fixture', 'prefix' => 'TEST', '_upload_kind' => 'config',
+            'config' => UploadedFile::fake()->createWithContent('config.json', file_get_contents(base_path('tests/Fixtures/tracker-configuration.json'))),
+            'version' => '1', 'description' => 'Config fixture', 'prefix' => 'TEST', 'device_family' => 'smart-panels-esp32', '_upload_kind' => 'config',
         ])->assertRedirect('/developer-workspace?section=config')
             ->assertSessionHas('active_upload', 'config')->assertSessionHas('success');
         $this->assertDatabaseCount('firmware_versions', 1);

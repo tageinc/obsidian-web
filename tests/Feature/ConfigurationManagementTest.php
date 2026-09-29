@@ -44,15 +44,15 @@ class ConfigurationManagementTest extends TestCase
     private function payload(string $version = '1'): array
     {
         return [
-            'version' => $version, 'prefix' => 'CFG', 'description' => 'Synthetic configuration',
-            'config' => UploadedFile::fake()->createWithContent('configuration.json', '{"synthetic":true}'),
+            'device_family' => 'smart-panels-esp32', 'version' => $version, 'prefix' => 'CFG', 'description' => 'Synthetic configuration',
+            'config' => UploadedFile::fake()->createWithContent('configuration.json', file_get_contents(base_path('tests/Fixtures/tracker-configuration.json'))),
         ];
     }
 
     private function record(string $version = '1', string $prefix = 'CFG', ?string $path = null): ConfigVersions
     {
         $path = $path ?? 'public/config/fixture-'.$version.'.json';
-        Storage::put($path, '{"synthetic":true}');
+        Storage::put($path, file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')));
 
         return ConfigVersions::create([
             'version' => $version, 'prefix' => $prefix, 'description' => 'Configuration fixture', 'file_path' => $path,
@@ -74,14 +74,14 @@ class ConfigurationManagementTest extends TestCase
     {
         foreach ([false, true] as $external) {
             $base = $this->client($external);
-            $version = $external ? str_repeat('9', 255) : '9007199254740993';
+            $version = $external ? str_repeat('9', 64) : '9007199254740993';
             $create = $this->postJson($external ? $base : '/upload-config', $this->payload($version))
                 ->assertCreated()->assertJsonPath('version', $version)->assertDontSee('file_path');
             $record = ConfigVersions::findOrFail($create->json('id'));
             $path = $record->file_path;
             $createdAt = $record->created_at->toISOString();
             $this->assertMatchesRegularExpression('#^public/config/[a-f0-9-]{36}\.json$#', $path);
-            $this->assertSame('{"synthetic":true}', Storage::get($path));
+            $this->assertSame(file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')), Storage::get($path));
             Carbon::setTestNow(now()->addDay());
             $newVersion = $external ? '2' : '1';
             $this->patchJson($base.'/'.$record->id, ['version' => $newVersion, 'description' => 'Edited configuration'])
@@ -148,10 +148,10 @@ class ConfigurationManagementTest extends TestCase
         $record = ConfigVersions::findOrFail($first->json('id'));
         $this->patchJson($base.'/'.$record->id, ['version' => '2'])->assertOk();
         $payload = $this->payload();
-        $payload['config'] = UploadedFile::fake()->createWithContent('different.json', '{"second":true}');
+        $payload['config'] = UploadedFile::fake()->createWithContent('different.json', str_replace('"log_T":30', '"log_T":45', file_get_contents(base_path('tests/Fixtures/tracker-configuration.json'))));
         $second = $this->postJson('/upload-config', $payload)->assertCreated();
-        $this->assertSame('{"synthetic":true}', Storage::get($record->file_path));
-        $this->assertSame('{"second":true}', Storage::get(ConfigVersions::findOrFail($second->json('id'))->file_path));
+        $this->assertSame(file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')), Storage::get($record->file_path));
+        $this->assertSame(str_replace('"log_T":30', '"log_T":45', file_get_contents(base_path('tests/Fixtures/tracker-configuration.json'))), Storage::get(ConfigVersions::findOrFail($second->json('id'))->file_path));
         $this->assertCount(2, Storage::allFiles('public/config'));
     }
 
@@ -201,7 +201,7 @@ class ConfigurationManagementTest extends TestCase
         });
         $this->deleteJson($base.'/'.$record->id)->assertStatus(500);
         $this->assertDatabaseHas('config_versions', ['id' => $record->id]);
-        $this->assertSame('{"synthetic":true}', Storage::get($record->file_path));
+        $this->assertSame(file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')), Storage::get($record->file_path));
         $this->assertSame([], Storage::allFiles('config-deletions'));
     }
 
@@ -230,7 +230,7 @@ class ConfigurationManagementTest extends TestCase
         $latest = $this->record('10');
         $this->getJson('/api/config-version/CFG')->assertOk()->assertJsonPath('version', '10');
         $this->get('/api/config-file/prefix/CFG')->assertDownload(basename($latest->file_path));
-        $huge = str_repeat('9', 255);
+        $huge = str_repeat('9', 64);
         $this->patchJson($base.'/'.$latest->id, ['version' => $huge])->assertOk();
         $this->getJson('/api/config-version/CFG')->assertOk()->assertJsonPath('version', $huge);
         $this->get('/config-version/CFG')->assertOk()->assertSee($huge);

@@ -36,7 +36,7 @@
                 ],
             ];
         };
-        $uploadErrors = array_intersect_key($errors->messages(), array_flip(['firmware', 'config', 'version', 'description', 'prefix']));
+        $uploadErrors = array_intersect_key($errors->messages(), array_flip(['firmware', 'config', 'version', 'description', 'prefix', 'device_family']));
         $failedUpload = session('error') && in_array(session('active_upload'), ['firmware', 'config'], true) ? session('active_upload') : null;
         $activeUpload = $failedUpload ?? old('_upload_kind', session('active_upload', $errors->has('config') ? 'config' : request('section', 'firmware')));
         $activeUpload = $activeUpload === 'config' ? 'config' : 'firmware';
@@ -195,6 +195,15 @@
 				<form action="{{ route('uploadConfig') }}" method="post" enctype="multipart/form-data">
 					@csrf
                     <input type="hidden" name="_upload_kind" value="config">
+                        <p>Uploaded configurations are available for polling. Application and persistence require device telemetry.</p>
+                        <div class="form-group">
+                            <label for="config-device_family">Device family</label>
+                            <select id="config-device_family" name="device_family" class="form-control" required>
+                                <option value="smart-panels-esp32">Smart Panels ESP32 · schema 1</option>
+                            </select>
+                            <small class="form-text">All 12 supported settings are required. Maximum JSON size: 4096 bytes.</small>
+                            @error('device_family')<div class="text-danger">{{ $message }}</div>@enderror
+                        </div>
                     @if ($errors->any() && $legacyUploadKind === 'config')
                         <div class="alert alert-danger" role="alert">
                             <ul class="mb-0">

@@ -89,6 +89,30 @@
                     </div>
                 </div>
 
+                <section class="card mb-3" aria-labelledby="legacy-software-heading">
+                    <h3 class="card-header h5" id="legacy-software-heading">Software versions</h3>
+                    <div class="card-body">
+                        @foreach (['Firmware version' => 'Firmware', 'Config version' => 'Configuration', 'Prefix' => 'Prefix'] as $key => $label)
+                            <p><strong>{{ $label }}:</strong>
+                                @php($identifier = $telemetry['status'][$key])
+                                {{ $identifier === null ? '—' : ($key === 'Prefix' ? $identifier : 'v'.preg_replace('/^v+/i', '', trim((string) $identifier))) }}
+                            </p>
+                        @endforeach
+                        @if ($telemetry['status']['Firmware version'] === null || $telemetry['status']['Config version'] === null)
+                            <p class="small text-muted">The latest telemetry does not report these versions. A dash does not establish an update failure.</p>
+                        @endif
+                        <h4 class="h6">Configuration update</h4>
+                        <p class="small text-muted">Device-reported outcomes from the latest telemetry. Uploading makes a release available for polling; persistence requires a device acknowledgement.</p>
+                        @php($ota = $telemetry['status']['Configuration OTA'])
+                        <dl style="overflow-wrap: anywhere">
+                            @foreach (['downloaded', 'applied', 'persisted'] as $stage)
+                                <dt>{{ ucfirst($stage) }}</dt>
+                                <dd>{{ $ota[$stage] ? 'v'.$ota[$stage]['version'].' · '.$ota[$stage]['prefix'].' · release '.$ota[$stage]['release_id'] : 'Unknown — no acknowledgement in the latest telemetry' }}</dd>
+                            @endforeach
+                        </dl>
+                        @if ($ota['status'])<p class="small">Reported status: {{ $ota['status'] }} @if ($ota['error']) · {{ $ota['error'] }} @endif</p>@endif
+                    </div>
+                </section>
                 <div class="card mb-3" id="solar-tracker-remote">
                     <div class="card-header">Remote Control</div>
                     <div class="card-body">

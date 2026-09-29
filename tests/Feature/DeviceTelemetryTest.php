@@ -120,7 +120,9 @@ class DeviceTelemetryTest extends TestCase
             ->assertJsonPath('latest_reading', null)->assertJsonPath('graph.points', [])
             ->assertJsonPath('status.Updated', 'N/A');
         foreach ($empty->json('status') as $field => $value) {
-            if ($field !== 'Updated') {
+            if ($field === 'Configuration OTA') {
+                $this->assertSame(['downloaded' => null, 'applied' => null, 'persisted' => null, 'status' => null, 'error' => null], $value);
+            } elseif ($field !== 'Updated') {
                 $this->assertNull($value);
             }
         }
@@ -260,6 +262,28 @@ class DeviceTelemetryTest extends TestCase
         $this->actingAs($this->owner)->getJson('/devices/999999/telemetry')->assertNotFound();
         [, $secret] = ExternalApiKey::issue($this->developer, 'Snapshot test', null);
         $this->bearer($secret)->getJson('/api/external/v1/devices/999999/telemetry')->assertNotFound();
+    }
+
+    public function test_configuration_acknowledgements_are_latest_telemetry_only_and_preserve_storage_failure(): void
+    {
+        $new = ['release_id' => str_repeat('a', 64), 'prefix' => 'TEST', 'version' => '2', 'schema_version' => 1];
+        $old = array_replace($new, ['release_id' => str_repeat('b', 64), 'version' => '1']);
+        $ota = ['downloaded' => $new, 'applied' => $new, 'persisted' => $old,
+            'status' => 'persistence_failed', 'error' => 'storage:write failed'];
+        $this->reading('2026-09-25 19:00:00', ['data' => ['temp' => 20, 'config_version' => '2', 'config_ota' => $ota]]);
+        $browser = $this->actingAs($this->owner)->getJson($this->browserUrl())->assertOk()
+            ->assertJsonPath('status.Configuration OTA', $ota)->assertJsonPath('status.Config version', '2');
+        [, $secret] = ExternalApiKey::issue($this->developer, 'OTA status', null);
+        $this->assertSame($browser->json(), $this->bearer($secret)->getJson($this->externalUrl())->assertOk()->json());
+        $this->reading('2026-09-25 20:00:00', ['data' => ['temp' => 21, 'config_version' => '0']]);
+        $this->getJson($this->externalUrl())->assertOk()->assertJsonPath('status.Config version', '0')
+            ->assertJsonPath('status.Firmware version', null)->assertJsonPath('status.Configuration OTA.persisted', null)
+            ->assertJsonPath('status.Configuration OTA.applied', null)->assertJsonPath('status.Configuration OTA.status', null);
+        $this->reading('2026-09-25 21:00:00', ['data' => ['temp' => 22, 'config_ota' => [
+            'persisted' => ['version' => '2'], 'status' => ['success' => true], 'error' => false,
+        ]]]);
+        $this->getJson($this->externalUrl())->assertOk()->assertJsonPath('status.Configuration OTA.persisted', null)
+            ->assertJsonPath('status.Configuration OTA.status', null)->assertJsonPath('status.Configuration OTA.error', null);
     }
 
     private function reading(string $timestamp, array $values = []): DeviceLog

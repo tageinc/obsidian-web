@@ -113,8 +113,8 @@ class ExternalApiKeysTest extends TestCase
         $this->bearer($secret)->getJson('/api/external/v1/devices?per_page=1001')->assertUnprocessable();
         $this->bearer($secret)->getJson('/api/external/v1/devices/999999')->assertNotFound();
         $upload = $this->bearer($secret)->postJson('/api/external/v1/configuration', [
-            'config' => UploadedFile::fake()->createWithContent('fixture.json', '{"fixture":true}'),
-            'version' => '37', 'prefix' => 'TEST', 'description' => 'Synthetic integration test',
+            'config' => UploadedFile::fake()->createWithContent('fixture.json', file_get_contents(base_path('tests/Fixtures/tracker-configuration.json'))),
+            'version' => '37', 'prefix' => 'TEST', 'device_family' => 'smart-panels-esp32', 'description' => 'Synthetic integration test',
         ])->assertCreated()->assertJsonPath('version', '37')->assertJsonStructure(['id', 'version', 'message']);
         $this->bearer($secret)->getJson('/api/external/v1/configuration')->assertOk()->assertDontSee('file_path');
         $this->bearer($secret)->get('/api/external/v1/configuration/'.$upload->json('version').'/download')->assertOk();

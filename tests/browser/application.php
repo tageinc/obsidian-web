@@ -177,6 +177,7 @@ Illuminate\Support\Facades\Route::post('/__browser-fixtures/telemetry', function
         'temp' => 'required|numeric',
         'ps_avg' => 'required|numeric',
         'pds' => 'required|numeric',
+        'config_ota' => 'sometimes|array',
         'firmware_version' => 'nullable|string|max:255',
         'config_version' => 'nullable|string|max:255',
         'prefix' => 'nullable|string|max:255',

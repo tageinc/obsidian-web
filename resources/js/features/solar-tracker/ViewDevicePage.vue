@@ -93,6 +93,17 @@ function softwareVersion(key) {
     const version = String(reading(key)).trim().replace(/^v+/i, '').trim();
     return version && version !== '—' ? `v${version}` : '—';
 }
+const missingSoftwareVersions = computed(() =>
+    ['Firmware version', 'Config version'].some((key) => softwareVersion(key) === '—'),
+);
+const configurationOta = computed(() =>
+    hasReading.value ? (currentStatus.value['Configuration OTA'] ?? {}) : {},
+);
+function configurationStage(stage) {
+    const identity = configurationOta.value[stage];
+    if (!identity) return 'Unknown — no acknowledgement in the latest telemetry';
+    return `v${identity.version.replace(/^v+/i, '')} · ${identity.prefix} · release ${identity.release_id}`;
+}
 const temperature = computed(() => {
     if (!hasReading.value) return null;
     if ('Temperature (°F)' in currentStatus.value) {
@@ -286,9 +297,34 @@ function navigateSection(event, index) {
                                 <dd>{{ reading('Prefix') }}</dd>
                             </div>
                         </dl>
+                        <p v-if="missingSoftwareVersions" class="small text-muted mt-2 mb-0">
+                            The latest telemetry does not report these versions. A dash does not
+                            establish an update failure.
+                        </p>
                     </dd>
                 </div>
             </dl>
+            <section class="device-surface mb-3" aria-labelledby="configuration-status-title">
+                <component :is="embedded ? 'h3' : 'h2'" id="configuration-status-title">
+                    Configuration update
+                </component>
+                <p class="section-description">
+                    Device-reported outcomes from the latest telemetry. Uploading makes a release
+                    available for polling; persistence requires a device acknowledgement.
+                </p>
+                <dl class="configuration-outcomes mt-3 mb-0">
+                    <div v-for="stage in ['downloaded', 'applied', 'persisted']" :key="stage">
+                        <dt>{{ stage.charAt(0).toUpperCase() + stage.slice(1) }}</dt>
+                        <dd>{{ configurationStage(stage) }}</dd>
+                    </div>
+                </dl>
+                <p v-if="configurationOta.status" class="small mb-0">
+                    Reported status: {{ configurationOta.status }}
+                    <template v-if="configurationOta.error">
+                        · {{ configurationOta.error }}</template
+                    >
+                </p>
+            </section>
             <div class="device-overview-grid">
                 <section class="device-surface" aria-labelledby="sensors-title">
                     <component :is="embedded ? 'h3' : 'h2'" id="sensors-title">
@@ -383,6 +419,9 @@ function navigateSection(event, index) {
 </template>
 
 <style scoped>
+.configuration-outcomes dd {
+    overflow-wrap: anywhere;
+}
 .device-page {
     --device-muted: var(--obsidian-text-muted, #5c6879);
     --device-border: var(--obsidian-border, #e0e6ee);

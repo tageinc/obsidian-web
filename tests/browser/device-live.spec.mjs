@@ -87,6 +87,28 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         await expect(history.getByText('4 raw readings', { exact: true })).toBeVisible();
 
         const first = await addReading(37.75, 123, 9.5, {
+            config_ota: {
+                downloaded: {
+                    release_id: 'release-new',
+                    prefix: 'SP1',
+                    version: '2',
+                    schema_version: 1,
+                },
+                applied: {
+                    release_id: 'release-new',
+                    prefix: 'SP1',
+                    version: '2',
+                    schema_version: 1,
+                },
+                persisted: {
+                    release_id: 'release-old',
+                    prefix: 'SP1',
+                    version: '1',
+                    schema_version: 1,
+                },
+                status: 'persistence_failed',
+                error: 'storage:write failed',
+            },
             firmware_version: '001.021',
             config_version: '003.004',
             prefix: 'SP1',
@@ -115,6 +137,12 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         await expect(metric(/^PS Average$/)).toHaveText('123');
         await expect(metric(/^PDS$/)).toHaveText('9.5');
         await expect(versions.locator('dd')).toHaveText(['v001.021', 'v003.004', 'SP1']);
+        await expect(overview.locator('.configuration-outcomes dd')).toHaveText([
+            'v2 · SP1 · release release-new',
+            'v2 · SP1 · release release-new',
+            'v1 · SP1 · release release-old',
+        ]);
+        await expect(overview).toContainText('storage:write failed');
         await page.getByRole('tab', { name: 'History', exact: true }).click();
 
         await history.getByLabel('View', { exact: true }).selectOption('custom');
@@ -143,6 +171,10 @@ test('viewed device refreshes readings every minute and preserves a chosen histo
         await expect(metric(/^Temperature$/)).toHaveText('100.85 °F');
         await expect(metric(/^CTS$/)).toHaveText('Closed');
         await expect(versions.locator('dd')).toHaveText(['—', '—', '—']);
+        await expect(overview).toContainText('A dash does not establish an update failure.');
+        await expect(overview.locator('.configuration-outcomes dd')).toHaveText(
+            Array(3).fill('Unknown — no acknowledgement in the latest telemetry'),
+        );
         await page.unroute(telemetryRoute);
         await addReading(39.5, 125, 11, {
             cts: null,

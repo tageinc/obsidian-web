@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import axe from 'axe-core';
 
@@ -92,7 +93,7 @@ const releases = [
         uploadButton: 'Upload JSON Config',
         filename: 'fixture.json',
         mimeType: 'application/json',
-        bytes: Buffer.from('{"browser_fixture":true,"description":"Synthetic configuration."}'),
+        bytes: readFileSync(new URL('../Fixtures/tracker-configuration.json', import.meta.url)),
     },
 ];
 

@@ -72,7 +72,7 @@ function checkFile(event) {
                     {{
                         firmware
                             ? 'Release binaries for your devices.'
-                            : 'Versioned settings for your devices.'
+                            : 'Uploaded releases are available for polling. Application and persistence are reported by each device.'
                     }}
                 </p>
             </div>
@@ -114,6 +114,28 @@ function checkFile(event) {
                     >
                         <input type="hidden" name="_token" :value="csrfToken" />
                         <input type="hidden" name="_upload_kind" :value="kind" />
+                        <div v-if="!firmware" class="mb-3">
+                            <label for="config-device_family" class="form-label"
+                                >Device family</label
+                            >
+                            <select
+                                id="config-device_family"
+                                name="device_family"
+                                class="form-select"
+                                required
+                            >
+                                <option value="smart-panels-esp32">
+                                    Smart Panels ESP32 · schema 1
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                All 12 supported settings are required. Maximum JSON size: 4096
+                                bytes.
+                            </div>
+                            <div v-if="errors.device_family?.length" class="text-danger">
+                                {{ errors.device_family[0] }}
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <label :for="kind" class="form-label">{{
                                 firmware ? 'Firmware File (.bin)' : 'Configuration File (.json)'

@@ -859,3 +859,68 @@ API base URL.
 - [Device editing](../app/Http/Controllers/EditDeviceController.php)
 - [Software uploads and downloads](../app/Http/Controllers/DeveloperWorkspaceController.php)
 - [Access model](access-model.md)
+
+
+### Validated configuration publication and device acknowledgement
+
+`POST /api/external/v1/configuration` and the Developer upload form share validation.
+New uploads require `device_family=smart-panels-esp32`, integer version text (1–64 digits),
+and an ASCII prefix of 1–64 letters, digits, `.`, `_` or `-`. The JSON file is a flat
+object, at most 4096 bytes. Schema 1 requires every key below; unknown keys, strings,
+booleans, null, duplicate keys, fractions in integer fields, and non-finite values are rejected with
+422 validation errors before a release or file is published.
+
+| Key | Accepted JSON number range | Unit |
+| --- | --- | --- |
+| `lid_N`, `hm_N` | integer 1–4096 | samples |
+| `lid_th`, `optimize_th` | 0–100 | sensor scale |
+| `kp` | -10–10 | signed gain; zero disables proportional motion |
+| `nrml_w` | -100–100 | signed motor command; zero stops |
+| `log_T` | 1–86400 | seconds |
+| `update_T` | 5–86400 | seconds |
+| `remote_control_T` | 0.1–3600 | seconds |
+| `config_portal_T` | integer 1–3600 | seconds |
+| `optimize_T` | 0.001–1440 | minutes |
+| `cool_off_T` | 0–1440 | minutes |
+
+The catalog includes `device_family` and `schema_version`; null means a legacy
+release has not passed this validation. Upload success means available for polling.
+It never acknowledges device delivery, application or persistence. Existing release
+version/description edits and legacy download routes remain supported.
+
+Hardware protocol 2 uses `GET /api/config-version/{prefix}?protocol=2`. It returns
+`release_id`, `prefix`, `version`, `schema_version`, `sha256`, and a same-host
+`download_path`: `api/config-file/release/{rowId}?prefix={prefix}&release_id={hash}`.
+The download returns the same metadata and a `config` object. `release_id` is SHA-256
+of the compact JSON tuple `[string(rowId), prefix, version, 1, sha256(rawFileBytes)]`.
+Publication between these requests cannot change the selected row. Version edits or
+file replacement change the fingerprint; stale requests fail 409 `identity_mismatch`.
+Deleted rows and missing files fail 404; a storage read outage fails 503 `storage_unavailable`. Discovery of a latest unvalidated legacy
+release fails 409 `unsupported_configuration_schema`, without silently falling back.
+Protocol 2 reads one file snapshot for both its hash and response; no storage paths
+are disclosed. The hash binds identity and bytes, and is not a transport signature.
+
+Deploy the server/migration and publish a validated family release before enabling
+protocol 2 firmware. Existing releases are not retroactively certified. No deployment
+or production publication was performed as part of this change.
+
+`GET /api/external/v1/devices/{id}/telemetry` and the authorized browser snapshot
+return `status["Configuration OTA"]` with independently reported `downloaded`,
+`applied`, `persisted` identities, `status` and `error`. Every identity contains
+`release_id`, `prefix`, `version`, `schema_version`. Missing or malformed fields are
+null; only the latest reading is used. A storage failure may show a new applied
+identity and an older persisted identity. No catalog fallback or earlier-reading
+fallback is performed. Firmware/Configuration display uses the actual latest
+`firmware_version`/`config_version`, including `v0`. Missing fields mean unknown,
+not a proven OTA failure. UI wording/formatting has no separate external operation.
+These read and publish operations preserve existing ownership/Developer boundaries
+and do not add notifications or physical-device actions.
+
+Source review confirmed RAM-only configuration, incomplete validation and selection
+races before this change. The affected live cause remains unconfirmed. The supplied
+September 29 screenshot reports firmware v8, configuration v0 and prefix 202501220008;
+an earlier missing-version screenshot is a separate telemetry observation. Correlate
+the selected release fingerprint/prefix/version, sanitized JSON, running binary,
+latest telemetry and boot/update logs before attributing the cause. Prefix mismatch,
+unchanged selection and firmware-first reboot interference remain hypotheses. Bench
+validation with motion disabled and separate authorization is required before rollout.
