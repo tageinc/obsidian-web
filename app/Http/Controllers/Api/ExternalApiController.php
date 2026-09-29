@@ -58,8 +58,8 @@ class ExternalApiController extends Controller
     {
         $data = $request->validate(['per_page' => 'sometimes|integer|min:1|max:100']);
 
-        return response()->json($model::latest('id')->paginate($data['per_page'] ?? 20, [
+        return response()->json($model::latest('id')->paginate($data['per_page'] ?? 20, array_merge([
             'id', 'version', 'prefix', 'description', 'created_at',
-        ]));
+        ], $model === ConfigVersions::class ? ['device_family', 'schema_version'] : [])));
     }
 }

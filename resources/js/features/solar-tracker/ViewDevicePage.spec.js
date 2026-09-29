@@ -326,3 +326,37 @@ it.each([false, true])(
         wrapper.unmount();
     },
 );
+
+it('shows distinct reported stages when persistence fails and leaves legacy acknowledgements unknown', () => {
+    const identity = { release_id: 'release-new', prefix: 'TEST', version: '2', schema_version: 1 };
+    const wrapper = mount(ViewDevicePage, {
+        props: {
+            ...props,
+            status: {
+                ...props.status,
+                'Configuration OTA': {
+                    downloaded: identity,
+                    applied: identity,
+                    persisted: { ...identity, release_id: 'release-old', version: '1' },
+                    status: 'persistence_failed',
+                    error: 'storage:write failed',
+                },
+            },
+        },
+    });
+    expect(wrapper.findAll('.configuration-outcomes dd').map((row) => row.text())).toEqual([
+        'v2 · TEST · release release-new',
+        'v2 · TEST · release release-new',
+        'v1 · TEST · release release-old',
+    ]);
+    expect(wrapper.text()).toContain('persistence_failed');
+    expect(wrapper.text()).toContain('storage:write failed');
+    wrapper.unmount();
+    const legacy = mount(ViewDevicePage, { props });
+    expect(
+        legacy
+            .findAll('.configuration-outcomes dd')
+            .every((row) => row.text().startsWith('Unknown')),
+    ).toBe(true);
+    legacy.unmount();
+});

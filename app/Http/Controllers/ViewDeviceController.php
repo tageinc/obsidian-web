@@ -20,7 +20,7 @@ class ViewDeviceController extends Controller
         $remoteControl = SolarTrackerRemoteControl::where('serial_no', $device->serial_no)->first();
         $payload = config('frontend.vue3.view_device')
             ? ['telemetry' => app(DeviceTelemetryData::class)->forDevice($device)]
-            : $this->statusPayload($device->serial_no);
+            : array_merge($this->statusPayload($device->serial_no), ['telemetry' => app(DeviceTelemetryData::class)->forDevice($device)]);
         if (isset($payload['latestStatus'])) {
             // Legacy JSON replaces missing values with zero; display the actual recorded values.
             $raw = $payload['latestStatus'] instanceof DeviceLog

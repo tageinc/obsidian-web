@@ -13,7 +13,8 @@ class ConfigVersions extends Model
     use OrdersReleaseVersions;
 
     protected $softwareVersionKind = 'config';
-    protected $fillable = ['version', 'prefix', 'file_path', 'description', 'timestamp'];
+    protected $fillable = ['version', 'prefix', 'file_path', 'description', 'timestamp', 'device_family', 'schema_version'];
+    protected $casts = ['schema_version' => 'integer'];
     public $timestamps = true;
 	protected $dates = ['created_at', 'updated_at'];
 

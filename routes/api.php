@@ -60,6 +60,7 @@ Route::prefix('external/v1')->name('external.')->middleware(['auth.external', 't
 Route::post('/log', [DeviceLogController::class, 'logData'])->middleware('throttle:device-telemetry')->name('device.log-data');
 
 Route::get('/firmware-file/version/{version?}', [DeviceSoftwareController::class, 'serveFirmwareByVersion'])->name('device.firmware-by-version');
+Route::get('/config-file/release/{release}', [DeviceSoftwareController::class, 'serveConfigRelease'])->whereNumber('release')->name('device.config-release');
 Route::get('/config-file/version/{version?}', [DeviceSoftwareController::class, 'serveConfigByVersion'])->name('device.config-by-version');
 Route::get('/firmware-file/prefix/{prefix?}', [DeviceSoftwareController::class, 'serveFirmwareByPrefix'])->name('device.firmware-by-prefix');
 Route::get('/config-file/prefix/{prefix?}', [DeviceSoftwareController::class, 'serveConfigByPrefix'])->name('device.config-by-prefix');

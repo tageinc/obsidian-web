@@ -67,7 +67,7 @@ class DeveloperUploadModalTest extends TestCase
         $url = '/developer-workspace?section='.($kind === 'firmware' ? 'config' : 'firmware').'&firmware_show=2&config_show=10';
         $this->from($url)->post('/upload-'.$kind, [
             '_upload_kind' => $kind, $kind => UploadedFile::fake()->create('rejected.'.$extension, $maxKb + 1),
-            'version' => '1', 'description' => $description, 'prefix' => 'TEST', 'file_path' => 'private-path-must-not-appear',
+            'device_family' => 'smart-panels-esp32', 'version' => '1', 'description' => $description, 'prefix' => 'TEST', 'file_path' => 'private-path-must-not-appear',
         ])->assertRedirect($url)->assertSessionHasErrors($kind)
             ->assertSessionHasInput('_upload_kind', $kind)->assertSessionHasInput('description', $description);
         $response = $this->get($url);
@@ -86,7 +86,7 @@ class DeveloperUploadModalTest extends TestCase
     /** @dataProvider uploadKinds */
     public function test_storage_failure_reopens_server_selected_kind_and_flashes_only_safe_text(string $kind, string $extension, int $maxKb): void
     {
-        $content = $kind === 'config' ? '{"fixture":"file-content-must-not-appear"}' : 'file-content-must-not-appear';
+        $content = $kind === 'config' ? file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')) : 'file-content-must-not-appear';
         $fixture = UploadedFile::fake()->createWithContent('failed.'.$extension, $content);
         $failedFile = new class($fixture->getPathname(), 'failed.'.$extension, $fixture->getMimeType(), null, true) extends UploadedFile {
             public function storeAs($path, $name, $options = [])
@@ -98,7 +98,7 @@ class DeveloperUploadModalTest extends TestCase
         $url = '/developer-workspace?section='.$opposite;
         $this->from($url)->post('/upload-'.$kind, [
             '_upload_kind' => $opposite, $kind => $failedFile,
-            'version' => '1', 'description' => 'Retained description', 'prefix' => 'TEST',
+            'device_family' => 'smart-panels-esp32', 'version' => '1', 'description' => 'Retained description', 'prefix' => 'TEST',
             'file_path' => 'private-path-must-not-appear', 'extra' => 'unknown-input-must-not-appear',
         ])->assertRedirect($url)->assertSessionHasNoErrors()->assertSessionHas('active_upload', $kind)
             ->assertSessionHas('_old_input', [
@@ -128,11 +128,11 @@ class DeveloperUploadModalTest extends TestCase
     /** @dataProvider uploadKinds */
     public function test_successful_upload_returns_to_history_without_reopening_or_exposing_stored_files(string $kind, string $extension, int $maxKb): void
     {
-        $content = $kind === 'config' ? '{"fixture":"file-content-must-not-appear"}' : 'file-content-must-not-appear';
+        $content = $kind === 'config' ? file_get_contents(base_path('tests/Fixtures/tracker-configuration.json')) : 'file-content-must-not-appear';
         $url = '/developer-workspace?section='.$kind;
         $this->from($url)->post('/upload-'.$kind, [
             '_upload_kind' => $kind, $kind => UploadedFile::fake()->createWithContent('success.'.$extension, $content),
-            'version' => '1', 'description' => 'Release fixture', 'prefix' => 'TEST',
+            'device_family' => 'smart-panels-esp32', 'version' => '1', 'description' => 'Release fixture', 'prefix' => 'TEST',
         ])->assertRedirect($url)->assertSessionHasNoErrors()->assertSessionHas('success');
         $response = $this->get($url);
         $props = $this->props($response);

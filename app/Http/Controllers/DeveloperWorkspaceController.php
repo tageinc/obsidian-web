@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Services\TrackerConfigurationSchema;
 
 class DeveloperWorkspaceController extends Controller
 {
@@ -181,7 +182,14 @@ class DeveloperWorkspaceController extends Controller
             'description' => 'required|string|max:255',
             'prefix' => 'required|string|max:255',
         ];
+        if ($kind === 'config') {
+            $rules['device_family'] = ['required', Rule::in([TrackerConfigurationSchema::FAMILY])];
+            $rules['prefix'] = ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/D'];
+        }
         $request->validate($rules);
+        if ($kind === 'config') {
+            app(TrackerConfigurationSchema::class)->validate($request->file('config')->get());
+        }
         $path = null;
         $committed = false;
         try {
@@ -200,7 +208,7 @@ class DeveloperWorkspaceController extends Controller
                 return $model::create([
                     'version' => $data['version'], 'prefix' => $data['prefix'],
                     'description' => $data['description'], 'file_path' => $path,
-                ]);
+                ] + ($kind === 'config' ? ['device_family' => TrackerConfigurationSchema::FAMILY, 'schema_version' => TrackerConfigurationSchema::VERSION] : []));
             });
         } catch (\Throwable $exception) {
             // A post-commit cache failure must not remove an already-persisted release file.
@@ -220,10 +228,10 @@ class DeveloperWorkspaceController extends Controller
             Log::info('device.config_uploaded');
         }
         if ($request->expectsJson()) {
-            return response()->json(['id' => $record->id, 'version' => (string) $record->version, 'message' => $title.' uploaded successfully.'], 201);
+            return response()->json(['id' => $record->id, 'version' => (string) $record->version, 'message' => $title.' uploaded successfully.'.($kind === 'config' ? ' Available for polling; application and persistence require device telemetry.' : '')], 201);
         }
 
-        return back()->with('success', $title.' v'.$record->version.' uploaded successfully!')->with('active_upload', $kind);
+        return back()->with('success', $title.' v'.$record->version.' uploaded successfully!'.($kind === 'config' ? ' Available for polling; application and persistence require device telemetry.' : ''))->with('active_upload', $kind);
     }
 
     private function updateRelease(Request $request, $id, string $kind, string $model)
@@ -237,6 +245,7 @@ class DeveloperWorkspaceController extends Controller
                 'description' => 'sometimes|required|string|max:255',
                 'prefix' => 'prohibited', 'firmware' => 'prohibited', 'config' => 'prohibited', 'file_path' => 'prohibited',
                 'created_at' => 'prohibited', 'updated_at' => 'prohibited', 'id' => 'prohibited',
+                'device_family' => 'prohibited', 'schema_version' => 'prohibited',
             ]);
             $record->fill(Arr::only($data, ['version', 'description']))->save();
 
@@ -319,7 +328,7 @@ class DeveloperWorkspaceController extends Controller
 
     private function releaseVersionRules(string $model, $ignore = null): array
     {
-        return ['required', 'string', 'max:255', 'regex:/^[1-9][0-9]*$/D', Rule::unique((new $model)->getTable(), 'version')->ignore($ignore)];
+        return ['required', 'string', $model === ConfigVersions::class ? 'max:64' : 'max:255', 'regex:/^[1-9][0-9]*$/D', Rule::unique((new $model)->getTable(), 'version')->ignore($ignore)];
     }
 
     private function lockReleaseWrites(Request $request): void

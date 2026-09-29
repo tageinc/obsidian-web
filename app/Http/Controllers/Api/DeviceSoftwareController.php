@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\FirmwareVersions;
 use App\Models\ConfigVersions;
 use App\Services\RedisWorkloads;
+use App\Services\ConfigurationRelease;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -13,7 +16,44 @@ class DeviceSoftwareController extends Controller
 {
     public function getLatestConfigVersionNumber($prefix = null)
     {
+        if (request()->query('protocol') === '2') {
+            $record = ConfigVersions::where('prefix', $prefix)->orderByReleaseVersion()->orderByDesc('id')->first();
+            if (!$record) {
+                return response()->json(['error' => 'no_matching_version'], 404);
+            }
+            try {
+                $snapshot = app(ConfigurationRelease::class)->snapshot($record);
+                unset($snapshot['config']);
+                $snapshot['download_path'] = 'api/config-file/release/'.$record->id.'?'.http_build_query([
+                    'prefix' => $snapshot['prefix'], 'release_id' => $snapshot['release_id'],
+                ]);
+                return response()->json($snapshot)->header('Cache-Control', 'no-store');
+            } catch (HttpException $error) {
+                return response()->json(['error' => $error->getMessage()], $error->getStatusCode());
+            }
+        }
         return $this->version(ConfigVersions::class, 'config', $prefix);
+    }
+
+    public function serveConfigRelease(Request $request, $release)
+    {
+        $data = $request->validate([
+            'prefix' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9._-]+$/D'],
+            'release_id' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/D'],
+        ]);
+        $record = ConfigVersions::find($release);
+        if (!$record) {
+            return response()->json(['error' => 'missing_record'], 404);
+        }
+        try {
+            $snapshot = app(ConfigurationRelease::class)->snapshot($record);
+            if ($data['prefix'] !== $snapshot['prefix'] || !hash_equals($snapshot['release_id'], $data['release_id'])) {
+                return response()->json(['error' => 'identity_mismatch'], 409);
+            }
+            return response()->json($snapshot)->header('Cache-Control', 'no-store');
+        } catch (HttpException $error) {
+            return response()->json(['error' => $error->getMessage()], $error->getStatusCode());
+        }
     }
 
     public function getLatestFirmwareVersionNumber($prefix = null)
