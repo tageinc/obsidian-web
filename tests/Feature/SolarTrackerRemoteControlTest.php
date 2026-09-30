@@ -129,4 +129,17 @@ class SolarTrackerRemoteControlTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('mode');
         $this->assertSame(0, SolarTrackerRemoteControl::count());
     }
+
+    public function test_remote_control_api_emits_integer_mode_and_numeric_speed_contract(): void
+    {
+        SolarTrackerRemoteControl::create([
+            'serial_no' => $this->device->serial_no, 'mode' => 1, 'motor_speed' => -37,
+        ]);
+
+        $response = $this->get('/api/remote-control/'.$this->device->serial_no)->assertOk();
+
+        $this->assertSame(1, $response->json('mode'));
+        $this->assertIsNumeric($response->json('motor_speed'));
+        $this->assertEquals(-37.0, $response->json('motor_speed'));
+    }
 }
