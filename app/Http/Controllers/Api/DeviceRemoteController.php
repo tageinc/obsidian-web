@@ -27,8 +27,10 @@ class DeviceRemoteController extends Controller{
 			}
 			//Log::info('Remote control info requested. serial_no: ' . $serial_no);
 			$remote_control = SolarTrackerRemoteControl::where('serial_no', $serial_no)->select('mode', 'motor_speed')->first();
-			$json = json_encode($remote_control);
-			return $json;
+			return response()->json([
+				'mode' => $remote_control ? (int) $remote_control->mode : 0,
+				'motor_speed' => $remote_control ? (float) $remote_control->motor_speed : 0.0,
+			]);
 		}else{
 			//Log::info('Remote control info requested. serial number is null.');
 			return self::ERROR_RESPONSE;
