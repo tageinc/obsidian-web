@@ -139,6 +139,7 @@ class SolarTrackerRemoteControlTest extends TestCase
         $response = $this->get('/api/remote-control/'.$this->device->serial_no)->assertOk();
 
         $this->assertSame(1, $response->json('mode'));
-        $this->assertSame(-37.0, $response->json('motor_speed'));
+        $this->assertIsNumeric($response->json('motor_speed'));
+        $this->assertEquals(-37.0, $response->json('motor_speed'));
     }
 }
